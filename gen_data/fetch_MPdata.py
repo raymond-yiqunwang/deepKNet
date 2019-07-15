@@ -19,7 +19,8 @@ m = MPRester(api_key=my_API_key)
 # have band gap, no warning, 97585 instances
 #mp_data2 = m.query(criteria={"band_gap": { "$ne" : None}, "warnings": []}, properties=prop_list)
 # have band structure, no warning, 50171 instances
-mp_data3 = m.query(criteria={"band_structure": { "$ne" : None}, "warnings": []}, properties=prop_list)
+#mp_data3 = m.query(criteria={"band_structure": { "$ne" : None}, "warnings": []}, properties=prop_list)
+mp_data3 = m.query(criteria={"band_structure": { "$ne" : None}, "nsites": { "$lt" : 4 }, "volume": { "$lt" : 80},"warnings": []}, properties=prop_list)
 
 """
 data1 = []
