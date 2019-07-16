@@ -18,8 +18,8 @@ FLAGS = parser.parse_args()
 
 def read_data(path):
     f = h5py.File(path, 'r')
-    I_hkl = f['I_hkl'][:]
-    band_gap = f['band_gap'][:]
+    I_hkl = f['I_hkl'][:100]
+    band_gap = f['band_gap'][:100]
     return I_hkl, band_gap
 
 
@@ -59,7 +59,7 @@ class Trainer(object):
                 for epoch in range(self.max_epoch):
                     
                     self.train_one_epoch(sess, ops)
-#                    self.eval_one_epoch(sess, ops)
+                    self.eval_one_epoch(sess, ops)
 
                     if (epoch % 10 == 0):
                         print("Current epoch: {}".format(epoch))
@@ -74,7 +74,7 @@ class Trainer(object):
 
         num_batches = I_hkl.shape[0] // self.batch_size
 
-        loss_sum = 0
+        loss_sum = 0.
         for batch_idx in range(num_batches):
             start_idx = batch_idx * self.batch_size
             end_idx = (batch_idx+1) * self.batch_size
@@ -90,7 +90,35 @@ class Trainer(object):
             
             loss_sum += loss_val
 
-        print("mean loss: {0:.1%}".format(loss_sum))
+        print("train mean loss: {0:.1%}".format(loss_sum))
+
+
+    def eval_one_epoch(self, sess, ops):
+        is_training = False
+
+        I_hkl, band_gap = read_data(path="data_test/dataset1.h5")
+
+        num_batches = I_hkl.shape[0] // self.batch_size
+
+        loss_sum = 0.
+        for batch_idx in range(num_batches):
+            start_idx = batch_idx * self.batch_size
+            end_idx = (batch_idx+1) * self.batch_size
+
+            pointcloud_batch = I_hkl[start_idx:end_idx, :, :]
+            y_true_batch = band_gap[start_idx:end_idx]
+            
+            feed_dict_train = { ops["pointcloud_pl"]: pointcloud_batch,
+                                ops["y_true_pl"]: y_true_batch,
+                                ops["is_training_pl"]: is_training
+                              }
+            _, loss_val, pred_val = sess.run([ops["optimizer"], ops["MSELoss"], ops["y_pred"]], feed_dict=feed_dict_train)
+
+            loss_sum += loss_val
+            
+        print("eval mean loss: {0:.1%}".format(loss_sum))
+
+            
 
 if __name__ == "__main__":
     trainer = Trainer()
