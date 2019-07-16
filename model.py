@@ -73,7 +73,8 @@ class KNetModel(object):
         """
 
         #### linear model for debugging
-        weights = tf.Variable(tf.zeros([max_npoint, num_channels]))
+        initializer = tf.contrib.layers.xavier_initializer()
+        weights = tf.Variable(initializer([max_npoint, num_channels]))
         biases = tf.Variable(0.0)
         y_pred = tf.tensordot(pointcloud, weights, axes=[[1,2], [0,1]]) + biases
         #### end of linear model
