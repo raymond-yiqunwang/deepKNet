@@ -82,7 +82,7 @@ class KNetModel(object):
         return y_pred
 
     def get_loss(self, y_pred, y_true):
-        MSELoss = tf.reduce_mean(tf.square(y_pred - y_true))
-        return MSELoss
+        MAELoss = tf.reduce_mean(tf.losses.absolute_difference(y_pred, y_true))
+        return MAELoss
 
 
