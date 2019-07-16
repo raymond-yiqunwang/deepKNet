@@ -68,7 +68,6 @@ class Trainer(object):
             end_idx = (batch_idx+1) * self.batch_size
 
             x_batch = I_hkl[start_idx:end_idx, :, :]
-            x_batch = x_batch.reshape(x_batch.shape[0], -1)
             y_true_batch = band_gap[start_idx:end_idx]
             
             feed_dict_train = { ops["x_train"]: x_batch,
