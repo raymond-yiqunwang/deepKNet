@@ -15,8 +15,8 @@ class KNetModel(object):
     def g_train(self):
         return self.g_train_
     
-    def placeholder_inputs(self, batch_size, max_npoint, num_channels):
-        pointcloud_pl = tf.placeholder(tf.float32, shape=(batch_size, max_npoint, num_channels))
+    def placeholder_inputs(self, batch_size, num_channels):
+        pointcloud_pl = tf.placeholder(tf.float32, shape=(batch_size, None, num_channels))
         y_true_pl = tf.placeholder(tf.float32, shape=(batch_size))
         return pointcloud_pl, y_true_pl
     
@@ -24,7 +24,7 @@ class KNetModel(object):
         # input  -- (BATCH_SIZE, MAX_NPOINT, NUM_CHANNELS)
         # output -- (BATCH_SIZE, 1)
         batch_size = pointcloud.get_shape()[0].value
-        max_npoint = pointcloud.get_shape()[1].value
+        npoint = pointcloud.get_shape()[1].value
         num_channels = pointcloud.get_shape()[2].value
 
         """
@@ -74,9 +74,10 @@ class KNetModel(object):
 
         #### linear model for debugging
         initializer = tf.contrib.layers.xavier_initializer()
-        weights = tf.Variable(initializer([max_npoint, num_channels]))
+#        weights = tf.Variable(initializer([npoint, num_channels]))
         biases = tf.Variable(0.0)
-        y_pred = tf.tensordot(pointcloud, weights, axes=[[1,2], [0,1]]) + biases
+        y_pred = np.zeros((batch_size)) + biases
+#        y_pred = tf.tensordot(pointcloud, weights, axes=[[1,2], [0,1]]) + biases
         #### end of linear model
 
         return y_pred

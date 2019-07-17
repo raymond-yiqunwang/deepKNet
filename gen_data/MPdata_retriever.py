@@ -22,7 +22,7 @@ m = MPRester(api_key=my_API_key)
 #mp_data = m.query(criteria={"band_gap": { "$ne" : None}, "warnings": []}, properties=prop_list)
 # have band structure, no warning, 50171 instances
 #mp_data = m.query(criteria={"band_structure": { "$ne" : None}, "warnings": []}, properties=prop_list)
-mp_data = m.query(criteria={"band_structure": { "$ne" : None}, "nsites": { "$lt" : 20 }, "volume": { "$lt" : 300 },"warnings": []}, properties=prop_list)
+mp_data = m.query(criteria={"band_structure": { "$ne" : None}, "nsites": { "$lt" : 10 }, "volume": { "$lt" : 100 },"warnings": []}, properties=prop_list)
 
 index = 0
 data = []

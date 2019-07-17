@@ -7,7 +7,8 @@ import pymatgen.analysis.diffraction.xrd_mod as xrd
 import tensorflow as tf
 
 
-def check_max_npoint(source_file, wavelength):
+"""
+def check_max_npoint(source_file, wavelength, num_channels):
     # read data
     data = pd.read_csv(source_file, sep=';', header=0, index_col=None)
             
@@ -21,9 +22,10 @@ def check_max_npoint(source_file, wavelength):
             print("")
         struct = Structure.from_str(irow['cif'], fmt="cif")
         hkl = xrdcalc.get_pattern(struct)
-        if (len(hkl) > max_npoint):
-            max_npoint = len(hkl)
+        if (len(hkl) > num_channels*max_npoint):
+            max_npoint = int(len(hkl) / num_channels)
     return max_npoint
+"""
 
 
 # wrapper functions for TFRecord
@@ -40,10 +42,10 @@ def _int64_feature(value):
   return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
 
-def make_example(pointcloud_string, max_npoint, my_id, band_gap, formation_energy_per_atom, nsites):
+def make_example(pointcloud_string, num_channels, my_id, band_gap, formation_energy_per_atom, nsites):
         feature = {
             'pointcloud_raw': _bytes_feature(pointcloud_string),
-            'max_npoint': _int64_feature(max_npoint),
+            'num_channels': _int64_feature(num_channels),
             'my_id': _int64_feature(my_id),
             'band_gap': _float_feature(band_gap),
             'formation_energy_per_atom': _float_feature(formation_energy_per_atom),
@@ -52,13 +54,13 @@ def make_example(pointcloud_string, max_npoint, my_id, band_gap, formation_energ
         return tf.train.Example(features=tf.train.Features(feature=feature))
 
 
-def generate_pointnet(source_file, save_dir, wavelength, max_npoint):
+def generate_pointnet(source_file, save_dir, wavelength, num_channels):
     # read data
     data_origin = pd.read_csv(source_file, sep=';', header=0, index_col=None)
 
     # split data and store in multiple files
     num_instance = data_origin.shape[0]
-    instance_per_file = 8000
+    instance_per_file = 4000
     num_files = int(np.ceil(num_instance / instance_per_file))
     
     # init XRD calculator
@@ -78,8 +80,6 @@ def generate_pointnet(source_file, save_dir, wavelength, max_npoint):
             for index, irow in idata.iterrows():
                 struct = Structure.from_str(irow['cif'], fmt="cif")
                 hkl = xrdcalc.get_pattern(struct)
-                while(len(hkl) < max_npoint): hkl.append([0.]*4)
-                hkl = [val for sublist in hkl for val in sublist]
                 hkl = np.asarray(hkl, dtype=float)
                 pointcloud_string = hkl.tobytes()
     
@@ -88,7 +88,7 @@ def generate_pointnet(source_file, save_dir, wavelength, max_npoint):
                 formation_energy_per_atom = irow['formation_energy_per_atom']
                 nsites = irow['nsites']
     
-                tf_example = make_example(pointcloud_string, max_npoint, my_id, 
+                tf_example = make_example(pointcloud_string, num_channels, my_id, 
                                           band_gap, formation_energy_per_atom, nsites)
                 writer.write(tf_example.SerializeToString())
     
@@ -103,38 +103,15 @@ if __name__ == "__main__":
     
     input_data = "../data/MPdata.csv"
     wavelength = "CuKa"
+    num_channels = 4
     
+    """
     if (1):
-        max_npoint = check_max_npoint(source_file=input_data, wavelength=wavelength)
+        max_npoint = check_max_npoint(source_file=input_data, wavelength=wavelength, num_channels=num_channels)
         print("max npoint: {}".format(max_npoint))
     else:
-        max_npoint = 482
-
+        max_npoint = 940
+    """
     generate_pointnet(source_file=input_data, save_dir="../data/", \
-                      wavelength=wavelength, max_npoint=max_npoint)
+                      wavelength=wavelength, num_channels=num_channels)
 
-"""
-
-def read_record():
-    raw_data = tf.data.TFRecordDataset('test.tfrecords')
-    feature_description = {
-        'max_npoint': tf.FixedLenFeature([], tf.int64),
-        'pointcloud_raw': tf.FixedLenFeature([], tf.string),
-        'band_gap': tf.FixedLenFeature([], tf.float32),
-    }
-    
-    def _parse_image_function(example_proto):
-        return tf.parse_single_example(example_proto, feature_description)
-    
-    parsed_data = raw_data.map(_parse_image_function)
-
-    iterator = parsed_data.make_one_shot_iterator()
-    next_element = iterator.get_next()
-    sess = tf.Session()
-    for i in range(3):
-        item = sess.run(next_element)
-        pointcloud_raw = item['pointcloud_raw']
-        pointcloud = np.frombuffer(pointcloud_raw, dtype=float)
-        print(pointcloud.shape)
-
-"""
