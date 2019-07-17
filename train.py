@@ -83,7 +83,11 @@ class Trainer(object):
         loss_sum = 0.
         while True:
             try:
-                pointcloud_raw = idata['pointcloud_raw']
+                # pointcloud_raw = idata['pointcloud_raw']
+                # If you use tf.dataset, it is a part of the graph, so you need to first session run it to get the real data
+                # But it is not the best practice.
+                # Best one is directly feed it into your train function, and eval the loss
+                pointcloud_raw = sess.run(idata['pointcloud_raw'])
                 # NEED HELP WITH THIS, HOW TO FEED THIS TO SESS.RUN?
                 pointcloud_batch = np.frombuffer(pointcloud_raw, dtype=float).reshape((-1, self.num_channles))
                 y_true_batch = ...
