@@ -1,6 +1,8 @@
 #! /home/raymondw/.conda/envs/tf-cpu/bin/python
 from pymatgen import MPRester
 import pandas as pd
+import os
+
 
 # relevant properties:
 prop_list = [ 
@@ -20,7 +22,7 @@ m = MPRester(api_key=my_API_key)
 #mp_data = m.query(criteria={"band_gap": { "$ne" : None}, "warnings": []}, properties=prop_list)
 # have band structure, no warning, 50171 instances
 #mp_data = m.query(criteria={"band_structure": { "$ne" : None}, "warnings": []}, properties=prop_list)
-mp_data = m.query(criteria={"band_structure": { "$ne" : None}, "nsites": { "$lt" : 4 }, "volume": { "$lt" : 80},"warnings": []}, properties=prop_list)
+mp_data = m.query(criteria={"band_structure": { "$ne" : None}, "nsites": { "$lt" : 20 }, "volume": { "$lt" : 300 },"warnings": []}, properties=prop_list)
 
 index = 0
 data = []
@@ -31,8 +33,12 @@ for entry in mp_data:
     data.append(plist)
     index += 1
 
+out_dir = "../data/"
+if not os.path.isdir(out_dir):
+    os.mkdir(out_dir)
+
 prop_list.insert(0, "my_id")
 data = pd.DataFrame(data, index=None, columns=None)
-data.to_csv("../data/MPdata.csv", sep=';', columns=None, header=prop_list, index=None)
+data.to_csv(out_dir+"MPdata.csv", sep=';', columns=None, header=prop_list, index=None)
 
 

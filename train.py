@@ -7,30 +7,29 @@ import numpy as np
 import argparse
 from model import KNetModel
 import h5py
+import glob
 
 parser = argparse.ArgumentParser(description='CNN parameters')
-parser.add_argument('--max_npoint', type=int, default=744)
+parser.add_argument('--max_npoint', type=int, default=-1)
 parser.add_argument('--num_channels', type=int, default=4)
 parser.add_argument('--max_epoch', type=int, default=10, help='Epoch to run [default: 10]')
 parser.add_argument('--batch_size', type=int, default=32, help='Batch Size during training [default: 32]')
 parser.add_argument('--learning_rate', type=float, default=1e-3, help='Initial learning rate [default: 1e-3]')
 FLAGS = parser.parse_args()
 
-def read_data(path):
-    f = h5py.File(path, 'r')
-    I_hkl = f['I_hkl'][:100]
-    band_gap = f['band_gap'][:100]
-    return I_hkl, band_gap
-
 
 class Trainer(object):
     def __init__(self, data, **kwargs):
         self.KNet_model = KNetModel(**kwargs)
-        self.max_npoint = FLAGS.max_npoint
         self.num_channels = FLAGS.num_channels
         self.batch_size = FLAGS.batch_size
         self.max_epoch = FLAGS.max_epoch
         self.learning_rate = FLAGS.learning_rate
+        self.max_npoint = FLAGS.max_npoint
+        if self.max_npoint == -1:
+            print('--max_npoint must be set according to the input pointcloud data! Exit..')
+            sys.exit(1)
+        
 
     
     def train(self):
@@ -128,19 +127,24 @@ class Trainer(object):
         print("eval mean loss: {0:.1%}".format(loss_sum))
 
             
-
 if __name__ == "__main__":
     # load data 
-    def read_hdf5(filename, label):
-        with h5py.File(filename, 'r') as f:
+    with h5py.File("data/pointcloud_set0.h5", 'r') as f:
+        x0 = tf.data.Dataset.from_tensor_slices(f['I_hkl'][:100])
+    with h5py.File("data/pointcloud_set1.h5", 'r') as f:
+        x1 = tf.data.Dataset.from_tensor_slices(f['I_hkl'][:100])
+#        band_gap = tf.data.Dataset.from_tensor_slices(f['band_gap'][:100])
+    x = x0.concatenate(x1)
+    x = x.shuffle()
+    print(x)
+
+
+
             
-    f = h5py.File(path, 'r')
-    I_hkl = f['I_hkl'][:100]
-    band_gap = f['band_gap'][:100]
 
     # train
-    trainer = Trainer(data)
-    trainer.train()
+#    trainer = Trainer(data)
+#    trainer.train()
 
     # test
     # trainer.KNetModel
