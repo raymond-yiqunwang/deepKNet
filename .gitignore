@@ -1,6 +1,6 @@
 __pycache__/
 */__pycache__/
 data/
-train_logs/
-val_logs/
+logs_train/
+logs_val/
 save_model/

@@ -72,10 +72,12 @@ class RecordWriter(object):
             record_file = self.save_dir + 'pointcloud_{}.tfrecords'.format(mode)
             with tf.io.TFRecordWriter(record_file) as writer:
                 for index, irow in idata.iterrows():
+                    if (index % 1000 == 0): print(">> checkpoint {}".format(index))
                     struct = Structure.from_str(irow['cif'], fmt="cif")
                     pointcloud = xrdcalc.get_pattern(struct)
-                    while len(pointcloud) < 30: pointcloud.append(0.)
-                    pointcloud = pointcloud[:30]
+                    # take 800x3 for debugging purpose
+                    while len(pointcloud) < 2400: pointcloud.append(0.)
+                    pointcloud = pointcloud[:2400]
                     pointcloud = np.asarray(pointcloud, dtype=float)
         
                     my_id = irow['my_id']
@@ -88,18 +90,7 @@ class RecordWriter(object):
                 writer.close()
 
 
-if __name__ == "__main__":
-    
-    input_data = "../data/MPdata.csv"
-    save_dir = "../data/"
-    wavelength = "CuKa"
-    
-    rw = RecordWriter(input_data=input_data, save_dir=save_dir, wavelength=wavelength)
-    rw.write_pointnet()
-
-
-"""
-def check_max_npoint(source_file, wavelength, num_channels):
+def check_max_npoint(source_file, wavelength):
     # read data
     data = pd.read_csv(source_file, sep=';', header=0, index_col=None)
             
@@ -113,7 +104,18 @@ def check_max_npoint(source_file, wavelength, num_channels):
             print("")
         struct = Structure.from_str(irow['cif'], fmt="cif")
         hkl = xrdcalc.get_pattern(struct)
-        if (len(hkl) > num_channels*max_npoint):
-            max_npoint = int(len(hkl) / num_channels)
+        if (len(hkl) > 3*max_npoint):
+            max_npoint = int(len(hkl) / 3)
     return max_npoint
-"""
+
+
+if __name__ == "__main__":
+    
+    input_data = "../data/MPdata.csv"
+    save_dir = "../data/"
+    wavelength = "CuKa"
+
+#    print("max npoint : {}".format(check_max_npoint(input_data, wavelength)))
+    
+    rw = RecordWriter(input_data=input_data, save_dir=save_dir, wavelength=wavelength)
+    rw.write_pointnet()

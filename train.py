@@ -7,7 +7,7 @@ from model import KNetModel
 parser = argparse.ArgumentParser(description='KNet parameters')
 parser.add_argument('--num_channels', type=int, default=3)
 parser.add_argument('--train_epoch', type=int, default=2, help='Epoch to run [default: 2]')
-parser.add_argument('--batch_size', type=int, default=1, help='Batch Size during training [default: 1]')
+parser.add_argument('--batch_size', type=int, default=32, help='Batch Size during training [default: 32]')
 parser.add_argument('--learning_rate', type=float, default=1e-3, help='Initial learning rate [default: 1e-3]')
 parser.add_argument('--continue_training', type=bool, default=False)
 FLAGS = parser.parse_args()
@@ -52,9 +52,10 @@ class Trainer(object):
             features = iterator.get_next()
 
             pointcloud = tf.sparse_tensor_to_dense(features["pointcloud"])
-            pointcloud = tf.reshape(pointcloud, [self.batch_size, 10, 3])
+            # TODO will take care of the reshape problem later
+            pointcloud = tf.reshape(pointcloud, [self.batch_size, 800, 3])
 
-            band_gap = tf.reshape(features["band_gap"], [1,1])
+            band_gap = tf.reshape(features["band_gap"], [self.batch_size, 1])
 
             # define loss
             MAELoss = self.KNet_model.train_graph(pointcloud, band_gap)
@@ -72,7 +73,7 @@ class Trainer(object):
             merged = tf.summary.merge_all()
 
             # summary writer
-            train_writer = tf.summary.FileWriter("./train_logs", self.KNet_model.g_train)
+            train_writer = tf.summary.FileWriter("./logs_train", self.KNet_model.g_train)
 
             saver = tf.train.Saver()
             with tf.Session() as sess:
@@ -86,8 +87,10 @@ class Trainer(object):
                     try:
                         step, _, loss_val, mgd = sess.run([global_step, optimizer, MAELoss, merged])
                         train_writer.add_summary(mgd, step)
-                        if step % 1000 == 0:
-                            print("Save model at: {}".format(saver.save(sess, self.model_path)))
+                        if step % 100 == 0:
+                            print(">> Current step: {}".format(step))
+                            if step % 1000 == 0:
+                                print(">> Save model at: {}".format(saver.save(sess, self.model_path)))
 
                     except tf.errors.OutOfRangeError:
                         print("Fininshed training...")
@@ -98,14 +101,14 @@ class Trainer(object):
         with self.KNet_model.g_val.as_default():
             # input dataset
             dataset = load_tfrecords(self.val_data)
-            dataset = dataset.repeat(1).batch(self.batch_size)
+            dataset = dataset.batch(self.batch_size).repeat(1).shuffile(buffer_size=2000)
             iterator = dataset.make_one_shot_iterator()
             features = iterator.get_next()
 
             pointcloud = tf.sparse_tensor_to_dense(features["pointcloud"])
             pointcloud = tf.reshape(pointcloud, [self.batch_size, 10, 3])
 
-            band_gap = tf.reshape(features["band_gap"], [1,1])
+            band_gap = tf.reshape(features["band_gap"], [self.batch_size, 1])
 
             # define loss
             MAELoss = self.KNet_model.val_graph(pointcloud, band_gap)
@@ -114,7 +117,7 @@ class Trainer(object):
             merged = tf.summary.merge_all()
 
             # summary writer
-            val_writer = tf.summary.FileWriter("./val_logs", self.KNet_model.g_val)
+            val_writer = tf.summary.FileWriter("./logs_val", self.KNet_model.g_val)
             
             saver = tf.train.Saver()
             with tf.Session() as sess:
@@ -143,7 +146,7 @@ if __name__ == "__main__":
     trainer.train()
     
     # validate
-    trainer.validate()
+#    trainer.validate()
 
     # test
 
