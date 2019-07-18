@@ -44,6 +44,7 @@ class RecordWriter(object):
             writer.write(example.SerializeToString())
 
 
+
     def write_pointnet(self):
         # read data
         data_origin = pd.read_csv(self.input_data, sep=';', header=0, index_col=None)
@@ -84,6 +85,7 @@ class RecordWriter(object):
 
                     self.write_feature(writer, pointcloud, my_id, band_gap,
                                         formation_energy_per_atom, nsites)
+                writer.close()
 
 
 if __name__ == "__main__":
