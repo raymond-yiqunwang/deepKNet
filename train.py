@@ -2,13 +2,14 @@
 
 import tensorflow as tf
 import argparse
+import sys
 from model import KNetModel
 
 parser = argparse.ArgumentParser(description='KNet parameters')
-parser.add_argument('--num_channels', type=int, default=3)
-parser.add_argument('--train_epoch', type=int, default=2, help='Epoch to run [default: 2]')
-parser.add_argument('--batch_size', type=int, default=32, help='Batch Size during training [default: 32]')
-parser.add_argument('--learning_rate', type=float, default=1e-3, help='Initial learning rate [default: 1e-3]')
+parser.add_argument('--num_channels', type=int, default=4)
+parser.add_argument('--train_epoch', type=int, default=100)
+parser.add_argument('--batch_size', type=int, default=1)
+parser.add_argument('--learning_rate', type=float, default=1e-4)
 parser.add_argument('--continue_training', type=bool, default=False)
 FLAGS = parser.parse_args()
 
@@ -32,7 +33,7 @@ def load_tfrecords(record_files):
 
 class Trainer(object):
     def __init__(self, batch_size, num_channels, learning_rate, train_epoch, model_path=None, continue_training=False):
-        self.KNet_model = KNetModel(batch_size, num_channels)
+        self.KNet_model = KNetModel()
         self.batch_size = batch_size
         self.num_channels = num_channels
         self.learning_rate = learning_rate
@@ -52,28 +53,31 @@ class Trainer(object):
             features = iterator.get_next()
 
             pointcloud = tf.sparse_tensor_to_dense(features["pointcloud"])
-            # TODO will take care of the reshape problem later
-            pointcloud = tf.reshape(pointcloud, [self.batch_size, 800, 3])
+            pointcloud = tf.reshape(pointcloud, [self.batch_size, -1, self.num_channels])
 
             band_gap = tf.reshape(features["band_gap"], [self.batch_size, 1])
 
             # define loss
-            MAELoss = self.KNet_model.train_graph(pointcloud, band_gap)
-            tf.summary.scalar('MAELoss', MAELoss)
+            MSELoss = self.KNet_model.train_graph(pointcloud, band_gap)
+            tf.summary.scalar('MSELoss', MSELoss)
 
             # TODO learning rate decay
+            # lr_scheduling
             learning_rate = self.learning_rate
-            tf.summary.scalar('learning_rate', learning_rate)
+            #tf.summary.scalar('learning_rate', learning_rate)
+
+            # TODO BN
+
+            # tf.summary.histo to visualize weight distribution
 
             global_step = tf.Variable(0, name='global_step',trainable=False)
 
             # define optimizer
-            optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(MAELoss, global_step=global_step)
-
-            merged = tf.summary.merge_all()
+            optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(MSELoss, global_step=global_step)
 
             # summary writer
             train_writer = tf.summary.FileWriter("./logs_train", self.KNet_model.g_train)
+            merged = tf.summary.merge_all()
 
             saver = tf.train.Saver()
             with tf.Session() as sess:
@@ -85,18 +89,19 @@ class Trainer(object):
 
                 while True:
                     try:
-                        step, _, loss_val, mgd = sess.run([global_step, optimizer, MAELoss, merged])
+                        step, _, loss_val, mgd = sess.run([global_step, optimizer, MSELoss, merged])
                         train_writer.add_summary(mgd, step)
-                        if step % 100 == 0:
+                        if step % 5000 == 0:
                             print(">> Current step: {}".format(step))
-                            if step % 1000 == 0:
-                                print(">> Save model at: {}".format(saver.save(sess, self.model_path)))
+                            print(">> Save model at: {}".format(saver.save(sess, self.model_path)))
+                            print("")
 
                     except tf.errors.OutOfRangeError:
                         print("Fininshed training...")
                         break
 
 
+    """
     def validate(self):
         with self.KNet_model.g_val.as_default():
             # input dataset
@@ -106,13 +111,13 @@ class Trainer(object):
             features = iterator.get_next()
 
             pointcloud = tf.sparse_tensor_to_dense(features["pointcloud"])
-            pointcloud = tf.reshape(pointcloud, [self.batch_size, 10, 3])
+            pointcloud = tf.reshape(pointcloud, [self.batch_size, 10, 4])
 
             band_gap = tf.reshape(features["band_gap"], [self.batch_size, 1])
 
             # define loss
-            MAELoss = self.KNet_model.val_graph(pointcloud, band_gap)
-            tf.summary.scalar('MAELoss', MAELoss)
+            MSELoss = self.KNet_model.val_graph(pointcloud, band_gap)
+            tf.summary.scalar('MSELoss', MSELoss)
             
             merged = tf.summary.merge_all()
 
@@ -134,6 +139,7 @@ class Trainer(object):
                     except tf.errors.OutOfRangeError:
                         print("Fininshed validating...")
                         break
+    """
 
 
 if __name__ == "__main__":
@@ -146,6 +152,7 @@ if __name__ == "__main__":
     trainer.train()
     
     # validate
+    # TODO refer to AIPIT
 #    trainer.validate()
 
     # test

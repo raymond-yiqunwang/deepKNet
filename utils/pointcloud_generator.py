@@ -8,6 +8,33 @@ import tensorflow as tf
 from collections import Iterable
 import random
 
+# XRD wavelengths in angstroms
+WAVELENGTHS = {
+    "CuKa": 1.54184,
+    "CuKa2": 1.54439,
+    "CuKa1": 1.54056,
+    "CuKb1": 1.39222,
+    "MoKa": 0.71073,
+    "MoKa2": 0.71359,
+    "MoKa1": 0.70930,
+    "MoKb1": 0.63229,
+    "CrKa": 2.29100,
+    "CrKa2": 2.29361,
+    "CrKa1": 2.28970,
+    "CrKb1": 2.08487,
+    "FeKa": 1.93735,
+    "FeKa2": 1.93998,
+    "FeKa1": 1.93604,
+    "FeKb1": 1.75661,
+    "CoKa": 1.79026,
+    "CoKa2": 1.79285,
+    "CoKa1": 1.78896,
+    "CoKb1": 1.63079,
+    "AgKa": 0.560885,
+    "AgKa2": 0.563813,
+    "AgKa1": 0.559421,
+    "AgKb1": 0.497082,
+}
 
 class RecordWriter(object):
     def __init__(self, input_data, save_dir, wavelength):
@@ -43,7 +70,12 @@ class RecordWriter(object):
             example = tf.train.Example(features=tf.train.Features(feature=feature))
             writer.write(example.SerializeToString())
 
-
+    def pointcloud_normalizer(self, pointcloud_raw):
+        pointcloud = np.asarray(pointcloud_raw, dtype=float)
+        radius = 2. / WAVELENGTHS[self.wavelength]
+        pointcloud[:,:3] /= radius
+        pointcloud[:,-1] = np.where(pointcloud[:,-1]>1e-6, np.log(pointcloud[:,-1]), np.log(1e-6))
+        return pointcloud
 
     def write_pointnet(self):
         # read data
@@ -65,20 +97,20 @@ class RecordWriter(object):
         for mode in ['train', 'val', 'test']:
             print("writing {} records..".format(mode))
 
-            if (mode == 'train'): idata = data_origin.iloc[rand_index[:num_train]]
-            elif (mode == 'val'): idata = data_origin.iloc[rand_index[num_train: num_train+num_val]]
-            else: idata = data_origin.iloc[rand_index[num_train+num_val:]]
+            if (mode == 'train'): index = rand_index[:num_train]
+            elif (mode == 'val'): index = rand_index[num_train: num_train+num_val]
+            else: index = rand_index[num_train+num_val:]
 
             record_file = self.save_dir + 'pointcloud_{}.tfrecords'.format(mode)
             with tf.io.TFRecordWriter(record_file) as writer:
-                for index, irow in idata.iterrows():
-                    if (index % 1000 == 0): print(">> checkpoint {}".format(index))
+                cnt = 0
+                for idx in index:
+                    if (cnt % 5000 == 0): print(">> checkpoint {}".format(cnt))
+                    irow = data_origin.iloc[idx]
                     struct = Structure.from_str(irow['cif'], fmt="cif")
                     pointcloud = xrdcalc.get_pattern(struct)
-                    # take 800x3 for debugging purpose
-                    while len(pointcloud) < 2400: pointcloud.append(0.)
-                    pointcloud = pointcloud[:2400]
-                    pointcloud = np.asarray(pointcloud, dtype=float)
+                    pointcloud = self.pointcloud_normalizer(pointcloud)
+                    pointcloud = pointcloud.flatten()
         
                     my_id = irow['my_id']
                     band_gap = irow['band_gap']
@@ -87,6 +119,8 @@ class RecordWriter(object):
 
                     self.write_feature(writer, pointcloud, my_id, band_gap,
                                         formation_energy_per_atom, nsites)
+                    cnt += 1
+
                 writer.close()
 
 
