@@ -8,7 +8,7 @@ from model import KNetModel
 parser = argparse.ArgumentParser(description='KNet parameters')
 parser.add_argument('--num_channels', type=int, default=4)
 parser.add_argument('--train_epoch', type=int, default=100)
-parser.add_argument('--batch_size', type=int, default=1)
+parser.add_argument('--batch_size', type=int, default=32)
 parser.add_argument('--learning_rate', type=float, default=1e-4)
 parser.add_argument('--continue_training', type=bool, default=False)
 FLAGS = parser.parse_args()
@@ -48,12 +48,12 @@ class Trainer(object):
         with self.KNet_model.g_train.as_default():
             # input dataset
             dataset = load_tfrecords(self.train_data)
-            dataset = dataset.batch(self.batch_size).repeat(self.train_epoch).shuffle(buffer_size=2000)
+            dataset = dataset.batch(self.batch_size).repeat(self.train_epoch).shuffle(buffer_size=500)
             iterator = dataset.make_one_shot_iterator()
             features = iterator.get_next()
 
             pointcloud = tf.sparse_tensor_to_dense(features["pointcloud"])
-            pointcloud = tf.reshape(pointcloud, [self.batch_size, -1, self.num_channels])
+            pointcloud = tf.reshape(pointcloud, [self.batch_size, 2500, self.num_channels])
 
             band_gap = tf.reshape(features["band_gap"], [self.batch_size, 1])
 
@@ -91,7 +91,7 @@ class Trainer(object):
                     try:
                         step, _, loss_val, mgd = sess.run([global_step, optimizer, MSELoss, merged])
                         train_writer.add_summary(mgd, step)
-                        if step % 5000 == 0:
+                        if step % 1000 == 0:
                             print(">> Current step: {}".format(step))
                             print(">> Save model at: {}".format(saver.save(sess, self.model_path)))
                             print("")
