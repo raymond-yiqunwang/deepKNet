@@ -73,7 +73,8 @@ class Trainer(object):
             global_step = tf.Variable(0, name='global_step',trainable=False)
 
             # define optimizer
-            optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(MSELoss, global_step=global_step)
+            # optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(MSELoss, global_step=global_step)
+            optimizer = tf.train.AdamOptimizer(learning_rate).minimize(MSELoss, global_step=global_step)
 
             # summary writer
             train_writer = tf.summary.FileWriter("./logs_train", self.KNet_model.g_train)
