@@ -28,7 +28,6 @@ class KNetModel(object):
     def train_graph(self, pointcloud, band_gap):
         # pointnet shape: (batch_size, npoint, num_channel)
         batch_size = pointcloud.get_shape()[0].value
-        num_point = pointcloud.get_shape()[1].value
         is_training = tf.constant(True, dtype=bool)
         bn_decay = None
         

@@ -8,8 +8,8 @@ from model import KNetModel
 parser = argparse.ArgumentParser(description='KNet parameters')
 parser.add_argument('--num_channels', type=int, default=4)
 parser.add_argument('--train_epoch', type=int, default=100)
-parser.add_argument('--batch_size', type=int, default=16)
-parser.add_argument('--learning_rate', type=float, default=1e-4)
+parser.add_argument('--batch_size', type=int, default=1)
+parser.add_argument('--learning_rate', type=float, default=1e-3)
 parser.add_argument('--continue_training', type=bool, default=False)
 FLAGS = parser.parse_args()
 
@@ -40,8 +40,8 @@ class Trainer(object):
         self.train_epoch = train_epoch
         self.model_path = model_path
         self.continue_training = continue_training
-        self.train_data = "data/pointcloud_train.tfrecords"
-        self.val_data = "data/pointcloud_val.tfrecords"
+        self.train_data = "./data/pointcloud_train.tfrecords"
+        self.val_data = "./data/pointcloud_val.tfrecords"
 
     
     def train(self):
@@ -53,20 +53,20 @@ class Trainer(object):
             features = iterator.get_next()
 
             pointcloud = tf.sparse_tensor_to_dense(features["pointcloud"])
-            pointcloud = tf.reshape(pointcloud, [self.batch_size, 2500, self.num_channels])
+            pointcloud = tf.reshape(pointcloud, [self.batch_size, -1, self.num_channels])
 
+            # TODO this is ugly but works for the moment
             band_gap = tf.reshape(features["band_gap"], [self.batch_size, 1])
 
             # define loss
             MSELoss = self.KNet_model.train_graph(pointcloud, band_gap)
             tf.summary.scalar('MSELoss', MSELoss)
 
-            # TODO learning rate decay
-            # lr_scheduling
+            # TODO learning rate decay, lr_scheduling
             learning_rate = self.learning_rate
             #tf.summary.scalar('learning_rate', learning_rate)
 
-            # TODO BN
+            # TODO batch normalization
 
             # tf.summary.histo to visualize weight distribution
 
@@ -91,7 +91,7 @@ class Trainer(object):
                     try:
                         step, _, loss_val, mgd = sess.run([global_step, optimizer, MSELoss, merged])
                         train_writer.add_summary(mgd, step)
-                        if step % 1000 == 0:
+                        if step % 5000 == 0:
                             print(">> Current step: {}".format(step))
                             print(">> Save model at: {}".format(saver.save(sess, self.model_path)))
                             print("")
@@ -101,60 +101,13 @@ class Trainer(object):
                         break
 
 
-    """
-    def validate(self):
-        with self.KNet_model.g_val.as_default():
-            # input dataset
-            dataset = load_tfrecords(self.val_data)
-            dataset = dataset.batch(self.batch_size).repeat(1).shuffile(buffer_size=2000)
-            iterator = dataset.make_one_shot_iterator()
-            features = iterator.get_next()
-
-            pointcloud = tf.sparse_tensor_to_dense(features["pointcloud"])
-            pointcloud = tf.reshape(pointcloud, [self.batch_size, 10, 4])
-
-            band_gap = tf.reshape(features["band_gap"], [self.batch_size, 1])
-
-            # define loss
-            MSELoss = self.KNet_model.val_graph(pointcloud, band_gap)
-            tf.summary.scalar('MSELoss', MSELoss)
-            
-            merged = tf.summary.merge_all()
-
-            # summary writer
-            val_writer = tf.summary.FileWriter("./logs_val", self.KNet_model.g_val)
-            
-            saver = tf.train.Saver()
-            with tf.Session() as sess:
-                sess.run(tf.global_variables_initializer())
-
-                if self.model_path:
-                    print("Loading model at:", self.model_path)
-                    saver.restore(sess, self.model_path)
-
-                while True:
-                    try:
-                        mgd = sess.run(merged)
-                        val_writer.add_summary(mgd)
-                    except tf.errors.OutOfRangeError:
-                        print("Fininshed validating...")
-                        break
-    """
-
-
 if __name__ == "__main__":
 
     trainer = Trainer(batch_size=FLAGS.batch_size, num_channels=FLAGS.num_channels,
                       learning_rate=FLAGS.learning_rate, train_epoch=FLAGS.train_epoch,
-                      model_path="save_model/model.ckpt", continue_training=FLAGS.continue_training)
+                      model_path="./save_model/model.ckpt", continue_training=FLAGS.continue_training)
     
     # train
     trainer.train()
     
-    # validate
-    # TODO refer to AIPIT
-#    trainer.validate()
-
-    # test
-
 
