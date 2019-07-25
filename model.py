@@ -93,6 +93,7 @@ class KNetModel(object):
 
 
         #return tf.reduce_mean(tf.losses.absolute_difference(y_pred, band_gap))
-        return tf.sqrt(tf.reduce_mean((y_pred - band_gap)**2))
+        #return tf.sqrt(tf.reduce_mean((y_pred - band_gap)**2))
+        return tf.losses.huber_loss(band_gap, y_pred, delta=0.5, reduction=tf.losses.Reduction.SUM_OVER_BATCH_SIZE)
 
 
