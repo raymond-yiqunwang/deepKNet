@@ -8,7 +8,7 @@ from model import KNetModel
 parser = argparse.ArgumentParser(description='KNet parameters')
 parser.add_argument('--num_channels', type=int, default=4)
 parser.add_argument('--train_epoch', type=int, default=100)
-parser.add_argument('--batch_size', type=int, default=32)
+parser.add_argument('--batch_size', type=int, default=16)
 parser.add_argument('--learning_rate', type=float, default=1e-4)
 parser.add_argument('--continue_training', type=bool, default=False)
 FLAGS = parser.parse_args()
