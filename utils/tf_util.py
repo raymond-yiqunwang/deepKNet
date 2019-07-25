@@ -97,6 +97,9 @@ def conv2d(inputs,
                                 tf.constant_initializer(0.0))
       outputs = tf.nn.bias_add(outputs, biases)
 
+      tf.summary.histogram('conv_kernel', kernel)
+      tf.summary.histogram('bias', biases)
+
       if activation_fn is not None:
         outputs = activation_fn(outputs)
       return outputs
@@ -113,11 +116,11 @@ def fully_connected(inputs,
                     bn_decay=None,
                     is_training=None):
   """ Fully connected layer with non-linear operation.
-  
+
   Args:
     inputs: 2-D tensor BxN
     num_outputs: int
-  
+
   Returns:
     Variable tensor of size B x num_outputs.
   """
@@ -132,7 +135,9 @@ def fully_connected(inputs,
     biases = _variable_on_cpu('biases', [num_outputs],
                              tf.constant_initializer(0.0))
     outputs = tf.nn.bias_add(outputs, biases)
-     
+
+    tf.summary.histogram('weights', weights)
+    tf.summary.histogram('bias', biases)
     if activation_fn is not None:
       outputs = activation_fn(outputs)
     return outputs
@@ -149,7 +154,7 @@ def max_pool2d(inputs,
     inputs: 4-D tensor BxHxWxC
     kernel_size: a list of 2 ints
     stride: a list of 2 ints
-  
+
   Returns:
     Variable tensor
   """
@@ -174,7 +179,7 @@ def avg_pool2d(inputs,
     inputs: 4-D tensor BxHxWxC
     kernel_size: a list of 2 ints
     stride: a list of 2 ints
-  
+
   Returns:
     Variable tensor
   """
