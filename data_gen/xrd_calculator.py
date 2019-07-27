@@ -3,7 +3,7 @@ import os
 import json
 from math import sin, cos, asin, pi, degrees, radians
 import numpy as np
-from xrd_core import AbstractDiffractionPatternCalculator
+from pymatgen.analysis.diffraction.core import AbstractDiffractionPatternCalculator
 
 
 # XRD wavelengths in angstroms
