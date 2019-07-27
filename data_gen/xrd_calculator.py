@@ -1,3 +1,4 @@
+### Copied and modified from pymatgen
 import os
 import json
 from math import sin, cos, asin, pi, degrees, radians
@@ -90,11 +91,8 @@ class XRDCalculator(AbstractDiffractionPatternCalculator):
         for hkl, g_hkl, ind, _ in sorted(
                 recip_pts, key=lambda i: (i[1], -i[0][0], -i[0][1], -i[0][2])):
             # Force miller indices to be integers.
-            hkl = [int(round(i)) for i in hkl]
             if g_hkl != 0:
                 # normalized coordinate within limiting sphere
-                hkl_data = list(np.dot(recip_basis.T, hkl) / max_r)
-                assert(np.linalg.norm(hkl_data) < max_r)
                 
                 d_hkl = 1 / g_hkl
 
@@ -131,8 +129,11 @@ class XRDCalculator(AbstractDiffractionPatternCalculator):
                 # Intensity for hkl is modulus square of structure factor.
                 i_hkl = (f_hkl * f_hkl.conjugate()).real
                 
-                if (i_hkl > 1e-6):
-                    hkl_data.append(np.log(i_hkl))
-                    out.append(hkl_data)
+                # each point in the reciprocal space is represented by a 4D vector -- [x, y, z, intensity]
+                hkl_data = list(np.dot(recip_basis.T, hkl) / max_r)
+                assert(np.linalg.norm(hkl_data) < 1.)
+                hkl_data.append(i_hkl)
+                
+                out.append(hkl_data)
 
         return out

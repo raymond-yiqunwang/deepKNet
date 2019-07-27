@@ -1,4 +1,4 @@
-#! /home/raymondw/.conda/envs/pymatgen/bin/python
+#! /home/raymondw/.conda/envs/tf-cpu/bin/python
 import pandas as pd
 import numpy as np
 import os
@@ -9,9 +9,9 @@ from collections import Iterable
 import random
 
 
-class RecordWriter(object):
-    def __init__(self, input_data, save_dir, wavelength):
-        self.input_data = input_data
+class tfRecordWriter(object):
+    def __init__(self, data, save_dir, wavelength):
+        self.data = data
         self.save_dir = save_dir
         self.wavelength = wavelength
 
@@ -43,13 +43,10 @@ class RecordWriter(object):
             example = tf.train.Example(features=tf.train.Features(feature=feature))
             writer.write(example.SerializeToString())
 
-    def write_pointnet(self):
-        # read data
-        data_origin = pd.read_csv(self.input_data, sep=';', header=0, index_col=None)
-    
+    def write_pointcloud(self):
         # split data into train, val, and test
         # TODO currently use all for training, update ratio later
-        num_instance = data_origin.shape[0]
+        num_instance = self.data.shape[0]
         rand_index = list(np.arange(num_instance))
         random.shuffle(rand_index)
         train_ratio = 0.9
@@ -73,10 +70,13 @@ class RecordWriter(object):
                 cnt = 0
                 for idx in index:
                     if (cnt % 1000 == 0): print(">> checkpoint {}".format(cnt))
-                    irow = data_origin.iloc[idx]
+                    irow = self.data.iloc[idx]
                     struct = Structure.from_str(irow['cif'], fmt="cif")
-                    pointcloud = xrdcalc.get_pattern(struct)
-                    pointcloud = np.asarray(pointcloud).flatten()
+                    pointcloud = np.asarray(xrdcalc.get_pattern(struct))
+                    # normalize intensity
+                    pointcloud[:, -1] = (pointcloud[:, -1] - np.mean(pointcloud[:, -1])) \
+                                             / np.max(pointcloud[:, -1])
+                    pointcloud = pointcloud.flatten()
         
                     my_id = irow['my_id']
                     band_gap = irow['band_gap']
@@ -88,15 +88,5 @@ class RecordWriter(object):
                     cnt += 1
 
                 writer.close()
-
-
-if __name__ == "__main__":
-    
-    input_data = "../data/MPdata.csv"
-    save_dir = "../data/"
-    wavelength = "CuKa"
-
-    rw = RecordWriter(input_data=input_data, save_dir=save_dir, wavelength=wavelength)
-    rw.write_pointnet()
 
 
