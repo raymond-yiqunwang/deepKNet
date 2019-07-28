@@ -6,7 +6,7 @@ import sys
 from model import KNetModel
 
 parser = argparse.ArgumentParser(description='KNet parameters')
-parser.add_argument('--num_channels', type=int, default=4)
+parser.add_argument('--num_channels', type=int, default=123)
 parser.add_argument('--train_epoch', type=int, default=100)
 parser.add_argument('--batch_size', type=int, default=1)
 parser.add_argument('--learning_rate', type=float, default=1e-3)
