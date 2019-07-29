@@ -7,7 +7,7 @@ from model import KNetModel
 
 parser = argparse.ArgumentParser(description='KNet parameters')
 parser.add_argument('--num_channels', type=int, default=123)
-parser.add_argument('--train_epoch', type=int, default=100)
+parser.add_argument('--max_epoch', type=int, default=100)
 parser.add_argument('--batch_size', type=int, default=1)
 parser.add_argument('--learning_rate', type=float, default=1e-3)
 parser.add_argument('--continue_training', type=bool, default=False)
@@ -19,10 +19,7 @@ def load_tfrecords(record_files):
 
     feature_description = {
         'pointcloud': tf.VarLenFeature(tf.float32),
-        'my_id': tf.FixedLenFeature([], tf.int64),
-        'band_gap': tf.FixedLenFeature([], tf.float32),
-        'formation_energy_per_atom': tf.FixedLenFeature([], tf.float32),
-        'nsites': tf.FixedLenFeature([], tf.int64),
+        'band_gap': tf.FixedLenFeature([], tf.float32)
     }
     def _parse_pointcloud_function(example_proto):
         return tf.parse_single_example(example_proto, feature_description)
@@ -32,24 +29,36 @@ def load_tfrecords(record_files):
 
 
 class Trainer(object):
-    def __init__(self, batch_size, num_channels, learning_rate, train_epoch, model_path=None, continue_training=False):
+    def __init__(self, batch_size, num_channels, learning_rate, max_epoch, model_path=None, continue_training=False):
         self.KNet_model = KNetModel()
-        self.batch_size = batch_size
         self.num_channels = num_channels
-        self.learning_rate = learning_rate
-        self.train_epoch = train_epoch
-        self.model_path = model_path
-        self.continue_training = continue_training
-        self.train_data = "./data/pointcloud_train.tfrecords"
-        self.val_data = "./data/pointcloud_val.tfrecords"
 
+        self.learning_rate = learning_rate
+        self.batch_size = batch_size
+        self.max_epoch = max_epoch
+        
+        self.continue_training = continue_training
+        self.model_path = model_path
+        self.train_data = "./data/pointcloud_train.tfrecords"
+        self.valid_data = "./data/pointcloud_valid.tfrecords"
+        
+        self.train_ops = self._get_train_ops()
+        self.valid_ops = self._get_valid_ops()
+
+        # init tf sessions
+        self.train_session = tf.Session(graph=self.KNet_model.g_train)
+        sess = self.train_session
+        sess.run(self.train_init)
+        
+#        self.valid_session = tf.Session(graph=self.KNet_model.g_valid)
+        
     
-    def train(self):
-        with self.KNet_model.g_train.as_default():
-            # input dataset
-            dataset = load_tfrecords(self.train_data)
-            dataset = dataset.batch(self.batch_size).repeat(self.train_epoch).shuffle(buffer_size=500)
-            iterator = dataset.make_one_shot_iterator()
+    def _get_valid_ops(self):
+        with self.KNet_model.g_valid.as_default():
+            dataset = load_tfrecords(self.valid_data)
+            dataset = dataset.batch(self.batch_size).repeat(1)
+            iterator = dataset.make_initializable_iterator()
+            self.valid_iterator = iterator
             features = iterator.get_next()
 
             pointcloud = tf.sparse_tensor_to_dense(features["pointcloud"])
@@ -59,8 +68,70 @@ class Trainer(object):
             band_gap = tf.reshape(features["band_gap"], [self.batch_size, 1])
 
             # define loss
-            MSELoss = self.KNet_model.train_graph(pointcloud, band_gap)
-            tf.summary.scalar('MSELoss', MSELoss)
+            loss = self.KNet_model.valid_graph(pointcloud, band_gap)
+            tf.summary.scalar('loss', loss)
+
+            # TODO learning rate decay, lr_scheduling
+            learning_rate = self.learning_rate
+            #tf.summary.scalar('learning_rate', learning_rate)
+
+            # TODO batch normalization
+
+            # tf.summary.histo to visualize weight distribution
+
+            global_step = tf.Variable(0, name='global_step',trainable=False)
+
+            # summary writer
+            self.valid_writer = tf.summary.FileWriter("./logs/valid", self.KNet_model.g_valid)
+            merged = tf.summary.merge_all()
+
+            self.valid_init = tf.global_variables_initializer()
+            self.valid_saver = tf.train.Saver()
+            
+            return global_step, loss, merged
+    
+    def valid(self):
+        writer = self.valid_writer
+        saver = self.valid_saver
+
+        sess = self.valid_session
+        sess.run(self.valid_iterator.initializer)
+
+        saver.restore(sess, self.model_path)
+
+        pdata = 0.0
+        cnt = 0
+
+        while True:
+            try:
+                step, loss, mgd = sess.run(self.train_ops)
+                writer.add_summary(mgd, step)
+                pdata += loss.sum() # TODO average?
+                cnt += 1
+
+            except tf.errors.OutOfRangeError as e:
+                print("Average batch loss: {.3f}\n".format(pdata/cnt))
+                break
+            
+
+    def _get_train_ops(self):
+        with self.KNet_model.g_train.as_default():
+            # input dataset
+            dataset = load_tfrecords(self.train_data)
+            dataset = dataset.batch(self.batch_size).repeat(1).shuffle(buffer_size=300)
+            iterator = dataset.make_initializable_iterator()
+            self.train_iterator = iterator
+            features = iterator.get_next()
+
+            pointcloud = tf.sparse_tensor_to_dense(features["pointcloud"])
+            pointcloud = tf.reshape(pointcloud, [self.batch_size, -1, self.num_channels])
+
+            # TODO this is ugly but works for the moment
+            band_gap = tf.reshape(features["band_gap"], [self.batch_size, 1])
+
+            # define loss
+            loss = self.KNet_model.train_graph(pointcloud, band_gap)
+            tf.summary.scalar('Huber loss', loss)
 
             # TODO learning rate decay, lr_scheduling
             learning_rate = self.learning_rate
@@ -73,42 +144,63 @@ class Trainer(object):
             global_step = tf.Variable(0, name='global_step',trainable=False)
 
             # define optimizer
-            # optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(MSELoss, global_step=global_step)
-            optimizer = tf.train.AdamOptimizer(learning_rate).minimize(MSELoss, global_step=global_step)
+            # optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step=global_step)
+            optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step)
 
             # summary writer
-            train_writer = tf.summary.FileWriter("./logs_train", self.KNet_model.g_train)
+            self.train_writer = tf.summary.FileWriter("./logs/train", self.KNet_model.g_train)
             merged = tf.summary.merge_all()
 
-            saver = tf.train.Saver()
-            with tf.Session() as sess:
-                sess.run(tf.global_variables_initializer())
+            self.train_init = tf.global_variables_initializer()
+            self.train_saver = tf.train.Saver()
+            
+            return global_step, optimizer, loss, merged
+    
+    def train(self):
+        
+        writer = self.train_writer
+        saver = self.train_saver
 
-                if (self.continue_training and self.model_path):
-                    print("Loading model at:", self.model_path)
-                    saver.restore(sess, self.model_path)
+        sess = self.train_session
+        sess.run(self.train_iterator.initializer)
 
-                while True:
-                    try:
-                        step, _, loss_val, mgd = sess.run([global_step, optimizer, MSELoss, merged])
-                        train_writer.add_summary(mgd, step)
-                        if step % 5000 == 0:
-                            print(">> Current step: {}".format(step))
-                            print(">> Save model at: {}".format(saver.save(sess, self.model_path)))
-                            print("")
+        while True:
+            try:
+                step, _, loss, mgd = sess.run(self.train_ops)
+                writer.add_summary(mgd, step)
 
-                    except tf.errors.OutOfRangeError:
-                        print("Fininshed training...")
-                        break
+            except tf.errors.OutOfRangeError as e:
+                print("")
+                break
+            
+        print(">> Save model at: {}".format(saver.save(sess, self.model_path)))
+        print("")
+
+
+    def train_and_eval(self):
+        tf.logging.set_verbosity(tf.logging.ERROR)
+        print('###')
+
+        for i in range(self.max_epoch):
+            print("In epoch #{}, ".format(i+1), end="\n")
+            self.train()
+#            self.valid()
+
+        self.train_session.close()
+#        self.valid_session.close()
 
 
 if __name__ == "__main__":
 
-    trainer = Trainer(batch_size=FLAGS.batch_size, num_channels=FLAGS.num_channels,
-                      learning_rate=FLAGS.learning_rate, train_epoch=FLAGS.train_epoch,
-                      model_path="./save_model/model.ckpt", continue_training=FLAGS.continue_training)
+    trainer = Trainer(batch_size        = FLAGS.batch_size,
+                      num_channels      = FLAGS.num_channels,
+                      learning_rate     = FLAGS.learning_rate,
+                      max_epoch       = FLAGS.max_epoch,
+                      model_path        = "./save_model/model.ckpt",
+                      continue_training = FLAGS.continue_training
+                      )
     
     # train
-    trainer.train()
+    trainer.train_and_eval()
     
 
