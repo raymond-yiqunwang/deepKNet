@@ -5,6 +5,8 @@ import argparse
 import sys
 from model import KNetModel
 
+DEBUG = True
+
 parser = argparse.ArgumentParser(description='KNet parameters')
 parser.add_argument('--num_channels', type=int, default=123)
 parser.add_argument('--max_epoch', type=int, default=100)
@@ -30,27 +32,28 @@ def load_tfrecords(record_files):
 
 class Trainer(object):
     def __init__(self, batch_size, num_channels, learning_rate, max_epoch, model_path=None, continue_training=False):
+        # initialize model
         self.KNet_model = KNetModel()
         self.num_channels = num_channels
-
         self.learning_rate = learning_rate
         self.batch_size = batch_size
         self.max_epoch = max_epoch
-        
         self.continue_training = continue_training
-        self.model_path = model_path
+        
+        # data and saving directories
         self.train_data = "./data/pointcloud_train.tfrecords"
         self.valid_data = "./data/pointcloud_valid.tfrecords"
+        if (DEBUG):
+            self.train_data = "./data/pointcloud_debug.tfrecords"
+            self.valid_data = "./data/pointcloud_debug.tfrecords"
+        self.model_path = model_path
         
-        self.train_ops = self._get_train_ops()
-        self.valid_ops = self._get_valid_ops()
-
-        # init tf sessions
+        # init tf sessions and get train valid ops
         self.train_session = tf.Session(graph=self.KNet_model.g_train)
-        sess = self.train_session
-        sess.run(self.train_init)
+        self.train_ops = self._get_train_ops()
         
-#        self.valid_session = tf.Session(graph=self.KNet_model.g_valid)
+        self.valid_session = tf.Session(graph=self.KNet_model.g_valid)
+        self.valid_ops = self._get_valid_ops()
         
     
     def _get_valid_ops(self):
@@ -64,53 +67,42 @@ class Trainer(object):
             pointcloud = tf.sparse_tensor_to_dense(features["pointcloud"])
             pointcloud = tf.reshape(pointcloud, [self.batch_size, -1, self.num_channels])
 
-            # TODO this is ugly but works for the moment
             band_gap = tf.reshape(features["band_gap"], [self.batch_size, 1])
 
-            # define loss
             loss = self.KNet_model.valid_graph(pointcloud, band_gap)
             tf.summary.scalar('loss', loss)
 
-            # TODO learning rate decay, lr_scheduling
-            learning_rate = self.learning_rate
-            #tf.summary.scalar('learning_rate', learning_rate)
-
             # TODO batch normalization
-
-            # tf.summary.histo to visualize weight distribution
 
             global_step = tf.Variable(0, name='global_step',trainable=False)
 
-            # summary writer
-            self.valid_writer = tf.summary.FileWriter("./logs/valid", self.KNet_model.g_valid)
             merged = tf.summary.merge_all()
-
             self.valid_init = tf.global_variables_initializer()
             self.valid_saver = tf.train.Saver()
+            self.valid_writer = tf.summary.FileWriter("./logs/valid", self.KNet_model.g_valid)
             
             return global_step, loss, merged
     
     def valid(self):
-        writer = self.valid_writer
-        saver = self.valid_saver
-
         sess = self.valid_session
+        sess.run(self.valid_init)
         sess.run(self.valid_iterator.initializer)
 
+        writer = self.valid_writer
+        saver = self.valid_saver
         saver.restore(sess, self.model_path)
 
         pdata = 0.0
         cnt = 0
-
         while True:
             try:
-                step, loss, mgd = sess.run(self.train_ops)
+                step, loss, mgd = sess.run(self.valid_ops)
                 writer.add_summary(mgd, step)
-                pdata += loss.sum() # TODO average?
+                pdata += loss 
                 cnt += 1
 
             except tf.errors.OutOfRangeError as e:
-                print("Average batch loss: {.3f}\n".format(pdata/cnt))
+                print(">> Average batch loss: {:.3f}\n".format(pdata/cnt))
                 break
             
 
@@ -126,10 +118,8 @@ class Trainer(object):
             pointcloud = tf.sparse_tensor_to_dense(features["pointcloud"])
             pointcloud = tf.reshape(pointcloud, [self.batch_size, -1, self.num_channels])
 
-            # TODO this is ugly but works for the moment
             band_gap = tf.reshape(features["band_gap"], [self.batch_size, 1])
 
-            # define loss
             loss = self.KNet_model.train_graph(pointcloud, band_gap)
             tf.summary.scalar('Huber loss', loss)
 
@@ -139,22 +129,22 @@ class Trainer(object):
 
             # TODO batch normalization
 
-            # tf.summary.histo to visualize weight distribution
+            for var in tf.trainable_variables():
+                tf.summary.histogram(var.op.name, var)
 
             global_step = tf.Variable(0, name='global_step',trainable=False)
+            update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+            with tf.control_dependencies(update_ops):
+                optimizer = tf.train.AdamOptimizer(learning_rate)
+                optimizer = tf.contrib.estimator.clip_gradients_by_norm(optimizer, clip_norm=1.0)
+                optim = optimizer.minimize(loss, global_step=global_step)
 
-            # define optimizer
-            # optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step=global_step)
-            optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step)
-
-            # summary writer
-            self.train_writer = tf.summary.FileWriter("./logs/train", self.KNet_model.g_train)
             merged = tf.summary.merge_all()
-
             self.train_init = tf.global_variables_initializer()
             self.train_saver = tf.train.Saver()
+            self.train_writer = tf.summary.FileWriter("./logs/train", self.KNet_model.g_train)
             
-            return global_step, optimizer, loss, merged
+            return global_step, optim, loss, merged
     
     def train(self):
         
@@ -162,6 +152,7 @@ class Trainer(object):
         saver = self.train_saver
 
         sess = self.train_session
+        sess.run(self.train_init)
         sess.run(self.train_iterator.initializer)
 
         while True:
@@ -179,15 +170,15 @@ class Trainer(object):
 
     def train_and_eval(self):
         tf.logging.set_verbosity(tf.logging.ERROR)
-        print('###')
+        print('\n###\n')
 
         for i in range(self.max_epoch):
             print("In epoch #{}, ".format(i+1), end="\n")
             self.train()
-#            self.valid()
+            self.valid()
 
         self.train_session.close()
-#        self.valid_session.close()
+        self.valid_session.close()
 
 
 if __name__ == "__main__":

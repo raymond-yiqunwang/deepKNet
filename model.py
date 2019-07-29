@@ -27,7 +27,7 @@ class KNetModel(object):
 
     def train_graph(self, pointcloud, band_gap):
         with self.g_train_.as_default():
-            # pointnet shape: (batch_size, npoint, num_channel)
+            # pointnet shape: (batch_size, npoint, num_channels)
             batch_size = pointcloud.get_shape()[0].value
             is_training = tf.constant(True, dtype=bool)
             bn_decay = None
@@ -75,7 +75,7 @@ class KNetModel(object):
 
     def valid_graph(self, pointcloud, band_gap):
         with self.g_valid_.as_default():
-            # pointnet shape: (batch_size, npoint, num_channel)
+            # pointnet shape: (batch_size, npoint, num_channels)
             batch_size = pointcloud.get_shape()[0].value
             is_training = tf.constant(False, dtype=bool)
             bn_decay = None

@@ -107,6 +107,8 @@ def write_tfRecord(data, save_dir, wavelength):
     num_train = int(num_instance * train_ratio)
     valid_ratio = 0.15
     num_valid = int(num_instance * valid_ratio)
+    debug_ratio = 0.05
+    num_debug = int(num_instance * debug_ratio)
 
     # init XRD calculator
     xrdcalc = xrd.XRDCalculator(wavelength=wavelength)
@@ -115,12 +117,13 @@ def write_tfRecord(data, save_dir, wavelength):
     rw = tfRecordWriter()
 
     # write train valid test records
-    for mode in ['train', 'valid', 'test']:
+    for mode in ['train', 'valid', 'test', 'debug']:
         print("writing {} records..".format(mode))
 
         if (mode == 'train'): index = rand_index[:num_train]
         elif (mode == 'valid'): index = rand_index[num_train: num_train+num_valid]
-        else: index = rand_index[num_train+num_valid:]
+        elif (mode == 'debug'): index = rand_index[num_train+num_valid: num_train+num_valid+num_debug:]
+        else: index = rand_index[num_train+num_valid+num_debug:]
 
         record_file = save_dir + 'pointcloud_{}.tfrecords'.format(mode)
         with tf.io.TFRecordWriter(record_file) as writer:
