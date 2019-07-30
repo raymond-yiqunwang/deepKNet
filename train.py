@@ -80,13 +80,15 @@ class Trainer(object):
             # TODO batch normalization
 
             global_step = tf.Variable(0, name='global_step',trainable=False)
-
+            global_step2 = tf.Variable(0, name='global_step2',trainable=False)
+            add_one_op = tf.assign(global_step2, global_step2+1)
+            
             merged = tf.summary.merge_all()
             self.valid_init = tf.global_variables_initializer()
             self.valid_saver = tf.train.Saver()
             self.valid_writer = tf.summary.FileWriter("./logs/valid", self.KNet_model.g_valid)
             
-            return global_step, loss, merged
+            return add_one_op, loss, merged
     
     def valid(self):
         sess = self.valid_session
