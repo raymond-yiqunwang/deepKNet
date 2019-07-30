@@ -5,7 +5,7 @@ import argparse
 import sys
 from model import KNetModel
 
-DEBUG = True
+DEBUG = False
 
 parser = argparse.ArgumentParser(description='KNet parameters')
 parser.add_argument('--num_channels', type=int, default=123)
@@ -75,7 +75,7 @@ class Trainer(object):
             band_gap = tf.reshape(features["band_gap"], [self.batch_size, 1])
 
             loss = self.KNet_model.valid_graph(pointcloud, band_gap)
-            tf.summary.scalar('validation loss', loss)
+            tf.summary.scalar('validation MSE loss', loss)
 
             # TODO batch normalization
 

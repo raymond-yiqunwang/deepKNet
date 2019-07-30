@@ -118,6 +118,6 @@ class KNetModel(object):
                                           scope='fc3', bn_decay=bn_decay)
             y_pred = tf_util.fully_connected(net, 1, activation_fn=None, scope='fc4')
     
-            return tf.losses.huber_loss(band_gap, y_pred, delta=0.5, reduction=tf.losses.Reduction.SUM_OVER_BATCH_SIZE)
+            return tf.losses.mean_squared_error(band_gap, y_pred, weights=1.0, reduction=tf.losses.Reduction.SUM_OVER_BATCH_SIZE)
 
 
