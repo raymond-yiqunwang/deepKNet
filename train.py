@@ -139,6 +139,7 @@ class Trainer(object):
                 tf.summary.histogram(var.op.name, var)
 
             global_step = tf.Variable(0, name='global_step',trainable=False)
+            global_step2 = tf.Variable(0, name='global_step2',trainable=False)
             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
             with tf.control_dependencies(update_ops):
                 optimizer = tf.train.AdamOptimizer(learning_rate)
