@@ -31,7 +31,7 @@ def load_tfrecords(record_files):
 
 
 class Trainer(object):
-    def __init__(self, batch_size, num_channels, learning_rate, max_epoch, model_path=None, continue_training=False):
+    def __init__(self, num_channels, learning_rate, batch_size, max_epoch,  continue_training=False, model_path=None):
         # initialize model
         self.KNet_model = KNetModel()
         self.num_channels = num_channels
@@ -39,23 +39,28 @@ class Trainer(object):
         self.batch_size = batch_size
         self.max_epoch = max_epoch
         self.continue_training = continue_training
-        
-        # data and saving directories
-        self.train_data = "./data/pointcloud_train.tfrecords"
-        self.valid_data = "./data/pointcloud_valid.tfrecords"
-        if (DEBUG):
-            self.train_data = "./data/pointcloud_debug.tfrecords"
-            self.valid_data = "./data/pointcloud_debug.tfrecords"
         self.model_path = model_path
         
-        # init tf sessions and get train valid ops
-        self.train_session = tf.Session(graph=self.KNet_model.g_train)
+        if not (DEBUG):
+            self.train_data = "./data/pointcloud_train.tfrecords"
+            self.valid_data = "./data/pointcloud_valid.tfrecords"
+        else:
+            self.train_data = "./data/pointcloud_debug.tfrecords"
+            self.valid_data = "./data/pointcloud_debug.tfrecords"
+        
+        # train session
         self.train_ops = self._get_train_ops()
+        self.train_session = tf.Session(graph=self.KNet_model.g_train)
+        sess_train = self.train_session
+        sess_train.run(self.train_init)
         
-        self.valid_session = tf.Session(graph=self.KNet_model.g_valid)
+        # valid session
         self.valid_ops = self._get_valid_ops()
-        
-    
+        self.valid_session = tf.Session(graph=self.KNet_model.g_valid)
+        sess_valid = self.valid_session
+        sess_valid.run(self.valid_init)
+   
+
     def _get_valid_ops(self):
         with self.KNet_model.g_valid.as_default():
             dataset = load_tfrecords(self.valid_data)
@@ -70,7 +75,7 @@ class Trainer(object):
             band_gap = tf.reshape(features["band_gap"], [self.batch_size, 1])
 
             loss = self.KNet_model.valid_graph(pointcloud, band_gap)
-            tf.summary.scalar('loss', loss)
+            tf.summary.scalar('validation loss', loss)
 
             # TODO batch normalization
 
@@ -85,7 +90,6 @@ class Trainer(object):
     
     def valid(self):
         sess = self.valid_session
-        sess.run(self.valid_init)
         sess.run(self.valid_iterator.initializer)
 
         writer = self.valid_writer
@@ -102,7 +106,7 @@ class Trainer(object):
                 cnt += 1
 
             except tf.errors.OutOfRangeError as e:
-                print(">> Average batch loss: {:.3f}\n".format(pdata/cnt))
+                print(">> Average epoch loss: {:.3f}\n".format(pdata/cnt))
                 break
             
 
@@ -152,7 +156,6 @@ class Trainer(object):
         saver = self.train_saver
 
         sess = self.train_session
-        sess.run(self.train_init)
         sess.run(self.train_iterator.initializer)
 
         while True:
@@ -183,14 +186,14 @@ class Trainer(object):
 
 if __name__ == "__main__":
 
-    trainer = Trainer(batch_size        = FLAGS.batch_size,
-                      num_channels      = FLAGS.num_channels,
+    trainer = Trainer(num_channels      = FLAGS.num_channels,
                       learning_rate     = FLAGS.learning_rate,
-                      max_epoch       = FLAGS.max_epoch,
-                      model_path        = "./save_model/model.ckpt",
-                      continue_training = FLAGS.continue_training
+                      batch_size        = FLAGS.batch_size,
+                      max_epoch         = FLAGS.max_epoch,
+                      continue_training = FLAGS.continue_training,
+                      model_path        = "./save_model/model.ckpt"
                       )
-    
+
     # train
     trainer.train_and_eval()
     
