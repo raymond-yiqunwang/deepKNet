@@ -103,11 +103,11 @@ def write_tfRecord(data, save_dir, wavelength):
     num_instance = data.shape[0]
     rand_index = list(np.arange(num_instance))
     random.shuffle(rand_index)
-    train_ratio = 0.7
+    train_ratio = 0.99
     num_train = int(num_instance * train_ratio)
-    valid_ratio = 0.15
+    valid_ratio = 0.01
     num_valid = int(num_instance * valid_ratio)
-    debug_ratio = 0.05
+    debug_ratio = 0.0
     num_debug = int(num_instance * debug_ratio)
 
     # init XRD calculator
@@ -117,7 +117,7 @@ def write_tfRecord(data, save_dir, wavelength):
     rw = tfRecordWriter()
 
     # write train valid test records
-    for mode in ['train', 'valid', 'test', 'debug']:
+    for mode in ['train', 'valid']:#, 'test', 'debug']:
         print("writing {} records..".format(mode))
 
         if (mode == 'train'): index = rand_index[:num_train]
@@ -125,7 +125,7 @@ def write_tfRecord(data, save_dir, wavelength):
         elif (mode == 'debug'): index = rand_index[num_train+num_valid: num_train+num_valid+num_debug:]
         else: index = rand_index[num_train+num_valid+num_debug:]
 
-        record_file = save_dir + 'pointcloud_{}.tfrecords'.format(mode)
+        record_file = save_dir + 'pointcloud2_{}.tfrecords'.format(mode)
         with tf.io.TFRecordWriter(record_file) as writer:
             checkpoint = 0
             for idx in index:

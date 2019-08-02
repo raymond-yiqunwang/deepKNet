@@ -64,7 +64,7 @@ class Trainer(object):
     def _get_valid_ops(self):
         with self.KNet_model.g_valid.as_default():
             dataset = load_tfrecords(self.valid_data)
-            dataset = dataset.batch(self.batch_size).repeat(1)
+            dataset = dataset.batch(self.batch_size).repeat(1).shuffle(buffer_size=300)
             iterator = dataset.make_initializable_iterator()
             self.valid_iterator = iterator
             features = iterator.get_next()
@@ -75,20 +75,18 @@ class Trainer(object):
             band_gap = tf.reshape(features["band_gap"], [self.batch_size, 1])
 
             loss = self.KNet_model.valid_graph(pointcloud, band_gap)
-            tf.summary.scalar('validation MSE loss', loss)
+            tf.summary.scalar('validation average MSE loss', loss)
 
             # TODO batch normalization
 
             global_step = tf.Variable(0, name='global_step',trainable=False)
-            global_step2 = tf.Variable(0, name='global_step2',trainable=False)
-            add_one_op = tf.assign(global_step2, global_step2+1)
             
             merged = tf.summary.merge_all()
             self.valid_init = tf.global_variables_initializer()
             self.valid_saver = tf.train.Saver()
             self.valid_writer = tf.summary.FileWriter("./logs/valid", self.KNet_model.g_valid)
             
-            return add_one_op, loss, merged
+            return global_step, loss, merged
     
     def valid(self):
         sess = self.valid_session
@@ -139,7 +137,6 @@ class Trainer(object):
                 tf.summary.histogram(var.op.name, var)
 
             global_step = tf.Variable(0, name='global_step',trainable=False)
-            global_step2 = tf.Variable(0, name='global_step2',trainable=False)
             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
             with tf.control_dependencies(update_ops):
                 optimizer = tf.train.AdamOptimizer(learning_rate)
