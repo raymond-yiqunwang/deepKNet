@@ -35,24 +35,24 @@ class KNetModel(object):
             
             net = tf_util.conv2d(pointcloud, 64, [1,123],
                              padding='VALID', stride=[1,1],
-                             bn=False, is_training=is_training,
+                             bn=True, is_training=is_training,
                              scope='conv1', bn_decay=bn_decay)
             net = tf_util.conv2d(net, 64, [1,1],
                              padding='VALID', stride=[1,1],
-                             bn=False, is_training=is_training,
+                             bn=True, is_training=is_training,
                              scope='conv2', bn_decay=bn_decay)
     
             net = tf_util.conv2d(net, 64, [1,1],
                                  padding='VALID', stride=[1,1],
-                                 bn=False, is_training=is_training,
+                                 bn=True, is_training=is_training,
                                  scope='conv3', bn_decay=bn_decay)
             net = tf_util.conv2d(net, 128, [1,1],
                                  padding='VALID', stride=[1,1],
-                                 bn=False, is_training=is_training,
+                                 bn=True, is_training=is_training,
                                  scope='conv4', bn_decay=bn_decay)
             net = tf_util.conv2d(net, 1024, [1,1],
                                  padding='VALID', stride=[1,1],
-                                 bn=False, is_training=is_training,
+                                 bn=True, is_training=is_training,
                                  scope='conv5', bn_decay=bn_decay)
         
             net = tf.math.reduce_max(net, axis=1, keepdims=True)
@@ -83,25 +83,26 @@ class KNetModel(object):
             
             net = tf_util.conv2d(pointcloud, 64, [1,123],
                              padding='VALID', stride=[1,1],
-                             bn=False, is_training=is_training,
+                             bn=True, is_training=is_training,
                              scope='conv1', bn_decay=bn_decay)
             net = tf_util.conv2d(net, 64, [1,1],
                              padding='VALID', stride=[1,1],
-                             bn=False, is_training=is_training,
+                             bn=True, is_training=is_training,
                              scope='conv2', bn_decay=bn_decay)
     
             net = tf_util.conv2d(net, 64, [1,1],
                                  padding='VALID', stride=[1,1],
-                                 bn=False, is_training=is_training,
+                                 bn=True, is_training=is_training,
                                  scope='conv3', bn_decay=bn_decay)
             net = tf_util.conv2d(net, 128, [1,1],
                                  padding='VALID', stride=[1,1],
-                                 bn=False, is_training=is_training,
+                                 bn=True, is_training=is_training,
                                  scope='conv4', bn_decay=bn_decay)
             net = tf_util.conv2d(net, 1024, [1,1],
                                  padding='VALID', stride=[1,1],
-                                 bn=False, is_training=is_training,
+                                 bn=True, is_training=is_training,
                                  scope='conv5', bn_decay=bn_decay)
+            #net = tf.keras.layers.BatchNormalization()(net)
         
             net = tf.math.reduce_max(net, axis=1, keepdims=True)
             net = tf.reshape(net, [batch_size, 1024])
