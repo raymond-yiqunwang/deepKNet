@@ -24,101 +24,72 @@ class KNetModel(object):
     @property
     def g_valid(self):
         return self.g_valid_
+    
+
+    def gap_func(self, feat, bn_decay=None, is_training=True):
+
+        net = tf.keras.layers.Conv1D(128, 1, activation=tf.nn.relu)(feat)
+
+        # bs x maxlen x 128
+        net = tf.keras.layers.LSTM(128, return_sequences=True)(net)
+
+        net = tf.keras.layers.Conv1D(256, 3, padding="same", activation=tf.nn.relu)(net)
+        for i in range(0, 5):
+            intmp = net
+            net = tf.keras.layers.Conv1D(256, 3, padding="same", dilation_rate=2**i, activation=None)(net)
+            net = tf.keras.layers.BatchNormalization()(net)
+            net += intmp # residue connection
+            net = tf.nn.relu(net)
+        
+        net = tf.keras.layers.Conv1D(512, 3, padding="same", activation=tf.nn.relu)(net)
+        for i in range(0, 5):
+            intmp = net
+            net = tf.keras.layers.Conv1D(512, 3, padding="same", dilation_rate=2**i, activation=None)(net)
+            net = tf.keras.layers.BatchNormalization()(net)
+            net += intmp # residue connection
+            net = tf.nn.relu(net)
+
+        net = tf.keras.layers.Conv1D(1024, 3, padding="same", activation=tf.nn.relu)(net)
+        for i in range(0, 5):
+            intmp = net
+            net = tf.keras.layers.Conv1D(1024, 3, padding="same", dilation_rate=2**i, activation=None)(net)
+            net = tf.keras.layers.BatchNormalization()(net)
+            net += intmp # residue connection
+            net = tf.nn.relu(net)
+
+        net = tf.math.reduce_max(net, axis=1)
+        net = tf.reshape(net, [-1, 1024])
+        
+        net = tf_util.fully_connected(net, 512, bn=False, is_training=is_training,
+                                      scope='fc1', bn_decay=bn_decay)
+        net = tf_util.fully_connected(net, 256, bn=False, is_training=is_training,
+                                      scope='fc2', bn_decay=bn_decay)
+        net = tf_util.fully_connected(net, 64, bn=False, is_training=is_training,
+                                      scope='fc3', bn_decay=bn_decay)
+        y_pred = tf_util.fully_connected(net, 1, activation_fn=None, scope='fc4')
+
+        return y_pred
 
     def train_graph(self, pointcloud, band_gap):
         with self.g_train_.as_default():
             # pointnet shape: (batch_size, npoint, num_channels)
-            batch_size = pointcloud.get_shape()[0].value
-            is_training = tf.constant(True, dtype=bool)
+            # batch_size = pointcloud.get_shape()[0].value
+            # is_training = tf.constant(True, dtype=bool)
             bn_decay = None
-            pointcloud = tf.expand_dims(pointcloud, -1)
-            
-            net = tf_util.conv2d(pointcloud, 64, [1,123],
-                             padding='VALID', stride=[1,1],
-                             bn=True, is_training=is_training,
-                             scope='conv1', bn_decay=bn_decay)
-            net = tf_util.conv2d(net, 64, [1,1],
-                             padding='VALID', stride=[1,1],
-                             bn=True, is_training=is_training,
-                             scope='conv2', bn_decay=bn_decay)
-    
-            net = tf_util.conv2d(net, 64, [1,1],
-                                 padding='VALID', stride=[1,1],
-                                 bn=True, is_training=is_training,
-                                 scope='conv3', bn_decay=bn_decay)
-            net = tf_util.conv2d(net, 128, [1,1],
-                                 padding='VALID', stride=[1,1],
-                                 bn=True, is_training=is_training,
-                                 scope='conv4', bn_decay=bn_decay)
-            net = tf_util.conv2d(net, 1024, [1,1],
-                                 padding='VALID', stride=[1,1],
-                                 bn=True, is_training=is_training,
-                                 scope='conv5', bn_decay=bn_decay)
-        
-            net = tf.math.reduce_max(net, axis=1, keepdims=True)
-            net = tf.reshape(net, [batch_size, 1024])
-            
-            net = tf_util.fully_connected(net, 512, bn=False, is_training=is_training,
-                                          scope='fc1', bn_decay=bn_decay)
-    #        net = tf_util.dropout(net, keep_prob=0.7, is_training=is_training,
-    #                              scope='dp1')
-            net = tf_util.fully_connected(net, 256, bn=False, is_training=is_training,
-                                          scope='fc2', bn_decay=bn_decay)
-    #        net = tf_util.dropout(net, keep_prob=0.7, is_training=is_training,
-    #                              scope='dp2')
-            net = tf_util.fully_connected(net, 64, bn=False, is_training=is_training,
-                                          scope='fc3', bn_decay=bn_decay)
-            y_pred = tf_util.fully_connected(net, 1, activation_fn=None, scope='fc4')
-    
-            return tf.losses.huber_loss(band_gap, y_pred, delta=0.5, reduction=tf.losses.Reduction.SUM_OVER_BATCH_SIZE)
 
+            y_pred = self.gap_func(pointcloud, bn_decay, True)
+
+            return tf.losses.huber_loss(band_gap, y_pred, delta=0.5, reduction=tf.losses.Reduction.SUM_OVER_BATCH_SIZE)
 
     def valid_graph(self, pointcloud, band_gap):
         with self.g_valid_.as_default():
             # pointnet shape: (batch_size, npoint, num_channels)
-            batch_size = pointcloud.get_shape()[0].value
-            is_training = tf.constant(False, dtype=bool)
+            #batch_size = pointcloud.get_shape()[0].value
+            #is_training = tf.constant(False, dtype=bool)
             bn_decay = None
-            pointcloud = tf.expand_dims(pointcloud, -1)
-            
-            net = tf_util.conv2d(pointcloud, 64, [1,123],
-                             padding='VALID', stride=[1,1],
-                             bn=True, is_training=is_training,
-                             scope='conv1', bn_decay=bn_decay)
-            net = tf_util.conv2d(net, 64, [1,1],
-                             padding='VALID', stride=[1,1],
-                             bn=True, is_training=is_training,
-                             scope='conv2', bn_decay=bn_decay)
-    
-            net = tf_util.conv2d(net, 64, [1,1],
-                                 padding='VALID', stride=[1,1],
-                                 bn=True, is_training=is_training,
-                                 scope='conv3', bn_decay=bn_decay)
-            net = tf_util.conv2d(net, 128, [1,1],
-                                 padding='VALID', stride=[1,1],
-                                 bn=True, is_training=is_training,
-                                 scope='conv4', bn_decay=bn_decay)
-            net = tf_util.conv2d(net, 1024, [1,1],
-                                 padding='VALID', stride=[1,1],
-                                 bn=True, is_training=is_training,
-                                 scope='conv5', bn_decay=bn_decay)
-            #net = tf.keras.layers.BatchNormalization()(net)
-        
-            net = tf.math.reduce_max(net, axis=1, keepdims=True)
-            net = tf.reshape(net, [batch_size, 1024])
-            
-            net = tf_util.fully_connected(net, 512, bn=False, is_training=is_training,
-                                          scope='fc1', bn_decay=bn_decay)
-    #        net = tf_util.dropout(net, keep_prob=0.7, is_training=is_training,
-    #                              scope='dp1')
-            net = tf_util.fully_connected(net, 256, bn=False, is_training=is_training,
-                                          scope='fc2', bn_decay=bn_decay)
-    #        net = tf_util.dropout(net, keep_prob=0.7, is_training=is_training,
-    #                              scope='dp2')
-            net = tf_util.fully_connected(net, 64, bn=False, is_training=is_training,
-                                          scope='fc3', bn_decay=bn_decay)
-            y_pred = tf_util.fully_connected(net, 1, activation_fn=None, scope='fc4')
-    
+
+            y_pred = self.gap_func(pointcloud, bn_decay, False)
+
             return tf.losses.mean_squared_error(band_gap, y_pred, weights=1.0, reduction=tf.losses.Reduction.SUM_OVER_BATCH_SIZE)
 
 
