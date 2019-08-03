@@ -25,6 +25,7 @@ def fetch_materials_data():
     
     # query data with computed band structures and no warning sign
     mp_data = m.query(criteria={"band_structure": { "$ne" : None }, "warnings": []}, properties=properties)
+    #mp_data = m.query(criteria={"volume": { "$lt" : 50 }, "band_structure": { "$ne" : None }, "warnings": []}, properties=properties)
     
     data_origin = []
     for entry in mp_data:
@@ -37,7 +38,7 @@ def fetch_materials_data():
     return data_origin
 
 
-def customize_data(data_origin):
+def customize_data(data_origin, wavelength):
     
     # show statistics of original data
     print("Data distribution before customization:")
@@ -86,7 +87,7 @@ def customize_data(data_origin):
     # rare elements
     rare_elements = []
     elem_dict2 = defaultdict(int)
-    for idx, irow in data_custom.iterrows():
+    for _, irow in data_custom.iterrows():
         for elem in irow['elements']:
             elem_dict2[Element(elem).Z] += 1
     for elem, count in elem_dict2.items():
@@ -94,21 +95,30 @@ def customize_data(data_origin):
             rare_elements.append(elem)
             print("Element No. {} has a count of {}.".format(elem, count))
 
+    # number of points
+    npoint_list = []
+    xrdcalc = xrd.XRDCalculator(wavelength=wavelength)
+    for _, irow in data_custom.iterrows():
+        struct = Structure.from_str(irow['cif'], fmt="cif")
+        npoint_list.append(xrdcalc.get_npoint(struct))
+    
+    npoint_array = np.asarray(npoint_list)
+    print(" npoint: mean = {:.2f}, median = {:.2f}, standard deviation = {:.2f}, min = {:.2f}, max = {:.2f}"
+          .format(np.mean(npoint_array), np.median(npoint_array), np.std(npoint_array), np.min(npoint_array), np.max(npoint_array)))
+    """
+    npoint: mean = 2590.45, median = 2319.00, standard deviation = 1623.81, min = 87.00, max = 7339.00
+    """
+
     return data_custom
 
 
-def write_tfRecord(data, save_dir, wavelength):
+def write_tfRecord(data, save_dir, wavelength, npoint_cutoff):
     
     # split data into train, valid, and test
-    num_instance = data.shape[0]
-    rand_index = list(np.arange(num_instance))
+    rand_index = list(data.index)
     random.shuffle(rand_index)
-    train_ratio = 0.99
-    num_train = int(num_instance * train_ratio)
-    valid_ratio = 0.01
-    num_valid = int(num_instance * valid_ratio)
-    debug_ratio = 0.0
-    num_debug = int(num_instance * debug_ratio)
+    train_ratio = 0.97
+    num_train = int(len(rand_index) * train_ratio)
 
     # init XRD calculator
     xrdcalc = xrd.XRDCalculator(wavelength=wavelength)
@@ -117,25 +127,31 @@ def write_tfRecord(data, save_dir, wavelength):
     rw = tfRecordWriter()
 
     # write train valid test records
-    for mode in ['train', 'valid']:#, 'test', 'debug']:
+    for mode in ['train', 'valid']:
         print("writing {} records..".format(mode))
 
         if (mode == 'train'): index = rand_index[:num_train]
-        elif (mode == 'valid'): index = rand_index[num_train: num_train+num_valid]
-        elif (mode == 'debug'): index = rand_index[num_train+num_valid: num_train+num_valid+num_debug:]
-        else: index = rand_index[num_train+num_valid+num_debug:]
+        else: index = rand_index[num_train:]
 
-        record_file = save_dir + 'pointcloud2_{}.tfrecords'.format(mode)
+        record_file = save_dir + 'pointcloud_{}.tfrecords'.format(mode)
         with tf.io.TFRecordWriter(record_file) as writer:
             checkpoint = 0
             for idx in index:
-                if (checkpoint % 1000 == 0): print(">> checkpoint {}".format(checkpoint))
-                irow = data.iloc[idx]
+                if (checkpoint % 500 == 0): print(">> checkpoint {}".format(checkpoint))
+                irow = data.loc[idx]
 
                 # generate pointnet
                 struct = Structure.from_str(irow['cif'], fmt="cif")
                 #pointcloud = np.asarray(xrdcalc.get_intensity(struct)).flatten()
-                pointcloud = np.asarray(xrdcalc.get_atomic_form_factor(struct)).flatten()
+                pointcloud = xrdcalc.get_atomic_form_factor(struct)
+                # tailoring and padding
+                while (len(pointcloud) < npoint_cutoff):
+                    pointcloud.extend(pointcloud)
+                if (len(pointcloud) > npoint_cutoff):
+                    pointcloud = pointcloud[:npoint_cutoff]
+                assert (len(pointcloud) == npoint_cutoff)
+                # output
+                pointcloud = np.asarray(pointcloud).flatten()
 
                 band_gap = irow['band_gap']
 
@@ -146,13 +162,16 @@ def write_tfRecord(data, save_dir, wavelength):
 
 
 if __name__ == "__main__":
+    
+    wavelength = "CuKa"
+    
     # get data from MaterialsProject
     data_origin = fetch_materials_data()
     
-    # modify data
-    data_custom = customize_data(data_origin)
-
+    # customize data and print statistics
+    data_custom = customize_data(data_origin, wavelength)
+    
     # compute XRD pattern and write to tfRecord
-    write_tfRecord(data_custom, save_dir="../data/", wavelength="CuKa")
+    write_tfRecord(data_custom, save_dir="../data/", wavelength=wavelength, npoint_cutoff = 4000)
 
 

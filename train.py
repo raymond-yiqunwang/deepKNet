@@ -9,6 +9,7 @@ DEBUG = False
 
 parser = argparse.ArgumentParser(description='KNet parameters')
 parser.add_argument('--num_channels', type=int, default=123)
+parser.add_argument('--npoint', type=int, default=4000)
 parser.add_argument('--max_epoch', type=int, default=100)
 parser.add_argument('--batch_size', type=int, default=1)
 parser.add_argument('--learning_rate', type=float, default=1e-3)
@@ -31,10 +32,11 @@ def load_tfrecords(record_files):
 
 
 class Trainer(object):
-    def __init__(self, num_channels, learning_rate, batch_size, max_epoch,  continue_training=False, model_path=None):
+    def __init__(self, num_channels, npoint, learning_rate, batch_size, max_epoch,  continue_training=False, model_path=None):
         # initialize model
         self.KNet_model = KNetModel()
         self.num_channels = num_channels
+        self.npont = npoint
         self.learning_rate = learning_rate
         self.batch_size = batch_size
         self.max_epoch = max_epoch
@@ -70,7 +72,7 @@ class Trainer(object):
             features = iterator.get_next()
 
             pointcloud = tf.sparse_tensor_to_dense(features["pointcloud"])
-            pointcloud = tf.reshape(pointcloud, [self.batch_size, -1, self.num_channels])
+            pointcloud = tf.reshape(pointcloud, [-1, self.npoint, self.num_channels])
 
             band_gap = tf.reshape(features["band_gap"], [self.batch_size, 1])
 
@@ -187,6 +189,7 @@ class Trainer(object):
 if __name__ == "__main__":
 
     trainer = Trainer(num_channels      = FLAGS.num_channels,
+                      npoint            = FLAGS.npoint,
                       learning_rate     = FLAGS.learning_rate,
                       batch_size        = FLAGS.batch_size,
                       max_epoch         = FLAGS.max_epoch,

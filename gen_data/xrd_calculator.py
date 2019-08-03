@@ -62,6 +62,16 @@ class XRDCalculator(AbstractDiffractionPatternCalculator):
         # deprecated function
         pass
 
+    def get_npoint(self, structure):
+        
+        wavelength = self.wavelength
+        latt = structure.lattice
+        max_r = 2. / wavelength
+        recip_latt = latt.reciprocal_lattice_crystallographic
+        recip_basis = recip_latt.matrix
+        npoint = len(recip_latt.get_points_in_sphere([[0, 0, 0]], [0, 0, 0], max_r))
+        return npoint
+
     def get_atomic_form_factor(self, structure):
         # returns an (N x 123) array where N is the number of valid hkl points within the limiting sphere
         out = []
