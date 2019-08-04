@@ -137,7 +137,7 @@ def write_tfRecord(data, save_dir, wavelength, npoint_cutoff):
         with tf.io.TFRecordWriter(record_file) as writer:
             checkpoint = 0
             for idx in index:
-                if (checkpoint % 500 == 0): print(">> checkpoint {}".format(checkpoint))
+                if (checkpoint % 1000 == 0): print(">> checkpoint {}".format(checkpoint))
                 irow = data.loc[idx]
 
                 # generate pointnet
@@ -172,6 +172,6 @@ if __name__ == "__main__":
     data_custom = customize_data(data_origin, wavelength)
     
     # compute XRD pattern and write to tfRecord
-    write_tfRecord(data_custom, save_dir="../data/", wavelength=wavelength, npoint_cutoff = 4000)
+    write_tfRecord(data_custom, save_dir="../data/", wavelength=wavelength, npoint_cutoff = 2500)
 
 

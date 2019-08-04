@@ -9,10 +9,10 @@ DEBUG = False
 
 parser = argparse.ArgumentParser(description='KNet parameters')
 parser.add_argument('--num_channels', type=int, default=123)
-parser.add_argument('--npoint', type=int, default=4000)
+parser.add_argument('--npoint', type=int, default=2500)
 parser.add_argument('--max_epoch', type=int, default=100)
-parser.add_argument('--batch_size', type=int, default=1)
-parser.add_argument('--learning_rate', type=float, default=1e-3)
+parser.add_argument('--batch_size', type=int, default=16)
+parser.add_argument('--learning_rate', type=float, default=1e-4)
 parser.add_argument('--continue_training', type=bool, default=False)
 FLAGS = parser.parse_args()
 
@@ -36,7 +36,7 @@ class Trainer(object):
         # initialize model
         self.KNet_model = KNetModel()
         self.num_channels = num_channels
-        self.npont = npoint
+        self.npoint = npoint
         self.learning_rate = learning_rate
         self.batch_size = batch_size
         self.max_epoch = max_epoch
@@ -45,10 +45,9 @@ class Trainer(object):
         
         if not (DEBUG):
             self.train_data = "./data/pointcloud_train.tfrecords"
-            self.valid_data = "./data/pointcloud_valid.tfrecords"
         else:
-            self.train_data = "./data/pointcloud_debug.tfrecords"
-            self.valid_data = "./data/pointcloud_debug.tfrecords"
+            self.train_data = "./data/pointcloud_valid.tfrecords"
+        self.valid_data = "./data/pointcloud_valid.tfrecords"
         
         # train session
         self.train_ops = self._get_train_ops()
@@ -66,7 +65,7 @@ class Trainer(object):
     def _get_valid_ops(self):
         with self.KNet_model.g_valid.as_default():
             dataset = load_tfrecords(self.valid_data)
-            dataset = dataset.batch(self.batch_size).repeat(1).shuffle(buffer_size=300)
+            dataset = dataset.batch(self.batch_size).repeat(1).shuffle(buffer_size=64)
             iterator = dataset.make_initializable_iterator()
             self.valid_iterator = iterator
             features = iterator.get_next()
@@ -74,12 +73,10 @@ class Trainer(object):
             pointcloud = tf.sparse_tensor_to_dense(features["pointcloud"])
             pointcloud = tf.reshape(pointcloud, [-1, self.npoint, self.num_channels])
 
-            band_gap = tf.reshape(features["band_gap"], [self.batch_size, 1])
+            band_gap = tf.reshape(features["band_gap"], [-1, 1])
 
             loss = self.KNet_model.valid_graph(pointcloud, band_gap)
             tf.summary.scalar('validation average MSE loss', loss)
-
-            # TODO batch normalization
 
             global_step = tf.Variable(0, name='global_step',trainable=False)
             
@@ -110,21 +107,21 @@ class Trainer(object):
             except tf.errors.OutOfRangeError as e:
                 print(">> Average epoch loss: {:.3f}\n".format(pdata/cnt))
                 break
-            
+
 
     def _get_train_ops(self):
         with self.KNet_model.g_train.as_default():
             # input dataset
             dataset = load_tfrecords(self.train_data)
-            dataset = dataset.batch(self.batch_size).repeat(1).shuffle(buffer_size=300)
+            dataset = dataset.batch(self.batch_size).repeat(1).shuffle(buffer_size=64)
             iterator = dataset.make_initializable_iterator()
             self.train_iterator = iterator
             features = iterator.get_next()
 
             pointcloud = tf.sparse_tensor_to_dense(features["pointcloud"])
-            pointcloud = tf.reshape(pointcloud, [self.batch_size, -1, self.num_channels])
+            pointcloud = tf.reshape(pointcloud, [-1, self.npoint, self.num_channels])
 
-            band_gap = tf.reshape(features["band_gap"], [self.batch_size, 1])
+            band_gap = tf.reshape(features["band_gap"], [-1, 1])
 
             loss = self.KNet_model.train_graph(pointcloud, band_gap)
             tf.summary.scalar('Huber loss', loss)
@@ -132,8 +129,6 @@ class Trainer(object):
             # TODO learning rate decay, lr_scheduling
             learning_rate = self.learning_rate
             #tf.summary.scalar('learning_rate', learning_rate)
-
-            # TODO batch normalization
 
             for var in tf.trainable_variables():
                 tf.summary.histogram(var.op.name, var)
@@ -149,7 +144,7 @@ class Trainer(object):
             self.train_init = tf.global_variables_initializer()
             self.train_saver = tf.train.Saver()
             self.train_writer = tf.summary.FileWriter("./logs/train", self.KNet_model.g_train)
-            
+
             return global_step, optim, loss, merged
     
     def train(self):

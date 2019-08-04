@@ -31,7 +31,7 @@ class KNetModel(object):
         net = tf.keras.layers.Conv1D(128, 1, activation=tf.nn.relu)(feat)
 
         # bs x maxlen x 128
-        net = tf.keras.layers.LSTM(128, return_sequences=True)(net)
+#        net = tf.keras.layers.LSTM(128, return_sequences=True)(net)
 
         net = tf.keras.layers.Conv1D(256, 3, padding="same", activation=tf.nn.relu)(net)
         for i in range(0, 5):
@@ -72,9 +72,6 @@ class KNetModel(object):
 
     def train_graph(self, pointcloud, band_gap):
         with self.g_train_.as_default():
-            # pointnet shape: (batch_size, npoint, num_channels)
-            # batch_size = pointcloud.get_shape()[0].value
-            # is_training = tf.constant(True, dtype=bool)
             bn_decay = None
 
             y_pred = self.gap_func(pointcloud, bn_decay, True)
@@ -83,13 +80,11 @@ class KNetModel(object):
 
     def valid_graph(self, pointcloud, band_gap):
         with self.g_valid_.as_default():
-            # pointnet shape: (batch_size, npoint, num_channels)
-            #batch_size = pointcloud.get_shape()[0].value
-            #is_training = tf.constant(False, dtype=bool)
             bn_decay = None
 
             y_pred = self.gap_func(pointcloud, bn_decay, False)
 
-            return tf.losses.mean_squared_error(band_gap, y_pred, weights=1.0, reduction=tf.losses.Reduction.SUM_OVER_BATCH_SIZE)
+            #return tf.losses.mean_squared_error(band_gap, y_pred, weights=1.0, reduction=tf.losses.Reduction.SUM_OVER_BATCH_SIZE)
+            return tf.keras.losses.MAE(band_gap, y_pred)
 
 
