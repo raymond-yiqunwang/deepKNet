@@ -84,7 +84,7 @@ class KNetModel(object):
 
             y_pred = self.gap_func(pointcloud, bn_decay, False)
 
-            #return tf.losses.mean_squared_error(band_gap, y_pred, weights=1.0, reduction=tf.losses.Reduction.SUM_OVER_BATCH_SIZE)
-            return tf.keras.losses.MAE(band_gap, y_pred)
+#            return tf.losses.mean_squared_error(band_gap, y_pred, weights=1.0, reduction=tf.losses.Reduction.SUM_OVER_BATCH_SIZE)
+            return tf.losses.absolute_difference(band_gap, y_pred, weights=1.0, reduction=tf.losses.Reduction.SUM_OVER_BATCH_SIZE)
 
 

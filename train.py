@@ -11,7 +11,7 @@ parser = argparse.ArgumentParser(description='KNet parameters')
 parser.add_argument('--num_channels', type=int, default=123)
 parser.add_argument('--npoint', type=int, default=2500)
 parser.add_argument('--max_epoch', type=int, default=100)
-parser.add_argument('--batch_size', type=int, default=16)
+parser.add_argument('--batch_size', type=int, default=8)
 parser.add_argument('--learning_rate', type=float, default=1e-4)
 parser.add_argument('--continue_training', type=bool, default=False)
 FLAGS = parser.parse_args()
@@ -44,9 +44,12 @@ class Trainer(object):
         self.model_path = model_path
         
         if not (DEBUG):
+            #self.train_data = "/data2/yiqun/pointcloud_train.tfrecords"
             self.train_data = "./data/pointcloud_train.tfrecords"
         else:
+            #self.train_data = "/data2/yiqun/pointcloud_valid.tfrecords"
             self.train_data = "./data/pointcloud_valid.tfrecords"
+        #self.valid_data = "/data2/yiqun/pointcloud_valid.tfrecords"
         self.valid_data = "./data/pointcloud_valid.tfrecords"
         
         # train session
@@ -64,6 +67,7 @@ class Trainer(object):
 
     def _get_valid_ops(self):
         with self.KNet_model.g_valid.as_default():
+            # input dataset
             dataset = load_tfrecords(self.valid_data)
             dataset = dataset.batch(self.batch_size).repeat(1).shuffle(buffer_size=64)
             iterator = dataset.make_initializable_iterator()

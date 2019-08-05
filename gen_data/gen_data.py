@@ -172,6 +172,7 @@ if __name__ == "__main__":
     data_custom = customize_data(data_origin, wavelength)
     
     # compute XRD pattern and write to tfRecord
+    #write_tfRecord(data_custom, save_dir="/data2/yiqun/", wavelength=wavelength, npoint_cutoff = 2500)
     write_tfRecord(data_custom, save_dir="../data/", wavelength=wavelength, npoint_cutoff = 2500)
 
 
