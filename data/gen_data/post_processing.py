@@ -1,7 +1,9 @@
 import pandas as pd
 import ast
 from collections import defaultdict
-
+import matplotlib
+matplotlib.use('TKAgg')
+import matplotlib.pyplot as plt
 
 """ properties
         "material_id", "icsd_ids",
@@ -15,8 +17,7 @@ from collections import defaultdict
 """
 
 
-def show_statistics(data, plot=False):
-    
+def show_statistics(data):
     # size of database
     print('>> Total number of materials: {:d}, number of properties: {:d}'\
             .format(data.shape[0], data.shape[1]))
@@ -91,7 +92,6 @@ def show_statistics(data, plot=False):
 
 
 def customize_data(data_raw):
-
     data_custom = data_raw.copy()
 
     # only take no-warning entries
@@ -104,69 +104,44 @@ def customize_data(data_raw):
 
     # get rid of extreme volumes TODO determine threshold
     if True:
-        data_custom = data_custom[data_custom['volume'] < 600]
+        data_custom = data_custom[data_custom['volume'] < 800]
 
     # get rid of rare elements
     if True:
-        rare_elements = []
-        elements = data_custom['elements']
+        # identify rare elements
         elem_dict = defaultdict(int)
-        for compound in elements:
-            for elem in ast.literal_eval(compound):
+        for entry in data_custom['elements']:
+            for elem in ast.literal_eval(entry):
                 elem_dict[elem] += 1
-        print(elem_dict)
-
-    """
-    # rare elements
-    rare_elements = []
-    elem_dict = defaultdict(int)
-    for elements in data_origin['elements']:
-        for elem in elements:
-            elem_dict[Element(elem).Z] += 1
-    for elem, count in elem_dict.items():
-        if (count < int(0.01*data_origin.shape[0])):
-            rare_elements.append(elem)
-            print("Element No. {} has a count of {}.".format(elem, count))
-
-    # customize data
-    data_custom = data_origin[['band_gap', 'nsites', 'volume', 'cif', 'elements']].copy()
-    drop_instance = []
-    for idx, irow in data_custom.iterrows():
-        if (True in [ (Element(elem).Z in rare_elements) for elem in irow['elements']]) \
-            or (irow['nsites'] > 50) or (irow['volume'] > 800.):
-            drop_instance.append(idx)
-    data_custom = data_custom.drop(drop_instance)
-
-
-    # number of points
-    npoint_list = []
-    xrdcalc = xrd.XRDCalculator(wavelength=wavelength)
-    for _, irow in data_custom.iterrows():
-        struct = Structure.from_str(irow['cif'], fmt="cif")
-        npoint_list.append(xrdcalc.get_npoint(struct))
-    
-    npoint_array = np.asarray(npoint_list)
-    print(" npoint: mean = {:.2f}, median = {:.2f}, standard deviation = {:.2f}, min = {:.2f}, max = {:.2f}"
-          .format(np.mean(npoint_array), np.median(npoint_array), np.std(npoint_array), np.min(npoint_array), np.max(npoint_array)))
-    """
+        rare_dict = {key: val for key, val in elem_dict.items() if val < 100}
+        rare_elements = set(rare_dict.keys())
+        # drop entries
+        drop_instance = []
+        for idx, value in data_custom['elements'].iteritems():
+            if rare_elements & set(ast.literal_eval(value)):
+                drop_instance.append(idx)
+        data_custom = data_custom.drop(drop_instance)
 
     return data_custom
 
 
 def main():
     # get raw data from Materials Project
-    data_raw = pd.read_csv("../data/MP_data_has_band.csv", sep=';', header=0, index_col=None)
+    data_raw = pd.read_csv("./raw_data/MP_data_has_band.csv", sep=';', header=0, index_col=None)
 
     # show statistics of raw data
     print('\nShowing raw data:')
-    show_statistics(data=data_raw, plot=False)
+    show_statistics(data=data_raw)
 
     # custom data
     data_custom = customize_data(data_raw)
 
     # show statistics of customized data
     print('\nShowing customized data:')
-    show_statistics(data=data_custom, plot=False)
+    show_statistics(data=data_custom)
+
+    # write customized data
+    data_custom.to_csv("./raw_data/custom_data_has_band.csv", sep=';', columns=None, header=data_custom.columns, index=None)
 
 
 if __name__ == "__main__":

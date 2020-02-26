@@ -4,34 +4,35 @@ import json
 import math
 import numpy as np
 from pymatgen.analysis.diffraction.core import AbstractDiffractionPatternCalculator
+from pymatgen.analysis.diffraction.xrd import XRDCalculator
 from pymatgen.core.structure import Structure
 from pymatgen import MPRester
 
 
 # XRD wavelengths in angstroms
 WAVELENGTHS = {
-    "CuKa": 1.54184,
-    "CuKa2": 1.54439,
-    "CuKa1": 1.54056,
-    "CuKb1": 1.39222,
-    "MoKa": 0.71073,
-    "MoKa2": 0.71359,
-    "MoKa1": 0.70930,
-    "MoKb1": 0.63229,
-    "CrKa": 2.29100,
     "CrKa2": 2.29361,
+    "CrKa" : 2.29100,
     "CrKa1": 2.28970,
     "CrKb1": 2.08487,
-    "FeKa": 1.93735,
     "FeKa2": 1.93998,
+    "FeKa" : 1.93735,
     "FeKa1": 1.93604,
-    "FeKb1": 1.75661,
-    "CoKa": 1.79026,
     "CoKa2": 1.79285,
+    "CoKa" : 1.79026,
     "CoKa1": 1.78896,
+    "FeKb1": 1.75661,
     "CoKb1": 1.63079,
-    "AgKa": 0.560885,
+    "CuKa2": 1.54439,
+    "CuKa" : 1.54184,
+    "CuKa1": 1.54056,
+    "CuKb1": 1.39222,
+    "MoKa2": 0.71359,
+    "MoKa" : 0.71073,
+    "MoKa1": 0.70930,
+    "MoKb1": 0.63229,
     "AgKa2": 0.563813,
+    "AgKa" : 0.560885,
     "AgKa1": 0.559421,
     "AgKb1": 0.497082,
 }
@@ -51,7 +52,7 @@ def cart2sphere(cart_coord):
     return [r, theta, phi]
 
 
-class XRDCalculator(AbstractDiffractionPatternCalculator):
+class XRDSimulator(AbstractDiffractionPatternCalculator):
     def __init__(self, wavelength="CuKa"):
         if isinstance(wavelength, float):
             self.wavelength = wavelength
@@ -227,9 +228,9 @@ class XRDCalculator(AbstractDiffractionPatternCalculator):
         return out
 
 
+### implemented for debugging purpose
 if __name__ == "__main__":
-    #xrd = XRDCalculator("CuKa")
-    xrd = XRDCalculator(5.0)
+    xrd = XRDSimulator("CuKa")
 
     my_API_key = "gxTAyXSm2GvCdWer"
     m = MPRester(api_key=my_API_key)

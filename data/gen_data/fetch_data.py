@@ -3,7 +3,6 @@ import pandas as pd
 
 
 def fetch_materials_data():
-
     # properties of interest
     properties = [ 
         "material_id", "icsd_ids",
@@ -33,7 +32,7 @@ def fetch_materials_data():
         data_origin.append(plist)
 
     data_origin = pd.DataFrame(data_origin, index=None, columns=properties)
-    data_origin.to_csv("../data/MP_data_has_band.csv", sep=';', columns=None, header=properties, index=None)
+    data_origin.to_csv("./raw_data/MP_data_has_band.csv", sep=';', columns=None, header=properties, index=None)
 
 
 def main():

@@ -1,2 +1,3 @@
 __pycache__/
-data/
+data/*.csv
+data/gen_data/raw_data/
