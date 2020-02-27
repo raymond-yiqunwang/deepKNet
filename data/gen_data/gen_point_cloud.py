@@ -1,5 +1,6 @@
 import pandas as pd
 import XRD_simulator.xrd_simulator as xrd
+from pymatgen.core.structure import Structure
 
 
 """ properties
@@ -16,28 +17,37 @@ import XRD_simulator.xrd_simulator as xrd
 
 def generate_point_cloud(data_raw):
 
-    # number of points
-#    npoint_list = []
-    xrdcalc = xrd.XRDCalculator(wavelength='CuKa')
-#    for _, irow in data_custom.iterrows():
-#        struct = Structure.from_str(irow['cif'], fmt="cif")
-#        npoint_list.append(xrdcalc.get_npoint(struct))
+    point_cloud = []
+    xrd_simulator = xrd.XRDSimulator(wavelength='CuKa')
+    for _, irow in data_raw.iterrows():
+        # obtain point cloud features
+        struct = Structure.from_str(irow['cif'], fmt="cif")
+        _, features = xrd_simulator.get_pattern(struct)
+        """
+          features: nrow = (the number of reciprocal kpoints in that material)
+          features: ncol = (hkl  , recip_xyz, recip_spherical, i_hkl_corrected, atomic_form_factor)
+                            [1x3], [1x3]    , [1x3]          , [1x1](scalar)  , [1x120]
+        """
+        flat_features = [ifeat for sublist in features for ifeat in sublist]
+        # properties of interest
+        band_gap = irow['band_gap']
+        energy_per_atom = irow['energy_per_atom']
+        formation_energy_per_atom = irow['formation_energy_per_atom']
+        # finish collecting one material
+        point_cloud.append(flat_features + [band_gap, energy_per_atom, formation_energy_per_atom])
     
-#    npoint_array = np.asarray(npoint_list)
-#    print(" npoint: mean = {:.2f}, median = {:.2f}, standard deviation = {:.2f}, min = {:.2f}, max = {:.2f}"
-#          .format(np.mean(npoint_array), np.median(npoint_array), np.std(npoint_array), np.min(npoint_array), np.max(npoint_array)))
-#
-    return data_raw
-
+    point_cloud = pd.DataFrame(point_cloud)
+    return point_cloud
 
 def main():
     # read customized data
-    data = pd.read_csv("../custom_data_has_band.csv", sep=';', header=0, index_col=None)
+    data = pd.read_csv("./raw_data/custom_data_has_band.csv", sep=';', header=0, index_col=None)
 
+    # generate point cloud representations
     point_cloud = generate_point_cloud(data)
 
     # write customized data
-    point_cloud.to_csv("../point_cloud.csv", sep=';', columns=None, header=None, index=None)
+    point_cloud.to_csv("./raw_data/point_cloud_raw.csv", sep=';', columns=None, header=None, index=None)
 
 
 if __name__ == "__main__":
