@@ -31,8 +31,8 @@ def fetch_materials_data():
             plist.append(val)
         data_origin.append(plist)
 
-    data_origin = pd.DataFrame(data_origin, index=None, columns=properties)
-    data_origin.to_csv("./raw_data/MP_data_has_band.csv", sep=';', columns=None, header=properties, index=None)
+    data_origin = pd.DataFrame(data_origin)
+    data_origin.to_csv("./data_raw/fetch_MPdata.csv", sep=';', index=False, header=properties)
 
 
 def main():

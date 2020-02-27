@@ -42,6 +42,8 @@ def show_statistics(data):
     print('>> Cell volume (A^3): mean = {:.2f}, median = {:.2f}, standard deviation = {:.2f}, '
                     'min = {:.2f}, max = {:.2f}'.format(vol.mean(), vol.median(),\
                      vol.std(), vol.min(), vol.max()))
+#    vol.plot.hist(10)
+#    plt.show()
 
     # number of sites
     nsites = data['nsites']
@@ -79,8 +81,9 @@ def show_statistics(data):
                      e_above_hull.std(), e_above_hull.min(), e_above_hull.max()))
 
     # band gap TODO determine threshold
-    metals = data[data['band_gap'] <= 1E-3]['band_gap']
-    insulators = data[data['band_gap'] > 1E-3]['band_gap']
+    gap_threshold = 1E-3
+    metals = data[data['band_gap'] <= gap_threshold]['band_gap']
+    insulators = data[data['band_gap'] > gap_threshold]['band_gap']
     print('>> Number of metals: {:d}, number of insulators: {:d}'.format(metals.size, insulators.size))
     print('     band gap of insulators: mean = {:.2f}, median = {:.2f}, standard deviation = {:.2f}, '
                         'min = {:.5f}, max = {:.2f}'.format(insulators.mean(), insulators.median(),\
@@ -104,7 +107,7 @@ def customize_data(data_raw):
 
     # get rid of extreme volumes TODO determine threshold
     if True:
-        data_custom = data_custom[data_custom['volume'] < 800]
+        data_custom = data_custom[data_custom['volume'] < 1000]
 
     # get rid of rare elements
     if True:
@@ -127,7 +130,7 @@ def customize_data(data_raw):
 
 def main():
     # get raw data from Materials Project
-    data_raw = pd.read_csv("./raw_data/MP_data_has_band.csv", sep=';', header=0, index_col=None)
+    data_raw = pd.read_csv("./data_raw/fetch_MPdata.csv", sep=';', header=0, index_col=None)
 
     # show statistics of raw data
     print('\nShowing raw data:')
@@ -141,7 +144,7 @@ def main():
     show_statistics(data=data_custom)
 
     # write customized data
-    data_custom.to_csv("./raw_data/custom_data_has_band.csv", sep=';', columns=None, header=data_custom.columns, index=None)
+    data_custom.to_csv("./data_raw/custom_MPdata.csv", sep=';', columns=None, header=data_custom.columns, index=None)
 
 
 if __name__ == "__main__":

@@ -148,7 +148,7 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
             self.wavelength = WAVELENGTHS[wavelength]
         self.symprec = symprec
 
-    def get_pattern(self, structure, scale_intensity=True, two_theta_range=None):
+    def get_pattern(self, structure, npoints=512, debug=False, scale_intensity=True, two_theta_range=None):
         """
         Calculates the diffraction pattern for a structure.
 
@@ -191,6 +191,14 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
             [[0, 0, 0]], [0, 0, 0], max_r)
         if min_r:
             recip_pts = [pt for pt in recip_pts if pt[1] >= min_r]
+
+        # calculate diffraction for all kpoints only in debugging mode,
+        # otherwise only take a subset near the zone center
+        # P.S. use (npoint+1) since the zone center is not included in output
+        if not debug:
+            assert(len(recip_pts) > npoints+1)
+            recip_pts = sorted(recip_pts, key=lambda i: i[1])
+            recip_pts = recip_pts[:npoints+1]
 
         # Create a flattened array of zs, coeffs, fcoords and occus. This is
         # used to perform vectorized computation of atomic scattering factors
@@ -288,8 +296,8 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
                 atomic_form_factor[z-1] += atomic_intensity * lorentz_factor
             
             # add to features 
-            ifeat = hkl + list(recip_xyz) + recip_spherical \
-                    + [i_hkl_corrected] + atomic_form_factor
+            ifeat = [hkl, list(recip_xyz), list(recip_spherical), \
+                     i_hkl_corrected, atomic_form_factor]
             features.append(ifeat)
 
             ### for diffractin pattern plotting only
@@ -339,8 +347,8 @@ if __name__ == "__main__":
     struct = Structure.from_str(mp_data[0]['cif'], fmt='cif')
     
     # compute XRD diffraction pattern and compare outputs
-    pattern, _ = XRDSimulator("CuKa").get_pattern(struct, two_theta_range=None) # this implementation
-    pattern_pymatgen = XRDCalculator("CuKa").get_pattern(struct, two_theta_range=None) # pymatgen original implementation
+    pattern, _ = XRDSimulator('AgKa').get_pattern(struct, two_theta_range=None, debug=True) # this implementation
+    pattern_pymatgen = XRDCalculator('AgKa').get_pattern(struct, two_theta_range=None) # pymatgen original implementation
     print('Error rate: {}'.format(max(abs(np.array(pattern.x) - np.array(pattern_pymatgen.x)))))
 
 

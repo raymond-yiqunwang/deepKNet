@@ -15,13 +15,13 @@ from pymatgen.core.structure import Structure
 """
 
 
-def generate_point_cloud(data_raw):
+def generate_xrd(data_raw):
 
-    point_cloud = []
+    xrd_data = []
     xrd_simulator = xrd.XRDSimulator(wavelength='CuKa')
     for idx, irow in data_raw.iterrows():
         if (idx+1)%500 == 0: print('>> Processed materials: {}'.format(idx+1))
-        # obtain point cloud features
+        # obtain xrd features
         struct = Structure.from_str(irow['cif'], fmt="cif")
         _, features = xrd_simulator.get_pattern(struct)
         """
@@ -35,20 +35,21 @@ def generate_point_cloud(data_raw):
         energy_per_atom = irow['energy_per_atom']
         formation_energy_per_atom = irow['formation_energy_per_atom']
         # finish collecting one material
-        point_cloud.append(flat_features + [band_gap, energy_per_atom, formation_energy_per_atom])
+        xrd_data.append(flat_features + [band_gap, energy_per_atom, formation_energy_per_atom])
     
-    point_cloud = pd.DataFrame(point_cloud)
-    return point_cloud
+    xrd_data = pd.DataFrame(xrd_data)
+    return xrd_data
+
 
 def main():
     # read customized data
-    data = pd.read_csv("./raw_data/custom_data_has_band.csv", sep=';', header=0, index_col=None)
+    MP_data = pd.read_csv("./data_raw/custom_MPdata.csv", sep=';', header=0, index_col=None)
 
-    # generate point cloud representations
-    point_cloud = generate_point_cloud(data)
+    # generate xrd point cloud representations
+    xrd_data = generate_xrd(MP_data)
 
     # write customized data
-    point_cloud.to_csv("./raw_data/point_cloud_raw.csv", sep=';', columns=None, header=None, index=None)
+    xrd_data.to_csv("./data_raw/compute_xrd.csv", sep=';', header=None, index=False)
 
 
 if __name__ == "__main__":
