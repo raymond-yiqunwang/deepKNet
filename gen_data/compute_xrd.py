@@ -27,19 +27,19 @@ def compute_xrd(data_raw):
     chunksize = 500
     npoints = 512
     header = ['material_id', 'band_gap', 'energy_per_atom', 'formation_energy_per_atom', \
-        'hkl', 'recip_xyz', 'recip_spherical', 'intensity', 'atomic_form_factor']
+        'hkl', 'recip_xyz', 'recip_spherical', 'i_hkl_corrected', 'atomic_form_factor', 'max_r']
 
     xrd_data_batch = []
     xrd_simulator = xrd.XRDSimulator(wavelength='AgKa')
     for idx, irow in data_raw.iterrows():
         # obtain xrd features
         struct = Structure.from_str(irow['cif'], fmt="cif")
-        _, features = xrd_simulator.get_pattern(struct, npoints=npoints)
+        _, features, max_r = xrd_simulator.get_pattern(struct, npoints=npoints)
         assert(len(features) == npoints)
         """
           features: nrow = number of reciprocal kpoints (npoints)
           features: ncol = (hkl  , recip_xyz, recip_spherical, i_hkl_corrected, atomic_form_factor)
-                            [1x3], [1x3]    , [1x3]          , [1x1](scalar)  , [1x120]
+                            [1x3], [1x3]    , [1x3]          , [1x1]          , [1x120]
         """
         # regroup features
         hkl = [ipoint[0] for ipoint in features]
@@ -56,7 +56,7 @@ def compute_xrd(data_raw):
 
         # finish collecting one material
         ifeat = [material_id, band_gap, energy_per_atom, formation_energy_per_atom] 
-        ifeat.extend([hkl, recip_xyz, recip_spherical, i_hkl_corrected, atomic_form_factor])
+        ifeat.extend([hkl, recip_xyz, recip_spherical, i_hkl_corrected, atomic_form_factor, max_r])
         xrd_data_batch.append(ifeat)
 
         # process batch

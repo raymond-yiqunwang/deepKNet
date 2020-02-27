@@ -1,6 +1,7 @@
+import os
+import shutil
+import ast
 import pandas as pd
-import XRD_simulator.xrd_simulator as xrd
-from pymatgen.core.structure import Structure
 
 
 """ properties
@@ -15,41 +16,61 @@ from pymatgen.core.structure import Structure
 """
 
 
-def generate_xrd(data_raw):
+def generate_point_cloud(xrd_data, out_dir_root):
+    # safeguard here
+    _ = input("Attention, all existing training data will be deleted and regenerated.. \
+        \n>> Hit Enter to continue, Ctrl+c to terminate..")
+    
+    # remove existing csv files
+    target_dir = out_dir_root + '/target/'
+    if os.path.exists(target_dir):
+        shutil.rmtree(target_dir, ignore_errors=True)
+    os.mkdir(target_dir)
+    features_dir = out_dir_root + '/features/'
+    if os.path.exists(features_dir):
+        shutil.rmtree(features_dir, ignore_errors=True)
+    os.mkdir(features_dir)
 
-    xrd_data = []
-    xrd_simulator = xrd.XRDSimulator(wavelength='CuKa')
-    for idx, irow in data_raw.iterrows():
-        if (idx+1)%500 == 0: print('>> Processed materials: {}'.format(idx+1))
-        # obtain xrd features
-        struct = Structure.from_str(irow['cif'], fmt="cif")
-        _, features = xrd_simulator.get_pattern(struct)
-        """
-          features: nrow = (the number of reciprocal kpoints in that material)
-          features: ncol = (hkl  , recip_xyz, recip_spherical, i_hkl_corrected, atomic_form_factor)
-                            [1x3], [1x3]    , [1x3]          , [1x1](scalar)  , [1x120]
-        """
-        flat_features = [ifeat for sublist in features for ifeat in sublist]
-        # properties of interest
+    # store point cloud representation for each material
+    for idx, irow in xrd_data.iterrows():
+        # unique ID
+        material_id = irow['material_id']
+        filename = str(material_id) + '.csv'
+
+        # features
+        hkl = ast.literal_eval(irow['hkl'])
+        recip_xyz = ast.literal_eval(irow['recip_xyz'])
+        recip_spherical = ast.literal_eval(irow['recip_spherical'])
+        i_hkl_corrected = ast.literal_eval(irow['i_hkl_corrected'])
+        atomic_form_factor = ast.literal_eval(irow['atomic_form_factor'])
+        max_r = float(irow['max_r'])
+        # pick features wisely
+        features = [recip_spherical[i]+atomic_form_factor[i] for i in range(len(hkl))]
+        features = pd.DataFrame(features)
+        # normalize features
+        features.iloc[:, 0] = features.iloc[:, 0] / max_r
+        features.iloc[:, 3:-1] = features.iloc[:, 3:-1] / max(max(atomic_form_factor))
+        # write features
+        features.to_csv(features_dir+filename, sep=';', header=None, index=False)
+
+        # target properties
         band_gap = irow['band_gap']
         energy_per_atom = irow['energy_per_atom']
         formation_energy_per_atom = irow['formation_energy_per_atom']
-        # finish collecting one material
-        xrd_data.append(flat_features + [band_gap, energy_per_atom, formation_energy_per_atom])
-    
-    xrd_data = pd.DataFrame(xrd_data)
-    return xrd_data
+        # write target
+        properties = [[band_gap, energy_per_atom, formation_energy_per_atom]]
+        header = ['band_gap', 'energy_per_atom', 'formation_energy_per_atom']
+        properties = pd.DataFrame(properties)
+        properties.to_csv(target_dir+filename, sep=';', header=header, index=False)
 
 
 def main():
-    # read customized data
-    MP_data = pd.read_csv("./data_raw/custom_MPdata.csv", sep=';', header=0, index_col=None)
+    # read xrd raw data
+    xrd_data = pd.read_csv("./data_raw/compute_xrd.csv", sep=';', header=0, index_col=None)
 
-    # generate xrd point cloud representations
-    xrd_data = generate_xrd(MP_data)
-
-    # write customized data
-    xrd_data.to_csv("./data_raw/compute_xrd.csv", sep=';', header=None, index=False)
+    out_dir_root = "../data/"
+    # generate training data
+    generate_point_cloud(xrd_data, out_dir_root)
 
 
 if __name__ == "__main__":

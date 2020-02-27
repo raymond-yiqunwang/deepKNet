@@ -297,7 +297,7 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
             
             # add to features 
             ifeat = [hkl, list(recip_xyz), list(recip_spherical), \
-                     i_hkl_corrected, atomic_form_factor]
+                     [i_hkl_corrected], atomic_form_factor]
             features.append(ifeat)
 
             ### for diffractin pattern plotting only
@@ -335,7 +335,7 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
         if scale_intensity:
             xrd.normalize(mode="max", value=100)
 
-        return xrd, features
+        return xrd, features, max_r
 
 
 ### implemented for debugging purpose
@@ -347,7 +347,7 @@ if __name__ == "__main__":
     struct = Structure.from_str(mp_data[0]['cif'], fmt='cif')
     
     # compute XRD diffraction pattern and compare outputs
-    pattern, _ = XRDSimulator('AgKa').get_pattern(struct, two_theta_range=None, debug=True) # this implementation
+    pattern, _, max_r = XRDSimulator('AgKa').get_pattern(struct, two_theta_range=None, debug=True) # this implementation
     pattern_pymatgen = XRDCalculator('AgKa').get_pattern(struct, two_theta_range=None) # pymatgen original implementation
     print('Error rate: {}'.format(max(abs(np.array(pattern.x) - np.array(pattern_pymatgen.x)))))
 
