@@ -20,7 +20,8 @@ def generate_point_cloud(xrd_data, out_dir_root):
     # safeguard here
     _ = input("Attention, all existing training data will be deleted and regenerated.. \
         \n>> Hit Enter to continue, Ctrl+c to terminate..")
-    
+    print("Started generating dataset..")
+
     # remove existing csv files
     target_dir = out_dir_root + '/target/'
     if os.path.exists(target_dir):
@@ -33,6 +34,8 @@ def generate_point_cloud(xrd_data, out_dir_root):
 
     # store point cloud representation for each material
     for idx, irow in xrd_data.iterrows():
+        if (idx+1)%500 == 0:
+            print('>> Generated dataset size: {}'.format(idx+1))
         # unique ID
         material_id = irow['material_id']
         filename = str(material_id) + '.csv'

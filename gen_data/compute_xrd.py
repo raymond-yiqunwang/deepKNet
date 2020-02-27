@@ -29,7 +29,7 @@ def compute_xrd(data_raw):
     header = ['material_id', 'band_gap', 'energy_per_atom', 'formation_energy_per_atom', \
         'hkl', 'recip_xyz', 'recip_spherical', 'i_hkl_corrected', 'atomic_form_factor', 'max_r']
 
-    xrd_data_batch = []
+    xrd_data_batch = [header]
     xrd_simulator = xrd.XRDSimulator(wavelength='AgKa')
     for idx, irow in data_raw.iterrows():
         # obtain xrd features
@@ -64,7 +64,7 @@ def compute_xrd(data_raw):
             print('>> Processed materials: {}'.format(idx+1))
             # write to file
             xrd_data_batch = pd.DataFrame(xrd_data_batch)
-            xrd_data_batch.to_csv(out_file, sep=';', header=header, index=False, mode='a')
+            xrd_data_batch.to_csv(out_file, sep=';', header=None, index=False, mode='a')
             # clear data list
             xrd_data_batch = [] 
 
