@@ -19,7 +19,8 @@ def generate_point_cloud(data_raw):
 
     point_cloud = []
     xrd_simulator = xrd.XRDSimulator(wavelength='CuKa')
-    for _, irow in data_raw.iterrows():
+    for idx, irow in data_raw.iterrows():
+        if (idx+1)%500 == 0: print('>> Processed materials: {}'.format(idx+1))
         # obtain point cloud features
         struct = Structure.from_str(irow['cif'], fmt="cif")
         _, features = xrd_simulator.get_pattern(struct)
