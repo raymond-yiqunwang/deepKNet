@@ -42,8 +42,6 @@ def show_statistics(data):
     print('>> Cell volume (A^3): mean = {:.2f}, median = {:.2f}, standard deviation = {:.2f}, '
                     'min = {:.2f}, max = {:.2f}'.format(vol.mean(), vol.median(),\
                      vol.std(), vol.min(), vol.max()))
-#    vol.plot.hist(10)
-#    plt.show()
 
     # number of sites
     nsites = data['nsites']

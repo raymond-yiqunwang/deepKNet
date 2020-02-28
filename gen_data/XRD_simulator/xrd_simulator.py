@@ -288,7 +288,7 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
             i_hkl_corrected = i_hkl * lorentz_factor 
 
             # compute atomic form factor
-            atomic_form_factor = [0.] * 120 
+            atomic_form_factor = [0.] * 94
             for idx in range(zs.size):
                 atom_f = atomic_f_hkl[idx]
                 z = zs[idx]

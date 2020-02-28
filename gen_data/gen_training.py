@@ -56,8 +56,12 @@ def generate_point_cloud(xrd_data, out_dir_root):
         # normalize features
         features.iloc[:, 0] = features.iloc[:, 0] / max_r
         features.iloc[:, 3:-1] = features.iloc[:, 3:-1] / max(max(atomic_form_factor))
-        # write features
-        features.to_csv(features_dir+filename, sep=';', header=None, index=False)
+        # transpose features to accommodate PyTorch tensor style
+        features_T = features.transpose()
+        assert(features_T.shape[0] == 3+94)
+        assert(features_T.shape[1] == 512)
+        # write features_T
+        features_T.to_csv(features_dir+filename, sep=';', header=None, index=False)
 
         # target properties
         band_gap = irow['band_gap']
