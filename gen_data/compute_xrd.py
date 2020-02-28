@@ -60,7 +60,7 @@ def compute_xrd(data_raw):
         xrd_data_batch.append(ifeat)
 
         # process batch
-        if (idx+1)%chunksize == 0:
+        if ((idx+1)%chunksize == 0) or (idx == len(data_raw)-1):
             print('>> Processed materials: {}'.format(idx+1))
             # write to file
             xrd_data_batch = pd.DataFrame(xrd_data_batch)

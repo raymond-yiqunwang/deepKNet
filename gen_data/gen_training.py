@@ -39,6 +39,9 @@ def generate_point_cloud(xrd_data, out_dir_root):
         # unique ID
         material_id = irow['material_id']
         filename = str(material_id) + '.csv'
+        if os.path.exists(features_dir+filename):
+            print('duplicate material_id detected, check data source..')
+            sys.exit(1)
 
         # features
         hkl = ast.literal_eval(irow['hkl'])
