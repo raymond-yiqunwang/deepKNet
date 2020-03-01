@@ -148,7 +148,7 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
             self.wavelength = WAVELENGTHS[wavelength]
         self.symprec = symprec
 
-    def get_pattern(self, structure, npoints=512, debug=False, scale_intensity=True, two_theta_range=None):
+    def get_pattern(self, structure, npoints=-1, debug=False, scale_intensity=True, two_theta_range=None):
         """
         Calculates the diffraction pattern for a structure.
 
@@ -196,7 +196,7 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
         # otherwise only take a subset near the zone center
         # P.S. use (npoint+1) since the zone center is not included in output
         if not debug:
-            assert(len(recip_pts) > npoints+1)
+            assert(len(recip_pts) > npoints+1 > 1)
             recip_pts = sorted(recip_pts, key=lambda i: i[1])
             recip_pts = recip_pts[:npoints+1]
 
@@ -285,7 +285,7 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
 
             # Intensity for hkl is modulus square of structure factor.
             i_hkl = (f_hkl * f_hkl.conjugate()).real
-            i_hkl_corrected = i_hkl * lorentz_factor 
+            i_hkl_lorentz = i_hkl * lorentz_factor 
 
             # compute atomic form factor
             atomic_form_factor = [0.] * 94
@@ -297,7 +297,7 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
             
             # add to features 
             ifeat = [hkl, list(recip_xyz), list(recip_spherical), \
-                     [i_hkl_corrected], atomic_form_factor]
+                     [i_hkl_lorentz], atomic_form_factor]
             features.append(ifeat)
 
             ### for diffractin pattern plotting only

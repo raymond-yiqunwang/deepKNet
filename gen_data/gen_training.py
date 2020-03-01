@@ -17,7 +17,7 @@ import pandas as pd
 
 
 def generate_point_cloud(xrd_data, out_dir_root):
-    # safeguard here
+    # safeguard
     _ = input("Attention, all existing training data will be deleted and regenerated.. \
         \n>> Hit Enter to continue, Ctrl+c to terminate..")
     print("Started generating dataset..")
@@ -47,7 +47,7 @@ def generate_point_cloud(xrd_data, out_dir_root):
         hkl = ast.literal_eval(irow['hkl'])
         recip_xyz = ast.literal_eval(irow['recip_xyz'])
         recip_spherical = ast.literal_eval(irow['recip_spherical'])
-        i_hkl_corrected = ast.literal_eval(irow['i_hkl_corrected'])
+        i_hkl_lorentz = ast.literal_eval(irow['i_hkl_lorentz'])
         atomic_form_factor = ast.literal_eval(irow['atomic_form_factor'])
         max_r = float(irow['max_r'])
         # pick features wisely
