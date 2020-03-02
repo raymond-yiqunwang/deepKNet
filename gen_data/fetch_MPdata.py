@@ -36,7 +36,7 @@ def fetch_materials_data():
 
 
 def main():
-    # fetch raw data from Materials Project
+    # fetch raw data from the Materials Project
     fetch_materials_data()
 
 

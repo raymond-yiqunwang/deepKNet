@@ -18,26 +18,24 @@ from pymatgen.core.structure import Structure
 """
 
 
-def compute_xrd(data_raw, npoints=512, wavelength='CuKa'):
-
+def compute_xrd(data_raw, npoints, wavelength):
     xrd_data_batch = []
     xrd_simulator = xrd.XRDSimulator(wavelength=wavelength)
     for idx, irow in data_raw.iterrows():
         # obtain xrd features
         struct = Structure.from_str(irow['cif'], fmt="cif")
-        _, features, max_r = xrd_simulator.get_pattern(struct, npoints=npoints)
+        _, features, recip_latt = xrd_simulator.get_pattern(structure=struct, npoints=npoints)
         assert(len(features) == npoints)
         """
-          features: nrow = number of reciprocal kpoints (npoints)
-          features: ncol = (hkl  , recip_xyz, recip_spherical, i_hkl_lorentz, atomic_form_factor)
-                            [1x3], [1x3]    , [1x3]          , [1x1]          , [1x120]
+          features: nrow = number of reciprocal k-points (npoints)
+          features: ncol = (hkl  , lorentz_factor, i_hkl , atomic_form_factor)
+                            [1x3], scalar,       , scalar, [1x94]
         """
         # regroup features
         hkl = [ipoint[0] for ipoint in features]
-        recip_xyz = [ipoint[1] for ipoint in features]
-        recip_spherical = [ipoint[2] for ipoint in features]
-        i_hkl_lorentz = [ipoint[3] for ipoint in features]
-        atomic_form_factor = [ipoint[4] for ipoint in features]
+        lorentz_factor = [ipoint[1] for ipoint in features]
+        i_hkl = [ipoint[2] for ipoint in features]
+        atomic_form_factor = [ipoint[3] for ipoint in features]
 
         # properties of interest
         material_id = irow['material_id']
@@ -45,14 +43,17 @@ def compute_xrd(data_raw, npoints=512, wavelength='CuKa'):
         energy_per_atom = irow['energy_per_atom']
         formation_energy_per_atom = irow['formation_energy_per_atom']
 
-        # finish collecting one material
+        # property list
         ifeat = [material_id, band_gap, energy_per_atom, formation_energy_per_atom] 
-        ifeat.extend([hkl, recip_xyz, recip_spherical, i_hkl_lorentz, atomic_form_factor, max_r])
+        # features for post-processing
+        ifeat.append(recip_latt.tolist())
+        # point-specific features
+        ifeat.extend([hkl, lorentz_factor, i_hkl, atomic_form_factor])
         xrd_data_batch.append(ifeat)
     return pd.DataFrame(xrd_data_batch)
 
 
-def parallel_computing(df_in, npoints, wavelength, out_file, nworkers=1):
+def parallel_computing(df_in, npoints, wavelength, nworkers=1):
     # initialize pool of workers
     pool = Pool(processes=nworkers)
     df_split = np.array_split(df_in, nworkers)
@@ -60,19 +61,12 @@ def parallel_computing(df_in, npoints, wavelength, out_file, nworkers=1):
     df_out = pd.concat(pool.starmap(compute_xrd, args), axis=0)
     pool.close()
     pool.join()
-    # write to file
-    df_out.to_csv(out_file, sep=';', header=None, index=False, mode='a')
+    return df_out
 
 
 def main():
     # read customized data
     MP_data = pd.read_csv("./data_raw/custom_MPdata.csv", sep=';', header=0, index_col=None)
-
-    # parameters
-    n_slices = MP_data.shape[0] // 500 + 1 # number of batches to split
-    npoints = 512 # number of k-points to compute
-    wavelength = 'AgKa' # X-ray wavelength
-    nworkers = 12
 
     # specify output
     out_file = "./data_raw/compute_xrd.csv"
@@ -82,16 +76,24 @@ def main():
             \n>> Hit Enter to continue, Ctrl+c to terminate..")
         print("Started recomputing xrd..")
     header = [['material_id', 'band_gap', 'energy_per_atom', 'formation_energy_per_atom', \
-              'hkl', 'recip_xyz', 'recip_spherical', 'i_hkl_lorentz', 'atomic_form_factor', 'max_r']]
+              'recip_latt', 'hkl', 'lorentz_factor', 'i_hkl', 'atomic_form_factor']]
     df = pd.DataFrame(header)
     df.to_csv(out_file, sep=';', header=None, index=False, mode='w')
+    
+    # parameters
+    n_slices = MP_data.shape[0] // 500 + 1 # number of batches to split
+    npoints = 1024 # number of k-points to compute
+    wavelength = 'AgKa' # X-ray wavelength
+    nworkers = 12
 
     # parallel processing
     MP_data_chunk = np.array_split(MP_data, n_slices)
-    print('\nNumber of chunks: {}'.format(n_slices))
-    # generate xrd point cloud representations
+    # 'serial parallel' processing
     for chunk in MP_data_chunk:
-        parallel_computing(chunk, npoints, wavelength, out_file, nworkers)
+        # generate xrd point cloud representations
+        xrd_data = parallel_computing(chunk, npoints, wavelength, nworkers)
+        # write to file
+        xrd_data.to_csv(out_file, sep=';', header=None, index=False, mode='a')
 
 
 if __name__ == "__main__":

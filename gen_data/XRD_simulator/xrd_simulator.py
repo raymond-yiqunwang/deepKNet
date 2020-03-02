@@ -59,19 +59,6 @@ with open(os.path.join(os.path.dirname(__file__),
     ATOMIC_SCATTERING_PARAMS = json.load(f)
 
 
-# convert Cartesian coord to spherical 
-def cart2sphere(cart_coord):
-    x, y, z = cart_coord[0], cart_coord[1], cart_coord[2]
-    r = np.linalg.norm(cart_coord)
-    theta = math.acos(cart_coord[2]/r) # [0, pi]
-    theta = 2.*(theta/math.pi) - 1. # convert to [-1, 1]
-    assert(-1. <= theta <= 1.)
-    phi = math.atan2(y, x) # [-pi, pi]
-    phi = phi / math.pi # convert to [-1, 1]
-    assert(-1. <= phi <= 1.)
-    return [r, theta, phi]
-
-
 class XRDSimulator(AbstractDiffractionPatternCalculator):
     """
     Computes the XRD pattern of a crystal structure.
@@ -163,9 +150,8 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
                 sphere of radius 2 / wavelength.
 
         Returns:
-            (XRDPattern)
-            intensity -- [[hkl, xyz, spherical, intensity], ...]
-            atomic_form_factor 
+            (XRDPattern) -- for debugging purpose
+            list of features for point cloud representation
         """
         features = []
 
@@ -186,7 +172,6 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
         # Obtain crystallographic reciprocal lattice points within range
         # recip_pts entry: [coord, distance, index, image]
         recip_latt = latt.reciprocal_lattice_crystallographic
-        recip_basis = recip_latt.matrix
         recip_pts = recip_latt.get_points_in_sphere(
             [[0, 0, 0]], [0, 0, 0], max_r)
         if min_r:
@@ -241,11 +226,6 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
             # Force miller indices to be integers.
             hkl = [int(round(i)) for i in hkl]
         
-            # reciprocal coord of hkl
-            recip_xyz = np.dot(recip_basis.T, hkl)
-            # Cartesian to spherical
-            recip_spherical = cart2sphere(recip_xyz)
-
             d_hkl = 1. / g_hkl
 
             # Bragg condition
@@ -285,7 +265,6 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
 
             # Intensity for hkl is modulus square of structure factor.
             i_hkl = (f_hkl * f_hkl.conjugate()).real
-            i_hkl_lorentz = i_hkl * lorentz_factor 
 
             # compute atomic form factor
             atomic_form_factor = [0.] * 94
@@ -293,11 +272,10 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
                 atom_f = atomic_f_hkl[idx]
                 z = zs[idx]
                 atomic_intensity = (atom_f * atom_f.conjugate()).real
-                atomic_form_factor[z-1] += atomic_intensity * lorentz_factor
+                atomic_form_factor[z-1] += atomic_intensity
             
             # add to features 
-            ifeat = [hkl, list(recip_xyz), list(recip_spherical), \
-                     [i_hkl_lorentz], atomic_form_factor]
+            ifeat = [hkl, lorentz_factor, i_hkl, atomic_form_factor]
             features.append(ifeat)
 
             ### for diffractin pattern plotting only
@@ -335,7 +313,7 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
         if scale_intensity:
             xrd.normalize(mode="max", value=100)
 
-        return xrd, features, max_r
+        return xrd, features, recip_latt.matrix
 
 
 ### implemented for debugging purpose
@@ -347,7 +325,7 @@ if __name__ == "__main__":
     struct = Structure.from_str(mp_data[0]['cif'], fmt='cif')
     
     # compute XRD diffraction pattern and compare outputs
-    pattern, _, max_r = XRDSimulator('AgKa').get_pattern(struct, two_theta_range=None, debug=True) # this implementation
+    pattern, _, _ = XRDSimulator('AgKa').get_pattern(struct, two_theta_range=None, debug=True) # this implementation
     pattern_pymatgen = XRDCalculator('AgKa').get_pattern(struct, two_theta_range=None) # pymatgen original implementation
     print('Error rate: {}'.format(max(abs(np.array(pattern.x) - np.array(pattern_pymatgen.x)))))
 

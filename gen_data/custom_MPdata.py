@@ -89,6 +89,10 @@ def show_statistics(data):
     insulators = data[data['band_gap'] > gap_threshold]['band_gap']
     print('>> Number of metals: {:d}, number of insulators: {:d}' \
                 .format(metals.size, insulators.size))
+    print('     band gap of all dataset: mean = {:.2f}, median = {:.2f}, '
+                 'std = {:.2f}, min = {:.5f}, max = {:.2f}' \
+                 .format(data['band_gap'].mean(), data['band_gap'].median(),\
+                         data['band_gap'].std(), data['band_gap'].min(), data['band_gap'].max()))
     print('     band gap of insulators: mean = {:.2f}, median = {:.2f}, '
                  'std = {:.2f}, min = {:.5f}, max = {:.2f}' \
                  .format(insulators.mean(), insulators.median(),\
@@ -122,6 +126,8 @@ def customize_data(data_raw):
             for elem in ast.literal_eval(entry):
                 elem_dict[elem] += 1
         rare_dict = {key: val for key, val in elem_dict.items() if val < 100}
+        print('>> Rare elements: ')
+        print(rare_dict)
         rare_elements = set(rare_dict.keys())
         # drop entries containing rare elements
         drop_instance = []
