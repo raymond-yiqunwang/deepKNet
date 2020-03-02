@@ -5,64 +5,92 @@ import torch.nn.functional as F
 class deepKNet(nn.Module):
     def __init__(self):
         super(deepKNet, self).__init__()
-        ## TF settings
-        # net = tf.keras.layers.Conv1D(128, 1, activation=tf.nn.relu)(feat)
-        # net = tf.keras.layers.Conv1D(256, 3, padding="same", activation=tf.nn.relu)(net)
-        # for i in range(0, 5):
-        #   intmp = net
-        #   net = tf.keras.layers.Conv1D(256, 3, padding="same", dilation_rate=2**i, activation=None)(net)
-        #   net = tf.keras.layers.BatchNormalization()(net)
-        #   net += intmp # residue connection
-        #   net = tf.nn.relu(net)
-        #   
-        # net = tf.keras.layers.Conv1D(512, 3, padding="same", activation=tf.nn.relu)(net)
-        # for i in range(0, 5):
-        #   intmp = net
-        #   net = tf.keras.layers.Conv1D(512, 3, padding="same", dilation_rate=2**i, activation=None)    (net)
-        #   net = tf.keras.layers.BatchNormalization()(net)
-        #   net += intmp # residue connection
-        #   net = tf.nn.relu(net)
-        #
-        # net = tf.keras.layers.Conv1D(1024, 3, padding="same", activation=tf.nn.relu)(net)
-        # for i in range(0, 5):
-        #   intmp = net
-        #   net = tf.keras.layers.Conv1D(1024, 3, padding="same", dilation_rate=2**i, activation=None    )(net)
-        #   net = tf.keras.layers.BatchNormalization()(net)
-        #   net += intmp # residue connection
-        #   net = tf.nn.relu(net)
-        #
-        # net = tf.math.reduce_max(net, axis=1)
-        # net = tf.reshape(net, [-1, 1024])
-        # net = tf_util.fully_connected(net, 512, bn=False, is_training=is_training,
-        #           scope='fc1', bn_decay=bn_decay)
-        # net = tf_util.fully_connected(net, 256, bn=False, is_training=is_training,
-        #           scope='fc2', bn_decay=bn_decay)
-        # net = tf_util.fully_connected(net, 64, bn=False, is_training=is_training,
-        #           scope='fc3', bn_decay=bn_decay)
-        # y_pred = tf_util.fully_connected(net, 1, activation_fn=None, scope='fc4')
-
-
-        self.conv1 = torch.nn.Conv1d(97, 64, 1)
-        self.conv2 = torch.nn.Conv1d(64, 128, 1)
-        self.conv3 = torch.nn.Conv1d(128, 1024, 1)
-        self.bn1 = nn.BatchNorm1d(64)
-        self.bn2 = nn.BatchNorm1d(128)
+        # layer 0
+        self.conv0 = nn.Conv1d(97, 128, 1)
+        self.bn0 = nn.BatchNorm1d(128)
+        
+        # wave1
+        self.conv1 = nn.Conv1d(128, 256, 3)
+        self.bn1 = nn.BatchNorm1d(256)
+        self.nwave1 = 5
+        self.wave1_convs = nn.ModuleList([
+            nn.Conv1d(256, 256, 3, dilation=2**i, padding=2**i) for i in range(self.nwave1)])
+        self.wave1_bns = nn.ModuleList([
+            nn.BatchNorm1d(256) for i in range(self.nwave1)])
+        
+        # wave2
+        self.conv2 = nn.Conv1d(256, 512, 3)
+        self.bn2 = nn.BatchNorm1d(512)
+        self.nwave2 = 5
+        self.wave2_convs = nn.ModuleList([
+            nn.Conv1d(512, 512, 3, dilation=2**i, padding=2**i) for i in range(self.nwave2)])
+        self.wave2_bns = nn.ModuleList([
+            nn.BatchNorm1d(512) for i in range(self.nwave2)])
+        
+        # wave3
+        self.conv3 = nn.Conv1d(512, 1024, 3)
         self.bn3 = nn.BatchNorm1d(1024)
-        self.fc1 = nn.Linear(1024, 1)
+        self.nwave3 = 5
+        self.wave3_convs = nn.ModuleList([
+            nn.Conv1d(1024, 1024, 3, dilation=2**i, padding=2**i) for i in range(self.nwave3)])
+        self.wave3_bns = nn.ModuleList([
+            nn.BatchNorm1d(1024) for i in range(self.nwave3)])
+        
+        # fc1
+        self.fc1 = nn.Linear(1024, 512)
+        self.bn_fc1 = nn.BatchNorm1d(512)
+        
+        # fc2 
+        self.fc2 = nn.Linear(512, 256)
+        self.bn_fc2 = nn.BatchNorm1d(256)
+        
+        # fc3 
+        self.fc3 = nn.Linear(256, 64)
+        self.bn_fc3 = nn.BatchNorm1d(64)
+        
+        # fc4
+        self.fc4 = nn.Linear(64, 1)
 
     def forward(self, point_cloud):
         # point_cloud size -- (batch_size, nfeatures, npoints)
         # current settings -- (        16,      3+94,     512)
-        out = F.relu(self.bn1(self.conv1(point_cloud)))
-        out = F.relu(self.bn2(self.conv2(out)))
-        out = F.relu(self.bn3(self.conv3(out)))
+
+        net = F.relu(self.bn0(self.conv0(point_cloud)))
+
+        # wave1
+        net = F.relu(self.bn1(self.conv1(net)))
+        for i in range(self.nwave1):
+            intmp = net
+            net = F.relu(self.wave1_bns[i](self.wave1_convs[i](net)))
+            net += intmp # residue connection
+            net = F.relu(net)
+
+        # wave2
+        net = F.relu(self.bn2(self.conv2(net)))
+        for i in range(self.nwave2):
+            intmp = net
+            net = F.relu(self.wave2_bns[i](self.wave2_convs[i](net)))
+            net += intmp # residue connection
+            net = F.relu(net)
+
+        # wave3
+        net = F.relu(self.bn3(self.conv3(net)))
+        for i in range(self.nwave3):
+            intmp = net
+            net = F.relu(self.wave3_bns[i](self.wave3_convs[i](net)))
+            net += intmp # residue connection
+            net = F.relu(net)
+        
         # max pooling
-#        out = torch.max(out, dim=2, keepdim=True)[0]
-        # mean pooling
-        out = torch.mean(out, dim=2)
-        # reshape tensor
-        out = out.view(-1, 1024)
-        out = self.fc1(out)
-        return out
+        net = torch.max(net, dim=2, keepdim=True)[0]
+
+        # fully-connected layers
+        net = net.view(-1, 1024) # reshape tensor
+        net = F.relu(self.bn_fc1(self.fc1(net)))
+        net = F.relu(self.bn_fc2(self.fc2(net)))
+        net = F.relu(self.bn_fc3(self.fc3(net)))
+        y_pred = self.fc4(net)
+        
+        return y_pred
  
 

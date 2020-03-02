@@ -82,7 +82,7 @@ def main():
     
     # parameters
     n_slices = MP_data.shape[0] // 500 + 1 # number of batches to split
-    npoints = 1024 # number of k-points to compute
+    npoints = 512 # number of k-points to compute
     wavelength = 'AgKa' # X-ray wavelength
     nworkers = 12
 

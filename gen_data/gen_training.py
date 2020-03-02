@@ -65,7 +65,7 @@ def generate_point_cloud(xrd_data, features_dir, target_dir):
         # transpose features to accommodate PyTorch tensor style
         features_T = features.transpose()
         assert(features_T.shape[0] == 3+94)
-        assert(features_T.shape[1] == 1024)
+        assert(features_T.shape[1] == 512)
         # write features_T
         features_T.to_csv(features_dir+filename, sep=';', header=None, index=False)
 
@@ -100,7 +100,7 @@ def main():
     print("Finished reading raw data, start generating dataset..")
 
     # parameters
-    nworkers = 1
+    nworkers = 12
 
     # parallel processing
     xrd_data_chunk = np.array_split(xrd_data, nworkers)
