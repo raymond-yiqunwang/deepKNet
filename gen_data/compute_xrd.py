@@ -1,6 +1,8 @@
 import os
+import numpy as np
 import pandas as pd
 import XRD_simulator.xrd_simulator as xrd
+from multiprocessing import Pool
 from pymatgen.core.structure import Structure
 
 
@@ -17,22 +19,8 @@ from pymatgen.core.structure import Structure
 
 
 def compute_xrd(data_raw, npoints=512, wavelength='CuKa'):
-    # specify output
-    out_file = "./data_raw/compute_xrd.csv"
-    # remove existing csv file
-    if os.path.exists(out_file):
-        # safeguard
-        _ = input("Attention, the existing xrd data will be deleted and regenerated.. \
-            \n>> Hit Enter to continue, Ctrl+c to terminate..")
-        os.remove(out_file)
-        print("Started recomputing xrd..")
 
-    # define batch size and npoints
-    chunksize = 500
-    header = ['material_id', 'band_gap', 'energy_per_atom', 'formation_energy_per_atom', \
-        'hkl', 'recip_xyz', 'recip_spherical', 'i_hkl_lorentz', 'atomic_form_factor', 'max_r']
-
-    xrd_data_batch = [header]
+    xrd_data_batch = []
     xrd_simulator = xrd.XRDSimulator(wavelength=wavelength)
     for idx, irow in data_raw.iterrows():
         # obtain xrd features
@@ -61,26 +49,49 @@ def compute_xrd(data_raw, npoints=512, wavelength='CuKa'):
         ifeat = [material_id, band_gap, energy_per_atom, formation_energy_per_atom] 
         ifeat.extend([hkl, recip_xyz, recip_spherical, i_hkl_lorentz, atomic_form_factor, max_r])
         xrd_data_batch.append(ifeat)
+    return pd.DataFrame(xrd_data_batch)
 
-        # process batch
-        if ((idx+1)%chunksize == 0) or (idx == len(data_raw)-1):
-            print('>> Processed materials: {}'.format(idx+1))
-            # write to file
-            xrd_data_batch = pd.DataFrame(xrd_data_batch)
-            xrd_data_batch.to_csv(out_file, sep=';', header=None, index=False, mode='a')
-            # clear data list
-            xrd_data_batch = [] 
+
+def parallel_computing(df_in, npoints, wavelength, out_file, nworkers=1):
+    # initialize pool of workers
+    pool = Pool(processes=nworkers)
+    df_split = np.array_split(df_in, nworkers)
+    args = [(data, npoints, wavelength) for data in df_split]
+    df_out = pd.concat(pool.starmap(compute_xrd, args), axis=0)
+    pool.close()
+    pool.join()
+    # write to file
+    df_out.to_csv(out_file, sep=';', header=None, index=False, mode='a')
 
 
 def main():
     # read customized data
     MP_data = pd.read_csv("./data_raw/custom_MPdata.csv", sep=';', header=0, index_col=None)
 
+    # parameters
+    n_slices = MP_data.shape[0] // 500 + 1 # number of batches to split
     npoints = 512 # number of k-points to compute
     wavelength = 'AgKa' # X-ray wavelength
+    nworkers = 12
 
+    # specify output
+    out_file = "./data_raw/compute_xrd.csv"
+    # safeguard
+    if os.path.exists(out_file):
+        _ = input("Attention, the existing xrd data will be deleted and regenerated.. \
+            \n>> Hit Enter to continue, Ctrl+c to terminate..")
+        print("Started recomputing xrd..")
+    header = [['material_id', 'band_gap', 'energy_per_atom', 'formation_energy_per_atom', \
+              'hkl', 'recip_xyz', 'recip_spherical', 'i_hkl_lorentz', 'atomic_form_factor', 'max_r']]
+    df = pd.DataFrame(header)
+    df.to_csv(out_file, sep=';', header=None, index=False, mode='w')
+
+    # parallel processing
+    MP_data_chunk = np.array_split(MP_data, n_slices)
+    print('\nNumber of chunks: {}'.format(n_slices))
     # generate xrd point cloud representations
-    compute_xrd(MP_data, npoints, wavelength)
+    for chunk in MP_data_chunk:
+        parallel_computing(chunk, npoints, wavelength, out_file, nworkers)
 
 
 if __name__ == "__main__":

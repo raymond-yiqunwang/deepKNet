@@ -1,7 +1,9 @@
 import os
 import shutil
 import ast
+import numpy as np
 import pandas as pd
+from multiprocessing import Pool
 
 
 """ properties
@@ -16,26 +18,9 @@ import pandas as pd
 """
 
 
-def generate_point_cloud(xrd_data, out_dir_root):
-    # safeguard
-    _ = input("Attention, all existing training data will be deleted and regenerated.. \
-        \n>> Hit Enter to continue, Ctrl+c to terminate..")
-    print("Started generating dataset..")
-
-    # remove existing csv files
-    target_dir = out_dir_root + '/target/'
-    if os.path.exists(target_dir):
-        shutil.rmtree(target_dir, ignore_errors=True)
-    os.mkdir(target_dir)
-    features_dir = out_dir_root + '/features/'
-    if os.path.exists(features_dir):
-        shutil.rmtree(features_dir, ignore_errors=True)
-    os.mkdir(features_dir)
-
+def generate_point_cloud(xrd_data, features_dir, target_dir):
     # store point cloud representation for each material
-    for idx, irow in xrd_data.iterrows():
-        if (idx+1)%500 == 0:
-            print('>> Generated dataset size: {}'.format(idx+1))
+    for _, irow in xrd_data.iterrows():
         # unique ID
         material_id = irow['material_id']
         filename = str(material_id) + '.csv'
@@ -75,12 +60,33 @@ def generate_point_cloud(xrd_data, out_dir_root):
 
 
 def main():
+    # safeguard
+    _ = input("Attention, all existing training data will be deleted and regenerated.. \
+        \n>> Hit Enter to continue, Ctrl+c to terminate..")
+    print("Started generating dataset..")
+    # remove existing csv files
+    target_dir = '../data/target/'
+    if os.path.exists(target_dir):
+        shutil.rmtree(target_dir, ignore_errors=True)
+    os.mkdir(target_dir)
+    features_dir = '../data/features/'
+    if os.path.exists(features_dir):
+        shutil.rmtree(features_dir, ignore_errors=True)
+    os.mkdir(features_dir)
+
     # read xrd raw data
     xrd_data = pd.read_csv("./data_raw/compute_xrd.csv", sep=';', header=0, index_col=None)
 
-    out_dir_root = "../data/"
-    # generate training data
-    generate_point_cloud(xrd_data, out_dir_root)
+    # parameters
+    nworkers = 12
+
+    # parallel processing
+    xrd_data_chunk = np.array_split(xrd_data, nworkers)
+    pool = Pool(nworkers)
+    args = [(data, features_dir, target_dir) for data in xrd_data_chunk]
+    pool.starmap(generate_point_cloud, args)
+    pool.close()
+    pool.join()
 
 
 if __name__ == "__main__":
