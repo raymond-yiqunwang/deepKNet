@@ -16,21 +16,24 @@ from pymatgen.core.structure import Structure
 """
 
 
-def compute_xrd(data_raw):
+def compute_xrd(data_raw, npoints=512, wavelength='CuKa'):
     # specify output
     out_file = "./data_raw/compute_xrd.csv"
     # remove existing csv file
     if os.path.exists(out_file):
+        # safeguard
+        _ = input("Attention, the existing xrd data will be deleted and regenerated.. \
+            \n>> Hit Enter to continue, Ctrl+c to terminate..")
         os.remove(out_file)
+        print("Started recomputing xrd..")
 
     # define batch size and npoints
     chunksize = 500
-    npoints = 512
     header = ['material_id', 'band_gap', 'energy_per_atom', 'formation_energy_per_atom', \
-        'hkl', 'recip_xyz', 'recip_spherical', 'i_hkl_corrected', 'atomic_form_factor', 'max_r']
+        'hkl', 'recip_xyz', 'recip_spherical', 'i_hkl_lorentz', 'atomic_form_factor', 'max_r']
 
     xrd_data_batch = [header]
-    xrd_simulator = xrd.XRDSimulator(wavelength='AgKa')
+    xrd_simulator = xrd.XRDSimulator(wavelength=wavelength)
     for idx, irow in data_raw.iterrows():
         # obtain xrd features
         struct = Structure.from_str(irow['cif'], fmt="cif")
@@ -38,14 +41,14 @@ def compute_xrd(data_raw):
         assert(len(features) == npoints)
         """
           features: nrow = number of reciprocal kpoints (npoints)
-          features: ncol = (hkl  , recip_xyz, recip_spherical, i_hkl_corrected, atomic_form_factor)
+          features: ncol = (hkl  , recip_xyz, recip_spherical, i_hkl_lorentz, atomic_form_factor)
                             [1x3], [1x3]    , [1x3]          , [1x1]          , [1x120]
         """
         # regroup features
         hkl = [ipoint[0] for ipoint in features]
         recip_xyz = [ipoint[1] for ipoint in features]
         recip_spherical = [ipoint[2] for ipoint in features]
-        i_hkl_corrected = [ipoint[3] for ipoint in features]
+        i_hkl_lorentz = [ipoint[3] for ipoint in features]
         atomic_form_factor = [ipoint[4] for ipoint in features]
 
         # properties of interest
@@ -56,7 +59,7 @@ def compute_xrd(data_raw):
 
         # finish collecting one material
         ifeat = [material_id, band_gap, energy_per_atom, formation_energy_per_atom] 
-        ifeat.extend([hkl, recip_xyz, recip_spherical, i_hkl_corrected, atomic_form_factor, max_r])
+        ifeat.extend([hkl, recip_xyz, recip_spherical, i_hkl_lorentz, atomic_form_factor, max_r])
         xrd_data_batch.append(ifeat)
 
         # process batch
@@ -73,8 +76,11 @@ def main():
     # read customized data
     MP_data = pd.read_csv("./data_raw/custom_MPdata.csv", sep=';', header=0, index_col=None)
 
+    npoints = 512 # number of k-points to compute
+    wavelength = 'AgKa' # X-ray wavelength
+
     # generate xrd point cloud representations
-    compute_xrd(MP_data)
+    compute_xrd(MP_data, npoints, wavelength)
 
 
 if __name__ == "__main__":

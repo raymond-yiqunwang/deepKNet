@@ -1,7 +1,7 @@
 __pycache__/
+gen_data/XRD_simulator/__pycache__/
 .*.swp
 data/
 gen_data/data_raw/
 runs/
 checkpoints/
-imageNet.py

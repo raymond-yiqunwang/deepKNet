@@ -19,7 +19,7 @@ def fetch_materials_data():
     my_API_key = "gxTAyXSm2GvCdWer"
     m = MPRester(api_key=my_API_key)
     
-    # query data with computed band structures and no warning sign
+    # query data with calculated band structures
     mp_data = m.query(criteria={
         "has": "bandstructure",
     }, properties=properties)

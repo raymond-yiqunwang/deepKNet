@@ -39,15 +39,17 @@ def show_statistics(data):
 
     # volume
     vol = data['volume']
-    print('>> Cell volume (A^3): mean = {:.2f}, median = {:.2f}, standard deviation = {:.2f}, '
-                    'min = {:.2f}, max = {:.2f}'.format(vol.mean(), vol.median(),\
-                     vol.std(), vol.min(), vol.max()))
+    print('>> Cell volume (A^3): mean = {:.2f}, median = {:.2f}, '
+                'std = {:.2f}, min = {:.2f}, max = {:.2f}' \
+                .format(vol.mean(), vol.median(), vol.std(), 
+                        vol.min(), vol.max()))
 
     # number of sites
     nsites = data['nsites']
-    print('>> Number of sites: mean = {:.1f}, median = {:.1f}, standard deviation = {:.1f}, '
-                    'min = {:d}, max = {:d}'.format(nsites.mean(), nsites.median(),\
-                     nsites.std(), nsites.min(), nsites.max()))
+    print('>> Number of sites: mean = {:.1f}, median = {:.1f}, '
+                'std = {:.1f}, min = {:d}, max = {:d}' \
+                .format(nsites.mean(), nsites.median(), nsites.std(), \
+                        nsites.min(), nsites.max()))
 
     # elements
     elements = data['elements']
@@ -57,35 +59,40 @@ def show_statistics(data):
             elem_dict[elem] += 1
     min_key = min(elem_dict, key=elem_dict.get)
     max_key = max(elem_dict, key=elem_dict.get)
-    print('>> Number of unique elements: {:d}, min: {:d}, max: {:d}'\
+    print('>> Number of unique elements: {:d}, min: {:d}, max: {:d}' \
             .format(len(elem_dict), elem_dict[min_key], elem_dict[max_key]))
 
     # energy per atom
     energy_atom = data['energy_per_atom']
-    print('>> Energy per atom (eV): mean = {:.2f}, median = {:.2f}, standard deviation = {:.2f}, '
-                    'min = {:.2f}, max = {:.2f}'.format(energy_atom.mean(), energy_atom.median(),\
-                     energy_atom.std(), energy_atom.min(), energy_atom.max()))
+    print('>> Energy per atom (eV): mean = {:.2f}, median = {:.2f}, '
+                'std = {:.2f}, min = {:.2f}, max = {:.2f}' \
+                .format(energy_atom.mean(), energy_atom.median(), energy_atom.std(), \
+                        energy_atom.min(), energy_atom.max()))
 
     # formation energy per atom
     formation_atom = data['formation_energy_per_atom']
-    print('>> Formation energy per atom (eV): mean = {:.2f}, median = {:.2f}, standard deviation = {:.2f}, '
-                    'min = {:.2f}, max = {:.2f}'.format(formation_atom.mean(), formation_atom.median(),\
-                     formation_atom.std(), formation_atom.min(), formation_atom.max()))
+    print('>> Formation energy per atom (eV): mean = {:.2f}, median = {:.2f}, '
+                'std = {:.2f}, min = {:.2f}, max = {:.2f}' \
+                .format(formation_atom.mean(), formation_atom.median(),\
+                        formation_atom.std(), formation_atom.min(), formation_atom.max()))
 
     # energy above hull
     e_above_hull = data['e_above_hull']
-    print('>> Energy above hull (eV): mean = {:.2f}, median = {:.2f}, standard deviation = {:.2f}, '
-                    'min = {:.2f}, max = {:.2f}'.format(e_above_hull.mean(), e_above_hull.median(),\
+    print('>> Energy above hull (eV): mean = {:.2f}, median = {:.2f}, '
+                'std = {:.2f}, min = {:.2f}, max = {:.2f}' \
+                .format(e_above_hull.mean(), e_above_hull.median(),\
                      e_above_hull.std(), e_above_hull.min(), e_above_hull.max()))
 
     # band gap TODO determine threshold
     gap_threshold = 1E-3
     metals = data[data['band_gap'] <= gap_threshold]['band_gap']
     insulators = data[data['band_gap'] > gap_threshold]['band_gap']
-    print('>> Number of metals: {:d}, number of insulators: {:d}'.format(metals.size, insulators.size))
-    print('     band gap of insulators: mean = {:.2f}, median = {:.2f}, standard deviation = {:.2f}, '
-                        'min = {:.5f}, max = {:.2f}'.format(insulators.mean(), insulators.median(),\
-                        insulators.std(), insulators.min(), insulators.max()))
+    print('>> Number of metals: {:d}, number of insulators: {:d}' \
+                .format(metals.size, insulators.size))
+    print('     band gap of insulators: mean = {:.2f}, median = {:.2f}, '
+                 'std = {:.2f}, min = {:.5f}, max = {:.2f}' \
+                 .format(insulators.mean(), insulators.median(),\
+                         insulators.std(), insulators.min(), insulators.max()))
 
     # warnings
     no_warnings = data[data['warnings'] == '[]']
@@ -116,7 +123,7 @@ def customize_data(data_raw):
                 elem_dict[elem] += 1
         rare_dict = {key: val for key, val in elem_dict.items() if val < 100}
         rare_elements = set(rare_dict.keys())
-        # drop entries
+        # drop entries containing rare elements
         drop_instance = []
         for idx, value in data_custom['elements'].iteritems():
             if rare_elements & set(ast.literal_eval(value)):
