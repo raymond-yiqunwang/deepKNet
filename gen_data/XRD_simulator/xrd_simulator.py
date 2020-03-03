@@ -135,7 +135,7 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
             self.wavelength = WAVELENGTHS[wavelength]
         self.symprec = symprec
 
-    def get_pattern(self, structure, npoints=-1, debug=False, scale_intensity=True, two_theta_range=None):
+    def get_pattern(self, structure, debug=False, scale_intensity=True, two_theta_range=None):
         """
         Calculates the diffraction pattern for a structure.
 
@@ -176,14 +176,6 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
             [[0, 0, 0]], [0, 0, 0], max_r)
         if min_r:
             recip_pts = [pt for pt in recip_pts if pt[1] >= min_r]
-
-        # calculate diffraction for all kpoints only in debugging mode,
-        # otherwise only take a subset near the zone center
-        # P.S. use (npoint+1) since the zone center is not included in output
-        if not debug:
-            assert(len(recip_pts) > npoints+1 > 1)
-            recip_pts = sorted(recip_pts, key=lambda i: i[1])
-            recip_pts = recip_pts[:npoints+1]
 
         # Create a flattened array of zs, coeffs, fcoords and occus. This is
         # used to perform vectorized computation of atomic scattering factors
@@ -314,6 +306,14 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
             xrd.normalize(mode="max", value=100)
 
         return xrd, features, recip_latt.matrix
+
+    def get_npoints(self, structure):
+        latt = structure.lattice
+        max_r = 2. / self.wavelength
+        recip_latt = latt.reciprocal_lattice_crystallographic
+        recip_pts = recip_latt.get_points_in_sphere(
+            [[0, 0, 0]], [0, 0, 0], max_r)
+        return len(recip_pts)
 
 
 ### implemented for debugging purpose

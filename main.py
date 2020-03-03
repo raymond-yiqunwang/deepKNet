@@ -16,7 +16,8 @@ parser = argparse.ArgumentParser(description='DeepKNet model')
 parser.add_argument('--root', default='./data/', metavar='DATA_ROOT',
                     help='path to root directory')
 parser.add_argument('--target', default='band_gap', metavar='TARGET_PROPERTY',
-                    help='target property (band gap, formation energy per atom)')
+                    help="target property ('band_gap', \
+                         'energy_per_atom', 'formation_energy per atom')")
 parser.add_argument('-j', '--num_workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
 parser.add_argument('--epochs', default=200, type=int, metavar='N',
@@ -54,7 +55,7 @@ best_mae = 1e8
 
 def main():
     global args, best_mae
-
+    device = torch.device("cuda:0" if args.cuda else "cpu")
 
     # load data
     dataset = deepKNetDataset(root=args.root, target=args.target)
@@ -71,7 +72,7 @@ def main():
 
     # build model
     model = deepKNet()
-    if args.cuda: model.cuda()
+    model.to(device)
 
     # define loss function (criterion) and optimizer
     criterion = nn.MSELoss()
@@ -100,10 +101,13 @@ def main():
         return
 
     # TensorBoard writer
-    summary_file = 'runs/test1'
+    summary_root = './runs/'
+    summary_file = summary_root + 'test1'
+    if not os.path.exists(summary_root):
+        os.mkdir(summary_root)
     if os.path.exists(summary_file):
         shutil.rmtree(summary_file)
-    writer = SummaryWriter('runs/test1')
+    writer = SummaryWriter(summary_file)
 
     # learning-rate scheduler
     scheduler = MultiStepLR(optimizer=optimizer, milestones=args.lr_milestones,
@@ -153,19 +157,20 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer):
 
         # features and target
         point_cloud, target = data
-        if args.cuda:
-            point_cloud = point_cloud.cuda()
-            target = target.cuda()
+        point_cloud = point_cloud.to(device)
+        target = target.to(device)
 
         # normalize target
-        target_normed = normalizer.norm(target)
+        #target_normed = normalizer.norm(target)
 
         # compute output
         output = model(point_cloud)
-        loss = criterion(output, target_normed)
+        #loss = criterion(output, target_normed)
+        loss = criterion(output, target)
 
         # measure accuracy and record loss
-        mae = compute_mae(target, normalizer.denorm(output))
+        #mae = compute_mae(target, normalizer.denorm(output))
+        mae = compute_mae(target, output)
         losses.update(loss.item(), target.size(0))
         maes.update(mae.item(), target.size(0))
         
@@ -210,19 +215,20 @@ def validate(val_loader, model, criterion, epoch, writer, normalizer):
         for idx, data in enumerate(val_loader):
             # features and target
             point_cloud, target = data
-            if args.cuda:
-                point_cloud = point_cloud.cuda()
-                target = target.cuda()
+            point_cloud = point_cloud.to(device)
+            target = target.to(device)
 
             # normalize target
-            target_normed = normalizer.norm(target)
+            #target_normed = normalizer.norm(target)
 
             # compute output
             output = model(point_cloud)
-            loss = criterion(output, target_normed)
+            #loss = criterion(output, target_normed)
+            loss = criterion(output, target)
 
             # measure accuracy and record loss
-            mae = compute_mae(target, normalizer.denorm(output))
+            #mae = compute_mae(target, normalizer.denorm(output))
+            mae = compute_mae(target, output)
             losses.update(loss.item(), target.size(0))
             maes.update(mae, target.size(0))
 

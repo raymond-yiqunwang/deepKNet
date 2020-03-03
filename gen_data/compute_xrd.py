@@ -1,6 +1,9 @@
 import os
+import sys
 import numpy as np
 import pandas as pd
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
 import XRD_simulator.xrd_simulator as xrd
 from multiprocessing import Pool
 from pymatgen.core.structure import Structure
@@ -18,16 +21,15 @@ from pymatgen.core.structure import Structure
 """
 
 
-def compute_xrd(data_raw, npoints, wavelength):
+def compute_xrd(data_raw, wavelength):
     xrd_data_batch = []
     xrd_simulator = xrd.XRDSimulator(wavelength=wavelength)
     for idx, irow in data_raw.iterrows():
         # obtain xrd features
         struct = Structure.from_str(irow['cif'], fmt="cif")
-        _, features, recip_latt = xrd_simulator.get_pattern(structure=struct, npoints=npoints)
-        assert(len(features) == npoints)
+        _, features, recip_latt = xrd_simulator.get_pattern(structure=struct)
         """
-          features: nrow = number of reciprocal k-points (npoints)
+          features: nrow = number of reciprocal k-points
           features: ncol = (hkl  , lorentz_factor, i_hkl , atomic_form_factor)
                             [1x3], scalar,       , scalar, [1x94]
         """
@@ -50,14 +52,15 @@ def compute_xrd(data_raw, npoints, wavelength):
         # point-specific features
         ifeat.extend([hkl, lorentz_factor, i_hkl, atomic_form_factor])
         xrd_data_batch.append(ifeat)
+    
     return pd.DataFrame(xrd_data_batch)
 
 
-def parallel_computing(df_in, npoints, wavelength, nworkers=1):
+def parallel_computing(df_in, wavelength, nworkers=1):
     # initialize pool of workers
     pool = Pool(processes=nworkers)
     df_split = np.array_split(df_in, nworkers)
-    args = [(data, npoints, wavelength) for data in df_split]
+    args = [(data, wavelength) for data in df_split]
     df_out = pd.concat(pool.starmap(compute_xrd, args), axis=0)
     pool.close()
     pool.join()
@@ -65,8 +68,12 @@ def parallel_computing(df_in, npoints, wavelength, nworkers=1):
 
 
 def main():
+    filename = "./data_raw/custom_MPdata.csv"
+    if not os.path.isfile(filename):
+        print("{} file does not exist, please generate it first..".format(filename))
+        sys.exit(1)
     # read customized data
-    MP_data = pd.read_csv("./data_raw/custom_MPdata.csv", sep=';', header=0, index_col=None)
+    MP_data = pd.read_csv(filename, sep=';', header=0, index_col=None)
 
     # specify output
     out_file = "./data_raw/compute_xrd.csv"
@@ -81,9 +88,8 @@ def main():
     df.to_csv(out_file, sep=';', header=None, index=False, mode='w')
     
     # parameters
-    n_slices = MP_data.shape[0] // 500 + 1 # number of batches to split
-    npoints = 512 # number of k-points to compute
-    wavelength = 'AgKa' # X-ray wavelength
+    n_slices = MP_data.shape[0] // 240 + 1 # number of batches to split
+    wavelength = 'CuKa' # X-ray wavelength
     nworkers = 12
 
     # parallel processing
@@ -91,7 +97,7 @@ def main():
     # 'serial parallel' processing
     for chunk in MP_data_chunk:
         # generate xrd point cloud representations
-        xrd_data = parallel_computing(chunk, npoints, wavelength, nworkers)
+        xrd_data = parallel_computing(chunk, wavelength, nworkers)
         # write to file
         xrd_data.to_csv(out_file, sep=';', header=None, index=False, mode='a')
 

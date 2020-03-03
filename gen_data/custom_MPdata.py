@@ -1,9 +1,14 @@
-import pandas as pd
+import os
+import sys
 import ast
+import numpy as np
+import pandas as pd
+import XRD_simulator.xrd_simulator as xrd
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+from multiprocessing import Pool
 from collections import defaultdict
-import matplotlib
-matplotlib.use('TKAgg')
-import matplotlib.pyplot as plt
+from pymatgen.core.structure import Structure
 
 """ properties
         "material_id", "icsd_ids",
@@ -17,7 +22,15 @@ import matplotlib.pyplot as plt
 """
 
 
-def show_statistics(data):
+def get_npts(data, simulator):
+    out = []
+    for cif in data['cif']:
+        struct = Structure.from_str(cif, fmt="cif")
+        out.append(simulator.get_npoints(structure=struct))
+    return out
+
+
+def show_statistics(data, compute_xrd=False):
     # size of database
     print('>> Total number of materials: {:d}, number of properties: {:d}'\
             .format(data.shape[0], data.shape[1]))
@@ -43,6 +56,21 @@ def show_statistics(data):
                 'std = {:.2f}, min = {:.2f}, max = {:.2f}' \
                 .format(vol.mean(), vol.median(), vol.std(), 
                         vol.min(), vol.max()))
+    
+    # number of recriprocal space points
+    if compute_xrd:
+        nworkers = 12
+        pool = Pool(processes=nworkers)
+        df_split = np.array_split(data, nworkers)
+        # CuKa
+        xrd_simulator = xrd.XRDSimulator(wavelength="CuKa")
+        args = [(data, xrd_simulator) for data in df_split]
+        out = pool.starmap(get_npts, args)
+        npts = [npt for sublist in out for npt in sublist]
+        print('>> Number of k-points with CuKa: mean = {:.1f}, median = {:.1f}, '
+                    'std = {:.1f}, min = {:d}, max = {:d}' \
+                    .format(np.mean(npts), np.median(npts), np.std(npts), 
+                            np.min(npts), np.max(npts)))
 
     # number of sites
     nsites = data['nsites']
@@ -116,7 +144,8 @@ def customize_data(data_raw):
 
     # get rid of extreme volumes TODO determine threshold
     if True:
-        data_custom = data_custom[data_custom['volume'] < 1000]
+        data_custom = data_custom[data_custom['volume'] > 100]
+        data_custom = data_custom[data_custom['volume'] < 800]
 
     # get rid of rare elements
     if True:
@@ -140,19 +169,23 @@ def customize_data(data_raw):
 
 
 def main():
+    filename = "./data_raw/fetch_MPdata.csv"
+    if not os.path.isfile(filename):
+        print("{} file does not exist, please generate it first..".format(filename))
+        sys.exit(1)
     # get raw data from Materials Project
-    data_raw = pd.read_csv("./data_raw/fetch_MPdata.csv", sep=';', header=0, index_col=None)
+    data_raw = pd.read_csv(filename, sep=';', header=0, index_col=None)
 
     # show statistics of raw data
     print('\nShowing raw data:')
-    show_statistics(data=data_raw)
+    show_statistics(data=data_raw, compute_xrd=False)
 
     # custom data
     data_custom = customize_data(data_raw)
 
     # show statistics of customized data
     print('\nShowing customized data:')
-    show_statistics(data=data_custom)
+    show_statistics(data=data_custom, compute_xrd=True)
 
     # write customized data
     data_custom.to_csv("./data_raw/custom_MPdata.csv", sep=';', columns=None, header=data_custom.columns, index=None)
