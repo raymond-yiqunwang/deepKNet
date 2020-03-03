@@ -1,9 +1,11 @@
 import os
+import sys
 import math
 import shutil
 import ast
 import numpy as np
 import pandas as pd
+import multiprocessing
 from multiprocessing import Pool
 
 
@@ -70,7 +72,7 @@ def generate_point_cloud(xrd_data, features_dir, target_dir, npoints):
         # transpose features to accommodate PyTorch tensor style
         features_T = features.transpose()
         assert(features_T.shape[0] == 3+94)
-        assert(features_T.shape[1] == 512)
+        assert(features_T.shape[1] == npoints)
         # write features_T
         features_T.to_csv(features_dir+filename, sep=';', header=None, index=False)
 
@@ -89,7 +91,14 @@ def main():
     # safeguard
     _ = input("Attention, all existing training data will be deleted and regenerated.. \
         \n>> Hit Enter to continue, Ctrl+c to terminate..")
-    # remove existing csv files
+    
+    # read xrd raw data
+    filename = "./data_raw/compute_xrd.csv"
+    if not os.path.isfile(filename):
+        print("{} file does not exist, please generate it first..".format(filename))
+        sys.exit(1)
+    
+    # remove existing output files
     root_dir = '../data/'
     if not os.path.exists(root_dir):
         print('making directory {}'.format(root_dir))
@@ -102,27 +111,22 @@ def main():
     if os.path.exists(features_dir):
         shutil.rmtree(features_dir, ignore_errors=False)
     os.mkdir(features_dir)
-
-    # read xrd raw data
-    filename = "./data_raw/compute_xrd.csv"
-    if not os.path.isfile(filename):
-        print("{} file does not exist, please generate it first..".format(filename))
-        sys.exit(1)
-    print("Reading raw data..")
-    xrd_data = pd.read_csv(filename, sep=';', header=0, index_col=None)
-    print("Finished reading raw data, start generating dataset..")
-
+    
     # parameters
-    nworkers = 12
-    npoints = 2048 # number of kpoints to consider
-
-    # parallel processing
-    xrd_data_chunk = np.array_split(xrd_data, nworkers)
-    pool = Pool(nworkers)
-    args = [(data, features_dir, target_dir, npoints) for data in xrd_data_chunk]
-    pool.starmap(generate_point_cloud, args)
-    pool.close()
-    pool.join()
+    nworkers = max(multiprocessing.cpu_count()-4, 1)
+    npoints = 1024 # number of kpoints to consider
+    
+    # process in chunks due to large size
+    for xrd_data in pd.read_csv(filename, sep=';', header=0, index_col=None, chunksize=nworkers*200):
+        print('start processing one chunk')
+        # parallel processing
+        xrd_data_chunk = np.array_split(xrd_data, nworkers)
+        pool = Pool(nworkers)
+        args = [(data, features_dir, target_dir, npoints) for data in xrd_data_chunk]
+        pool.starmap(generate_point_cloud, args)
+        pool.close()
+        pool.join()
+        print('chunk finished..')
 
 
 if __name__ == "__main__":

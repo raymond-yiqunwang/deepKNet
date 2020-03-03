@@ -6,6 +6,7 @@ import pandas as pd
 import XRD_simulator.xrd_simulator as xrd
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
+import multiprocessing
 from multiprocessing import Pool
 from collections import defaultdict
 from pymatgen.core.structure import Structure
@@ -59,7 +60,7 @@ def show_statistics(data, compute_xrd=False):
     
     # number of recriprocal space points
     if compute_xrd:
-        nworkers = 12
+        nworkers = max(multiprocessing.cpu_count()-4, 1)
         pool = Pool(processes=nworkers)
         df_split = np.array_split(data, nworkers)
         # CuKa

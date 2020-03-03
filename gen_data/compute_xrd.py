@@ -5,6 +5,7 @@ import pandas as pd
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 import XRD_simulator.xrd_simulator as xrd
+import multiprocessing
 from multiprocessing import Pool
 from pymatgen.core.structure import Structure
 
@@ -53,6 +54,7 @@ def compute_xrd(data_raw, wavelength):
         ifeat.extend([hkl, lorentz_factor, i_hkl, atomic_form_factor])
         xrd_data_batch.append(ifeat)
     
+    print('batch finished') 
     return pd.DataFrame(xrd_data_batch)
 
 
@@ -90,7 +92,7 @@ def main():
     # parameters
     n_slices = MP_data.shape[0] // 240 + 1 # number of batches to split
     wavelength = 'CuKa' # X-ray wavelength
-    nworkers = 12
+    nworkers = max(multiprocessing.cpu_count()-4, 1)
 
     # parallel processing
     MP_data_chunk = np.array_split(MP_data, n_slices)
