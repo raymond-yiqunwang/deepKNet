@@ -17,7 +17,7 @@ parser.add_argument('--root', default='./data/', metavar='DATA_ROOT',
                     help='path to root directory')
 parser.add_argument('--target', default='band_gap', metavar='TARGET_PROPERTY',
                     help='path to root directory')
-parser.add_argument('-j', '--num_workers', default=4, type=int, metavar='N',
+parser.add_argument('-j', '--num_workers', default=16, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
 parser.add_argument('--epochs', default=200, type=int, metavar='N',
                     help='number of epochs to run')
@@ -42,9 +42,9 @@ parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
 parser.add_argument('--disable-cuda', action='store_true',
                     help='disable CUDA')
-parser.add_argument('--train-size', default=0.8, type=float, metavar='n/N',
+parser.add_argument('--train-size', default=0.9, type=float, metavar='n/N',
                     help='fraction of training data')
-parser.add_argument('--val-size', default=0.2, type=float, metavar='n/N',
+parser.add_argument('--val-size', default=0.1, type=float, metavar='n/N',
                     help='fraction of validation data')
 
 # define global variables
@@ -167,7 +167,7 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer):
         # measure accuracy and record loss
         mae = compute_mae(target, normalizer.denorm(output))
         losses.update(loss.item(), target.size(0))
-        maes.update(mae, target.size(0))
+        maes.update(mae.item(), target.size(0))
         
         # compute gradient and optimize
         optimizer.zero_grad()
