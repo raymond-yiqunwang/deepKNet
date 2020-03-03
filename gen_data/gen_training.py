@@ -31,7 +31,7 @@ def cart2sphere(cart_coord):
     phi = math.atan2(y, x) # [-pi, pi]
     phi = (phi+math.pi) / (2*math.pi) # convert to [0, 1]
     assert(0. <= phi <= 1.)
-#    r_scaled = r / 4. # scaling factor 4.0 is the approximated Ewald sphere radius
+    r_scaled = r / 4. # scaling factor 4.0 is the approximated Ewald sphere radius
     r_scaled = r
 #    assert(1e-3 < r_scaled < 1.)
     return [r_scaled, theta, phi]
@@ -114,7 +114,7 @@ def main():
     
     # parameters
     nworkers = max(multiprocessing.cpu_count()-4, 1)
-    npoints = 1024 # number of kpoints to consider
+    npoints = 512 # number of kpoints to consider
     
     # process in chunks due to large size
     data_all = pd.read_csv(filename, sep=';', header=0, index_col=None, chunksize=nworkers*100)

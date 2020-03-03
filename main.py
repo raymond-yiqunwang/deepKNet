@@ -28,7 +28,7 @@ parser.add_argument('--lr-milestones', default=[50, 100], type=int, metavar='[N]
                     help='learning rate decay milestones (default: [50, 100])')
 parser.add_argument('-b', '--batch-size', default=32, type=int, metavar='N',
                     help='mini-batch size (default: 32)')
-parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
+parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                     metavar='LR', help='initial learning rate', dest='lr')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
@@ -66,9 +66,10 @@ def main():
     )
 
     # normalizer
-    sample_target = torch.tensor([dataset[i][1].item() for i in \
-                                 sample(range(len(dataset)), 500)])
-    normalizer = Normalizer(sample_target)
+    with torch.no_grad():
+        sample_target = torch.tensor([dataset[i][1].item() for i in \
+                                     sample(range(len(dataset)), 500)])
+        normalizer = Normalizer(sample_target)
 
     # build model
     model = deepKNet()
@@ -116,10 +117,10 @@ def main():
     # training
     for epoch in range(args.start_epoch, args.epochs):
         # train for one epoch
-        train(train_loader, model, criterion, optimizer, epoch, writer, normalizer)
+        train(train_loader, model, criterion, optimizer, epoch, writer, normalizer, device)
 
         # evaluate on validation set
-        mae = validate(val_loader, model, criterion, epoch, writer, normalizer)
+        mae = validate(val_loader, model, criterion, epoch, writer, normalizer, device)
 
         scheduler.step()
 
@@ -135,7 +136,7 @@ def main():
         }, is_best)
 
 
-def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer):
+def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer, device):
     batch_time = AverageMeter('Time', ':4.2f')
     losses = AverageMeter('Loss', ':6.3f')
     maes = AverageMeter('MAE', ':6.3f')
@@ -192,7 +193,7 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer):
             running_loss = 0.0
 
 
-def validate(val_loader, model, criterion, epoch, writer, normalizer):
+def validate(val_loader, model, criterion, epoch, writer, normalizer, device):
     batch_time = AverageMeter('Time', ':4.2f')
     losses = AverageMeter('Loss', ':6.3f')
     maes = AverageMeter('MAE', ':6.3f')
@@ -226,7 +227,7 @@ def validate(val_loader, model, criterion, epoch, writer, normalizer):
             #mae = compute_mae(target, normalizer.denorm(output))
             mae = compute_mae(target, output)
             losses.update(loss.item(), target.size(0))
-            maes.update(mae, target.size(0))
+            maes.update(mae.item(), target.size(0))
 
             # measure elapsed time
             batch_time.update(time.time() - end)
