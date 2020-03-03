@@ -28,10 +28,10 @@ def debug_xrd(material_id):
     recip_basis = recip_latt.matrix
     recip_pts = recip_latt.get_points_in_sphere(
         [[0, 0, 0]], [0, 0, 0], max_r)
-    npoints = 1024
+    npoints = 512
     recip_pts = sorted(recip_pts, key=lambda i: i[1])
-    if len(recip_pts) > 1024:
-        recip_pts = recip_pts[:1024]
+    if len(recip_pts) > npoints:
+        recip_pts = recip_pts[:npoints]
     
     with open("./XRD_simulator/atomic_scattering_params.json") as f:
         ATOMIC_SCATTERING_PARAMS = json.load(f)
