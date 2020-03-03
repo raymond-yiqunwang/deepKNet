@@ -179,9 +179,10 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
         
         # debug
         if not debug:
+            npoints = 512
             recip_pts = sorted(recip_pts, key=lambda i: i[1])
-            if len(recip_pts) > 512:
-                recip_pts = recip_pts[:512]
+            if len(recip_pts) > npoints:
+                recip_pts = recip_pts[:npoints]
 
         # Create a flattened array of zs, coeffs, fcoords and occus. This is
         # used to perform vectorized computation of atomic scattering factors
