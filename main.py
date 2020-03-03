@@ -16,8 +16,8 @@ parser = argparse.ArgumentParser(description='DeepKNet model')
 parser.add_argument('--root', default='./data/', metavar='DATA_ROOT',
                     help='path to root directory')
 parser.add_argument('--target', default='band_gap', metavar='TARGET_PROPERTY',
-                    help='path to root directory')
-parser.add_argument('-j', '--num_workers', default=16, type=int, metavar='N',
+                    help='target property (band gap, formation energy per atom)')
+parser.add_argument('-j', '--num_workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
 parser.add_argument('--epochs', default=200, type=int, metavar='N',
                     help='number of epochs to run')
@@ -25,8 +25,8 @@ parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch start number (useful on restarts)')
 parser.add_argument('--lr-milestones', default=[50, 100], type=int, metavar='[N]',
                     help='learning rate decay milestones (default: [50, 100])')
-parser.add_argument('-b', '--batch-size', default=8, type=int, metavar='N',
-                    help='mini-batch size (default=8)')
+parser.add_argument('-b', '--batch-size', default=32, type=int, metavar='N',
+                    help='mini-batch size (default: 32)')
 parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                     metavar='LR', help='initial learning rate', dest='lr')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
@@ -121,7 +121,7 @@ def main():
 
         # remember best mae and save checkpoint
         is_best = mae < best_mae
-        best_mea = min(mae, best_mae)
+        best_mae = min(mae, best_mae)
         save_checkpoint({
             'epoch': epoch,
             'state_dict': model.state_dict(),

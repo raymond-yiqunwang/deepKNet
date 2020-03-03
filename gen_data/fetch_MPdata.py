@@ -1,5 +1,6 @@
-from pymatgen import MPRester
+import os
 import pandas as pd
+from pymatgen import MPRester
 
 
 def fetch_materials_data():
@@ -32,6 +33,8 @@ def fetch_materials_data():
         data_origin.append(plist)
 
     data_origin = pd.DataFrame(data_origin)
+    if not os.path.exists("./data_raw/"):
+        os.mkdir("./data_raw/")
     data_origin.to_csv("./data_raw/fetch_MPdata.csv", sep=';', index=False, header=properties)
 
 
