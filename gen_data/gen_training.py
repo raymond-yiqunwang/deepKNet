@@ -117,8 +117,9 @@ def main():
     npoints = 1024 # number of kpoints to consider
     
     # process in chunks due to large size
-    for xrd_data in pd.read_csv(filename, sep=';', header=0, index_col=None, chunksize=nworkers*200):
-        print('start processing one chunk')
+    data_all = pd.read_csv(filename, sep=';', header=0, index_col=None, chunksize=nworkers*100)
+    cnt = 0
+    for idx, xrd_data in enumerate(data_all):
         # parallel processing
         xrd_data_chunk = np.array_split(xrd_data, nworkers)
         pool = Pool(nworkers)
@@ -126,7 +127,8 @@ def main():
         pool.starmap(generate_point_cloud, args)
         pool.close()
         pool.join()
-        print('chunk finished..')
+        cnt += nworkers * xrd_data_chunk[0].shape[0]
+        print('finished processing {} materials'.format(cnt))
 
 
 if __name__ == "__main__":

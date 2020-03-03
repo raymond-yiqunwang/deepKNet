@@ -136,13 +136,12 @@ def main():
 
 
 def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer):
-    batch_time = AverageMeter('Time', ':6.3f')
-    data_time = AverageMeter('Data', ':6.3f')
-    losses = AverageMeter('Loss', ':4e')
+    batch_time = AverageMeter('Time', ':4.2f')
+    losses = AverageMeter('Loss', ':6.3f')
     maes = AverageMeter('MAE', ':6.3f')
     progress = ProgressMeter(
         len(train_loader),
-        [batch_time, data_time, losses, maes],
+        [batch_time, losses, maes],
         prefix="Epoch: [{}]".format(epoch)
     )
 
@@ -152,9 +151,6 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer):
     end = time.time()
     running_loss = 0.0
     for idx, data in enumerate(train_loader):
-        # measure data loading time
-        data_time.update(time.time() - end)
-
         # features and target
         point_cloud, target = data
         point_cloud = point_cloud.to(device)
@@ -197,8 +193,8 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer):
 
 
 def validate(val_loader, model, criterion, epoch, writer, normalizer):
-    batch_time = AverageMeter('Time', ':6.3f')
-    losses = AverageMeter('Loss', ':.4f')
+    batch_time = AverageMeter('Time', ':4.2f')
+    losses = AverageMeter('Loss', ':6.3f')
     maes = AverageMeter('MAE', ':6.3f')
     progress = ProgressMeter(
         len(val_loader),

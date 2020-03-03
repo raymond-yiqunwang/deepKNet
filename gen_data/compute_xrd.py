@@ -54,7 +54,6 @@ def compute_xrd(data_raw, wavelength):
         ifeat.extend([hkl, lorentz_factor, i_hkl, atomic_form_factor])
         xrd_data_batch.append(ifeat)
     
-    print('batch finished') 
     return pd.DataFrame(xrd_data_batch)
 
 
@@ -97,11 +96,12 @@ def main():
     # parallel processing
     MP_data_chunk = np.array_split(MP_data, n_slices)
     # 'serial parallel' processing
-    for chunk in MP_data_chunk:
+    for idx, chunk in enumerate(MP_data_chunk):
         # generate xrd point cloud representations
         xrd_data = parallel_computing(chunk, wavelength, nworkers)
         # write to file
         xrd_data.to_csv(out_file, sep=';', header=None, index=False, mode='a')
+        print('finished processing chunk {}/{}'.format(idx, len(MP_data_chunk))) 
 
 
 if __name__ == "__main__":
