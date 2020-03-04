@@ -215,16 +215,20 @@ def debug_training_features():
 
         # debug features
         for i in range(len(hkl)):
+            # check intensity
             assert(abs(intensity[i]-features.iloc[3, i]) < threshold)
             for j in range(len(recip_spherical[i])):
+                # check spherical coord
                 assert(abs(recip_spherical[i][j]-features.iloc[j, i]) < threshold)
             for k in range(len(atomic_form_factor[i])):
+                # check aff
                 assert(abs(atomic_form_factor[i][k]-features.iloc[4+k, i]) < threshold)
         break
 
 
 def main():
-#    debug_compute_xrd()
+    debug_compute_xrd()
+
     debug_training_features()
 
 

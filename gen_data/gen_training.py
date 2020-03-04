@@ -71,7 +71,7 @@ def generate_point_cloud(xrd_data, features_dir, target_dir, npoints):
         recip_spherical = [cart2sphere(recip_xyz[idx]) for idx in range(len(recip_xyz))]
         # atomic form factor
         aff = np.array(atomic_form_factor)
-        aff = [aff[idx]/np.linalg.norm[aff[idx] for idx in range(aff.shape[0])].tolist()
+        aff = aff / np.linalg.norm(aff, axis=0)
         # total intensity
         intensity = np.array(i_hkl) / max(i_hkl)
         # build features
