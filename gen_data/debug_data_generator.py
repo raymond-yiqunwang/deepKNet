@@ -10,7 +10,6 @@ warnings.filterwarnings("ignore", category=UserWarning)
 from pymatgen import MPRester
 from pymatgen.core.structure import Structure
 
-
 # input -- material_id
 # output -- recip_latt, dict{(hkl): (i_hkl, atomic_form_factor)}
 def debug_xrd(material_id):
@@ -138,10 +137,98 @@ def debug_compute_xrd():
                 assert(abs(ival-debug_aff[idx]) < threshold)
         print('>> passing one chunk..')
 
-    print("All test cases passed, good to go training your model..")
+    print("All test cases passed for compute_xrd.csv\n")
+
+        
+def read_training(material_id):
+    data_root = "../data/"
+    features = pd.read_csv(data_root+'features/'+material_id+'.csv', \
+                           sep=';', header=None, index_col=None)
+    target = pd.read_csv(data_root+'target/'+material_id+'.csv', \
+                          sep=';', header=0, index_col=None)
+    return features, target
+           
+
+
+def cart2sphe(xyz):
+    x, y, z = xyz[0], xyz[1], xyz[2]
+    r = np.sqrt(x**2 + y**2 + z**2)
+    theta = np.arccos([z/r])[0]
+    phi = np.arctan2(y, x)
+    r = r / (2/1.54184)
+    theta /= math.pi
+    phi = 0.5*(phi/math.pi)+0.5
+    return [r, theta, phi]
+
+
+def debug_training_features():
+    # read stored data
+    filename = "./data_raw/compute_xrd.csv"
+    if not os.path.isfile(filename):
+        print("{} file does not exist, please generate it first..".format(filename))
+        sys.exit(1)
+    data_all = pd.read_csv(filename, sep=';', header=0, index_col=None, chunksize=100)
+
+    npoints = 512
+    
+    # loop over chunks
+    for xrd_data in data_all:
+        # randomly select 1 material data
+        sample = xrd_data.iloc[np.random.randint(xrd_data.shape[0])]
+        # properties
+        material_id = sample['material_id']
+        band_gap = sample['band_gap']
+        energy_per_atom = sample['energy_per_atom']
+        formation_energy_per_atom = sample['formation_energy_per_atom']
+        recip_latt = ast.literal_eval(sample['recip_latt'])
+        # calculated point-specific features as dictionary
+        hkl = ast.literal_eval(sample['hkl'])
+        while len(hkl) < npoints:
+            hkl.extend(hkl)
+        hkl = hkl[:npoints]
+        i_hkl = ast.literal_eval(sample['i_hkl'])
+        while len(i_hkl) < npoints:
+            i_hkl.extend(i_hkl)
+        i_hkl = i_hkl[:npoints]
+        atomic_form_factor = ast.literal_eval(sample['atomic_form_factor'])
+        while len(atomic_form_factor) < npoints:
+            atomic_form_factor.extend(atomic_form_factor)
+        atomic_form_factor = atomic_form_factor[:npoints]
+        # process primitive features
+        recip_xyz = [np.dot(np.transpose(recip_latt), hkl[idx]) for idx in range(len(hkl))]
+        recip_spherical = [cart2sphe(recip_xyz[idx]) for idx in range(len(recip_xyz))]
+        intensity = np.array(i_hkl) / max(i_hkl)
+        for idx in range(len(atomic_form_factor)):
+            norm = np.linalg.norm(atomic_form_factor[idx])
+            atomic_form_factor[idx] = (np.array(atomic_form_factor[idx])/norm).tolist()
+
+        # read training features
+        features, target = read_training(material_id)
+        
+        # threshold for numerical comparison
+        threshold = 1e-12
+        
+        # debug targets
+        assert(abs(target['band_gap'][0]-band_gap) < threshold)
+        assert(abs(target['energy_per_atom'][0]-energy_per_atom) < threshold)
+        assert(abs(target['formation_energy_per_atom'][0]-formation_energy_per_atom) < threshold)
+
+        # debug features
+        for i in range(len(hkl)):
+            assert(abs(intensity[i]-features.iloc[3, i]) < threshold)
+            for j in range(len(recip_spherical[i])):
+                assert(abs(recip_spherical[i][j]-features.iloc[j, i]) < threshold)
+            for k in range(len(atomic_form_factor[i])):
+                assert(abs(atomic_form_factor[i][k]-features.iloc[4+k, i]) < threshold)
+        break
+
+
+def main():
+#    debug_compute_xrd()
+    debug_training_features()
 
 
 if __name__ == "__main__":
-    debug_compute_xrd()
+    main()
 
 
