@@ -64,14 +64,15 @@ def show_statistics(data, compute_xrd=False):
         pool = Pool(processes=nworkers)
         df_split = np.array_split(data, nworkers)
         # CuKa
-        xrd_simulator = xrd.XRDSimulator(wavelength="CuKa")
+        wavelength = "CuKa"
+        xrd_simulator = xrd.XRDSimulator(wavelength=wavelength)
         args = [(data, xrd_simulator) for data in df_split]
         out = pool.starmap(get_npts, args)
         npts = [npt for sublist in out for npt in sublist]
-        print('>> Number of k-points with CuKa: mean = {:.1f}, median = {:.1f}, '
+        print('>> Number of k-points with {}: mean = {:.1f}, median = {:.1f}, '
                     'std = {:.1f}, min = {:d}, max = {:d}' \
-                    .format(np.mean(npts), np.median(npts), np.std(npts), 
-                            np.min(npts), np.max(npts)))
+                    .format(wavelength, np.mean(npts), np.median(npts), \
+                            np.std(npts), np.min(npts), np.max(npts)))
 
     # number of sites
     nsites = data['nsites']
@@ -88,8 +89,9 @@ def show_statistics(data, compute_xrd=False):
             elem_dict[elem] += 1
     min_key = min(elem_dict, key=elem_dict.get)
     max_key = max(elem_dict, key=elem_dict.get)
-    print('>> Number of unique elements: {:d}, min: {:d}, max: {:d}' \
-            .format(len(elem_dict), elem_dict[min_key], elem_dict[max_key]))
+    print('>> Number of unique elements: {:d}, min: {}({:d}), max: {}({:d})' \
+            .format(len(elem_dict), min_key, elem_dict[min_key], \
+                                    max_key, elem_dict[max_key]))
 
     # energy per atom
     energy_atom = data['energy_per_atom']
