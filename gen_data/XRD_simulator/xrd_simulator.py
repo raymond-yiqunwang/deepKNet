@@ -154,8 +154,6 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
             list of features for point cloud representation,
             recip_latt
         """
-        features = []
-
         assert(self.symprec == 0)
         if self.symprec:
             finder = SpacegroupAnalyzer(structure, symprec=self.symprec)
@@ -211,6 +209,7 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
         peaks = {}
         two_thetas = []
 
+        features = []
         for hkl, g_hkl, _, _ in sorted(recip_pts,
                                     key=lambda i: (i[1], -i[0][0], -i[0][1], -i[0][2])):
             # skip origin and points on the limiting sphere to avoid precision problems

@@ -25,17 +25,26 @@ from multiprocessing import Pool
 def cart2sphere(cart_coord):
     x, y, z = cart_coord[0], cart_coord[1], cart_coord[2]
     r = np.linalg.norm(cart_coord)
+    # the scaling factor is the approximated Ewald sphere radius
+    r_scale_factor = 2. / 1.54184
+    r_scaled = r / r_scale_factor # OUTPUT: [0, 1]
+    assert(1e-2 < r_scaled < 1.)
     theta = math.acos(z/r) # [0, pi]
-    theta /= math.pi # convert to [0, 1]
+    theta /= math.pi # OUTPUT: [0, 1]
     assert(0. <= theta <= 1.)
     phi = math.atan2(y, x) # [-pi, pi]
     phi = (phi+math.pi) / (2*math.pi) # convert to [0, 1]
     assert(0. <= phi <= 1.)
-    r_scaled = r / 4. # scaling factor 4.0 is the approximated Ewald sphere radius
-    r_scaled = r
-#    assert(1e-3 < r_scaled < 1.)
     return [r_scaled, theta, phi]
 
+
+def extend_and_truncate(input_list, npoints):
+    # extend list
+    while len(input_list) < npoints:
+        input_list.extend(features)
+    # cutoff to a certain length
+    return input_list[:npoints]
+    
 
 def generate_point_cloud(xrd_data, features_dir, target_dir, npoints):
     # store point cloud representation for each material
@@ -50,35 +59,38 @@ def generate_point_cloud(xrd_data, features_dir, target_dir, npoints):
         # all primitive features
         recip_latt = ast.literal_eval(irow['recip_latt'])
         hkl = ast.literal_eval(irow['hkl'])
-        lorentz_factor = ast.literal_eval(irow['lorentz_factor'])
+        hkl = extend_and_truncate(hkl, npoints)
         i_hkl = ast.literal_eval(irow['i_hkl'])
+        i_hkl = extend_and_truncate(i_hkl, npoints)
         atomic_form_factor = ast.literal_eval(irow['atomic_form_factor'])
+        atomic_form_factor = extend_and_truncate(atomic_form_factor, npoints)
         
         """!!! please construct features wisely !!!"""
         # spherical coordinate
         recip_xyz = [np.dot(np.array(recip_latt).T, np.array(hkl[idx])) for idx in range(len(hkl))]
         recip_spherical = [cart2sphere(recip_xyz[idx]) for idx in range(len(recip_xyz))]
-        # scaled atomic form factor
+        # atomic form factor
         aff = np.array(atomic_form_factor)
-        #lorentz_factor = np.array(lorentz_factor).reshape(-1, 1)
-        #aff_lorentz = aff * lorentz_factor
-        #atomic_form_factor_lorentz_scaled = (aff_lorentz/np.amax(aff_lorentz)).tolist()
-        #features = [recip_spherical[idx] + atomic_form_factor_lorentz_scaled[idx] for idx in range(len(hkl))]
         aff[:] = aff[:] / np.linalg.norm(aff[:])
-        features = [recip_spherical[idx] + aff.tolist()[idx] for idx in range(len(hkl))]
-        while len(features) <= npoints:
-            features.extend(features)
-        features = pd.DataFrame(features[:npoints])
+        # total intensity
+        intensity = np.array(i_hkl) / max(i_hkl)
+        # build features
+        features = [recip_spherical[idx] + [intensity[idx]] + aff.tolist()[idx] \
+                    for idx in range(len(hkl))]
+        feat = np.array(features).flatten()
+        assert(np.max(np.abs(feat)) < 1+1e-12)
+        features = pd.DataFrame(features)
+        
         # transpose features to accommodate PyTorch tensor style
         features_T = features.transpose()
-        assert(features_T.shape[0] == 3+94)
+        assert(features_T.shape[0] == 3+1+94)
         assert(features_T.shape[1] == npoints)
         # write features_T
         features_T.to_csv(features_dir+filename, sep=';', header=None, index=False)
 
         # target properties
-        band_gap = irow['band_gap'] / 10. # TODO downscale only, not normalized
-        energy_per_atom = irow['energy_per_atom']
+        band_gap = irow['band_gap'] 
+        energy_per_atom = irow['energy_per_atom'] 
         formation_energy_per_atom = irow['formation_energy_per_atom']
         # write target
         properties = [[band_gap, energy_per_atom, formation_energy_per_atom]]
@@ -115,6 +127,12 @@ def main():
     # parameters
     nworkers = max(multiprocessing.cpu_count()-4, 1)
     npoints = 512 # number of kpoints to consider
+    """ 
+    P.S. no k-point truncation in compute_xrd.csv,
+         all k-points in the Ewald sphere are stored,
+         therefore each material will have its unique
+         number of k-points
+    """
     
     # process in chunks due to large size
     data_all = pd.read_csv(filename, sep=';', header=0, index_col=None, chunksize=nworkers*100)
@@ -127,7 +145,7 @@ def main():
         pool.starmap(generate_point_cloud, args)
         pool.close()
         pool.join()
-        cnt += nworkers * xrd_data_chunk[0].shape[0]
+        cnt += xrd_data.shape[0]
         print('finished processing {} materials'.format(cnt))
 
 
