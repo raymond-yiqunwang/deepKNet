@@ -89,13 +89,13 @@ def debug_feat(material_id):
            mp_data[0]["formation_energy_per_atom"]
 
 
-def debug_compute_xrd():
+def debug_compute_xrd(chunksize=100):
     # read stored data
     filename = "./data_raw/compute_xrd.csv"
     if not os.path.isfile(filename):
         print("{} file does not exist, please generate it first..".format(filename))
         sys.exit(1)
-    data_all = pd.read_csv(filename, sep=';', header=0, index_col=None, chunksize=100)
+    data_all = pd.read_csv(filename, sep=';', header=0, index_col=None, chunksize=chunksize)
     
     # loop over chunks
     for xrd_data in data_all:
@@ -135,7 +135,7 @@ def debug_compute_xrd():
             assert(abs(intensity-debug_intensity) < threshold)
             for idx, ival in enumerate(aff):
                 assert(abs(ival-debug_aff[idx]) < threshold)
-        print('>> passing one chunk..')
+        print('>> passing one chunk of xrd data..')
 
     print("All test cases passed for compute_xrd.csv\n")
 
@@ -161,13 +161,13 @@ def cart2sphe(xyz):
     return [r, theta, phi]
 
 
-def debug_training_features():
+def debug_training_features(chunksize=100):
     # read stored data
     filename = "./data_raw/compute_xrd.csv"
     if not os.path.isfile(filename):
         print("{} file does not exist, please generate it first..".format(filename))
         sys.exit(1)
-    data_all = pd.read_csv(filename, sep=';', header=0, index_col=None, chunksize=100)
+    data_all = pd.read_csv(filename, sep=';', header=0, index_col=None, chunksize=chunksize)
 
     npoints = 512
     
@@ -199,8 +199,8 @@ def debug_training_features():
         recip_spherical = [cart2sphe(recip_xyz[idx]) for idx in range(len(recip_xyz))]
         intensity = np.array(i_hkl) / max(i_hkl)
         for idx in range(len(atomic_form_factor)):
-            norm = np.linalg.norm(atomic_form_factor[idx])
-            atomic_form_factor[idx] = (np.array(atomic_form_factor[idx])/norm).tolist()
+            imax = max(1, max(atomic_form_factor[idx]))
+            atomic_form_factor[idx] = (np.array(atomic_form_factor[idx])/imax).tolist()
 
         # read training features
         features, target = read_training(material_id)
@@ -223,13 +223,17 @@ def debug_training_features():
             for k in range(len(atomic_form_factor[i])):
                 # check aff
                 assert(abs(atomic_form_factor[i][k]-features.iloc[4+k, i]) < threshold)
-        break
+        print('>> passing one chunk in the training set..')
+
+    print("All test cases passed for training data, good to go start training!")
 
 
 def main():
-    debug_compute_xrd()
+    chunksize = 10
 
-    debug_training_features()
+    debug_compute_xrd(chunksize)
+
+    debug_training_features(chunksize)
 
 
 if __name__ == "__main__":
