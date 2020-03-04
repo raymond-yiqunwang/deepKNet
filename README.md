@@ -43,6 +43,15 @@ In order to generate new dataset, follow these steps:
 This may take tens of minutes or more depending on your CPU power.
 
 
+## check generated data
+In order to check the correctness of simulated XRD data, debug 
+code is als available in the `./gen_data/` folder:
+```code
+(DEBUG) cd ./gen_data
+(DEBUG)   python debug_data_generator.py
+```
+
+
 ## Train the model
 ```python
 python main.py 

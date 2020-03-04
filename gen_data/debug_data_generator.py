@@ -96,7 +96,7 @@ def debug_compute_xrd():
     if not os.path.isfile(filename):
         print("{} file does not exist, please generate it first..".format(filename))
         sys.exit(1)
-    data_all = pd.read_csv(filename, sep=';', header=0, index_col=None, chunksize=2)
+    data_all = pd.read_csv(filename, sep=';', header=0, index_col=None, chunksize=100)
     
     # loop over chunks
     for xrd_data in data_all:
