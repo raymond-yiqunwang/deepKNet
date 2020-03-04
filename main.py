@@ -97,13 +97,13 @@ def main():
             print("=> no checkpoint found at '{}'".format(args.resume))
 
     # evaluation only
-    if args.evaluate:
-        validate(val_loader, model, criterion)
-        return
+#    if args.evaluate:
+#        validate(val_loader, model, criterion)
+#        return
 
     # TensorBoard writer
     summary_root = './runs/'
-    summary_file = summary_root + 'test1'
+    summary_file = summary_root + 'baseline'
     if not os.path.exists(summary_root):
         os.mkdir(summary_root)
     if os.path.exists(summary_file):
@@ -152,26 +152,22 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer, 
     end = time.time()
     running_loss = 0.0
     for idx, data in enumerate(train_loader):
-        # features and target
         point_cloud, target = data
         if args.cuda:
             point_cloud = point_cloud.cuda()
             target = target.cuda()
-#        point_cloud = point_cloud.to(device)
-#        target = target.to(device)
 
         # normalize target
         #target_normed = normalizer.norm(target)
-        target_scaled = target #/ 10.
 
         # compute output
         output = model(point_cloud)
         #loss = criterion(output, target_normed)
-        loss = criterion(output, target_scaled)
+        loss = criterion(output, target)
 
         # measure accuracy and record loss
         #mae = compute_mae(target, normalizer.denorm(output))
-        mae = compute_mae(target, output)#* 10.)
+        mae = compute_mae(target, output)
         losses.update(loss.item(), target.size(0))
         maes.update(mae.item(), target.size(0))
         
@@ -214,26 +210,22 @@ def validate(val_loader, model, criterion, epoch, writer, normalizer, device):
         end = time.time()
         running_loss = 0.0
         for idx, data in enumerate(val_loader):
-            # features and target
             point_cloud, target = data
             if args.cuda:
                 point_cloud = point_cloud.cuda()
                 target = target.cuda()
-#            point_cloud = point_cloud.to(device)
-#            target = target.to(device)
 
             # normalize target
             #target_normed = normalizer.norm(target)
-            target_scaled = target #/ 10.
 
             # compute output
             output = model(point_cloud)
             #loss = criterion(output, target_normed)
-            loss = criterion(output, target_scaled)
+            loss = criterion(output, target)
 
             # measure accuracy and record loss
             #mae = compute_mae(target, normalizer.denorm(output))
-            mae = compute_mae(target, output)# * 10.)
+            mae = compute_mae(target, output)
             losses.update(loss.item(), target.size(0))
             maes.update(mae.item(), target.size(0))
 
