@@ -73,7 +73,6 @@ def main():
     # build model
     model = deepKNet()
     if args.cuda: model.cuda()
-#    model.to(device)
 
     # define loss function (criterion) and optimizer
     criterion = nn.MSELoss()
