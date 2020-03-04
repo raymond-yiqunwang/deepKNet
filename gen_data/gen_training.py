@@ -77,7 +77,7 @@ def generate_point_cloud(xrd_data, features_dir, target_dir, npoints):
         features_T.to_csv(features_dir+filename, sep=';', header=None, index=False)
 
         # target properties
-        band_gap = irow['band_gap']
+        band_gap = irow['band_gap'] / 10. # TODO downscale only, not normalized
         energy_per_atom = irow['energy_per_atom']
         formation_energy_per_atom = irow['formation_energy_per_atom']
         # write target

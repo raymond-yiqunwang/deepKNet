@@ -33,10 +33,11 @@ def fetch_materials_data():
         data_origin.append(plist)
 
     data_origin = pd.DataFrame(data_origin)
-    if not os.path.exists("./data_raw/"):
-        print("./data_raw/ folder does not exist, making directory..")
-        os.mkdir("./data_raw/")
-    data_origin.to_csv("./data_raw/fetch_MPdata.csv", sep=';', index=False, header=properties)
+    root_dir = "./data_raw/"
+    if not os.path.exists(root_dir):
+        print("{} folder does not exist, making directory..".format(root_dir))
+        os.mkdir(root_dir)
+    data_origin.to_csv(root_dir+"fetch_MPdata.csv", sep=';', index=False, header=properties)
 
 
 def main():

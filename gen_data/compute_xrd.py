@@ -31,13 +31,13 @@ def compute_xrd(data_raw, wavelength):
         _, features, recip_latt = xrd_simulator.get_pattern(structure=struct)
         """
           features: nrow = number of reciprocal k-points
-          features: ncol = (hkl  , lorentz_factor, i_hkl , atomic_form_factor)
-                            [1x3], scalar,       , scalar, [1x94]
+          features: ncol = (hkl  , i_hkl , lorentz_factor, atomic_form_factor)
+                            [1x3], scalar, scalar        , [1x94]
         """
         # regroup features
         hkl = [ipoint[0] for ipoint in features]
-        lorentz_factor = [ipoint[1] for ipoint in features]
-        i_hkl = [ipoint[2] for ipoint in features]
+        i_hkl = [ipoint[1] for ipoint in features]
+        lorentz_factor = [ipoint[2] for ipoint in features]
         atomic_form_factor = [ipoint[3] for ipoint in features]
 
         # properties of interest
@@ -51,7 +51,7 @@ def compute_xrd(data_raw, wavelength):
         # features for post-processing
         ifeat.append(recip_latt.tolist())
         # point-specific features
-        ifeat.extend([hkl, lorentz_factor, i_hkl, atomic_form_factor])
+        ifeat.extend([hkl, i_hkl, lorentz_factor, atomic_form_factor])
         xrd_data_batch.append(ifeat)
     
     return pd.DataFrame(xrd_data_batch)
@@ -84,7 +84,7 @@ def main():
             \n>> Hit Enter to continue, Ctrl+c to terminate..")
         print("Started recomputing xrd..")
     header = [['material_id', 'band_gap', 'energy_per_atom', 'formation_energy_per_atom', \
-              'recip_latt', 'hkl', 'lorentz_factor', 'i_hkl', 'atomic_form_factor']]
+              'recip_latt', 'hkl', 'i_hkl', 'lorentz_factor', 'atomic_form_factor']]
     df = pd.DataFrame(header)
     df.to_csv(out_file, sep=';', header=None, index=False, mode='w')
     
@@ -101,7 +101,7 @@ def main():
         xrd_data = parallel_computing(chunk, wavelength, nworkers)
         # write to file
         xrd_data.to_csv(out_file, sep=';', header=None, index=False, mode='a')
-        print('finished processing chunk {}/{}'.format(idx, len(MP_data_chunk))) 
+        print('finished processing chunk {}/{}'.format(idx+1, len(MP_data_chunk))) 
 
 
 if __name__ == "__main__":

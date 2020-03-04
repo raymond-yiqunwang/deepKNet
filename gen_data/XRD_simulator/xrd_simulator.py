@@ -274,7 +274,7 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
                 atomic_form_factor[z-1] += atomic_intensity
             
             # add to features 
-            ifeat = [hkl, lorentz_factor, i_hkl, atomic_form_factor]
+            ifeat = [hkl, i_hkl, lorentz_factor, atomic_form_factor]
             features.append(ifeat)
 
             ### for diffractin pattern plotting only

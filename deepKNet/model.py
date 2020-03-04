@@ -55,12 +55,12 @@ class deepKNet(nn.Module):
         # point_cloud size -- (batch_size, nfeatures, npoints)
         # current settings -- (        16,      3+94,    npts)
 
-        #net = F.relu(self.bn0(self.conv0(point_cloud)))
-        net = F.relu((self.conv0(point_cloud)))
+        net = F.relu(self.bn0(self.conv0(point_cloud)))
+        #net = F.relu((self.conv0(point_cloud)))
 
         # wave1
-        #net = F.relu(self.bn1(self.conv1(net)))
-        net = F.relu((self.conv1(net)))
+        net = F.relu(self.bn1(self.conv1(net)))
+        #net = F.relu((self.conv1(net)))
         for i in range(self.nwave1):
             intmp = net
             net = self.wave1_bns[i](self.wave1_convs[i](net))
@@ -68,8 +68,8 @@ class deepKNet(nn.Module):
             net = F.relu(net)
 
         # wave2
-        #net = F.relu(self.bn2(self.conv2(net)))
-        net = F.relu((self.conv2(net)))
+        net = F.relu(self.bn2(self.conv2(net)))
+        #net = F.relu((self.conv2(net)))
         for i in range(self.nwave2):
             intmp = net
             net = self.wave2_bns[i](self.wave2_convs[i](net))
@@ -77,8 +77,8 @@ class deepKNet(nn.Module):
             net = F.relu(net)
 
         # wave3
-        #net = F.relu(self.bn3(self.conv3(net)))
-        net = F.relu((self.conv3(net)))
+        net = F.relu(self.bn3(self.conv3(net)))
+        #net = F.relu((self.conv3(net)))
         for i in range(self.nwave3):
             intmp = net
             net = self.wave3_bns[i](self.wave3_convs[i](net))
@@ -90,12 +90,12 @@ class deepKNet(nn.Module):
 
         # fully-connected layers
         net = net.view(-1, 1024) # reshape tensor
-        #net = F.relu(self.bn_fc1(self.fc1(net)))
-        #net = F.relu(self.bn_fc2(self.fc2(net)))
-        #net = F.relu(self.bn_fc3(self.fc3(net)))
-        net = F.relu((self.fc1(net)))
-        net = F.relu((self.fc2(net)))
-        net = F.relu((self.fc3(net)))
+        net = F.relu(self.bn_fc1(self.fc1(net)))
+        net = F.relu(self.bn_fc2(self.fc2(net)))
+        net = F.relu(self.bn_fc3(self.fc3(net)))
+        #net = F.relu((self.fc1(net)))
+        #net = F.relu((self.fc2(net)))
+        #net = F.relu((self.fc3(net)))
         y_pred = self.fc4(net)
         
         return y_pred

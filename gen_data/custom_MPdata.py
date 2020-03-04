@@ -189,7 +189,8 @@ def main():
     show_statistics(data=data_custom, compute_xrd=True)
 
     # write customized data
-    data_custom.to_csv("./data_raw/custom_MPdata.csv", sep=';', columns=None, header=data_custom.columns, index=None)
+    data_custom.to_csv("./data_raw/custom_MPdata.csv", sep=';', columns=None, \
+                       header=data_custom.columns, index=None)
 
 
 if __name__ == "__main__":

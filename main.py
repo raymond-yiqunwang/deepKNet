@@ -250,6 +250,8 @@ def validate(val_loader, model, criterion, epoch, writer, normalizer, device):
 
 def save_checkpoint(state, is_best):
     check_root = './checkpoints/'
+    if not os.path.exists(check_root):
+        os.mkdir(check_root)
     filename = check_root + 'checkpoint.pth.tar'
     torch.save(state, filename)
     if is_best:
