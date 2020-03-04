@@ -6,7 +6,7 @@ class deepKNet(nn.Module):
     def __init__(self):
         super(deepKNet, self).__init__()
         # layer 0
-        self.conv0 = nn.Conv1d(97, 128, 1)
+        self.conv0 = nn.Conv1d(98, 128, 1)
         self.bn0 = nn.BatchNorm1d(128)
         
         # wave1
@@ -53,7 +53,7 @@ class deepKNet(nn.Module):
 
     def forward(self, point_cloud):
         # point_cloud size -- (batch_size, nfeatures, npoints)
-        # current settings -- (        16,      3+94,    npts)
+        # current settings -- (        16,    3+1+94,    npts)
 
         net = F.relu(self.bn0(self.conv0(point_cloud)))
         #net = F.relu((self.conv0(point_cloud)))

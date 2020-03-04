@@ -47,7 +47,6 @@ parser.add_argument('--train-size', default=0.9, type=float, metavar='n/N',
                     help='fraction of training data')
 parser.add_argument('--val-size', default=0.1, type=float, metavar='n/N',
                     help='fraction of validation data')
-
 # define global variables
 args = parser.parse_args()
 args.cuda = torch.cuda.is_available() and not args.disable_cuda
@@ -73,7 +72,8 @@ def main():
 
     # build model
     model = deepKNet()
-    model.to(device)
+    if args.cuda: model.cuda()
+#    model.to(device)
 
     # define loss function (criterion) and optimizer
     criterion = nn.MSELoss()
@@ -154,20 +154,24 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer, 
     for idx, data in enumerate(train_loader):
         # features and target
         point_cloud, target = data
-        point_cloud = point_cloud.to(device)
-        target = target.to(device)
+        if args.cuda:
+            point_cloud = point_cloud.cuda()
+            target = target.cuda()
+#        point_cloud = point_cloud.to(device)
+#        target = target.to(device)
 
         # normalize target
         #target_normed = normalizer.norm(target)
+        target_scaled = target #/ 10.
 
         # compute output
         output = model(point_cloud)
         #loss = criterion(output, target_normed)
-        loss = criterion(output, target)
+        loss = criterion(output, target_scaled)
 
         # measure accuracy and record loss
         #mae = compute_mae(target, normalizer.denorm(output))
-        mae = compute_mae(target, output)
+        mae = compute_mae(target, output)#* 10.)
         losses.update(loss.item(), target.size(0))
         maes.update(mae.item(), target.size(0))
         
@@ -212,20 +216,24 @@ def validate(val_loader, model, criterion, epoch, writer, normalizer, device):
         for idx, data in enumerate(val_loader):
             # features and target
             point_cloud, target = data
-            point_cloud = point_cloud.to(device)
-            target = target.to(device)
+            if args.cuda:
+                point_cloud = point_cloud.cuda()
+                target = target.cuda()
+#            point_cloud = point_cloud.to(device)
+#            target = target.to(device)
 
             # normalize target
             #target_normed = normalizer.norm(target)
+            target_scaled = target #/ 10.
 
             # compute output
             output = model(point_cloud)
             #loss = criterion(output, target_normed)
-            loss = criterion(output, target)
+            loss = criterion(output, target_scaled)
 
             # measure accuracy and record loss
             #mae = compute_mae(target, normalizer.denorm(output))
-            mae = compute_mae(target, output)
+            mae = compute_mae(target, output)# * 10.)
             losses.update(loss.item(), target.size(0))
             maes.update(mae.item(), target.size(0))
 

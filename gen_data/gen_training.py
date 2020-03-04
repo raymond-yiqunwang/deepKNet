@@ -28,7 +28,7 @@ def cart2sphere(cart_coord):
     # the scaling factor is the approximated Ewald sphere radius
     r_scale_factor = 2. / 1.54184
     r_scaled = r / r_scale_factor # OUTPUT: [0, 1]
-    assert(1e-2 < r_scaled < 1.)
+    assert(1e-3 < r_scaled <= 1.)
     theta = math.acos(z/r) # [0, pi]
     theta /= math.pi # OUTPUT: [0, 1]
     assert(0. <= theta <= 1.)
