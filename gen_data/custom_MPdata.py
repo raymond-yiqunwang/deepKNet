@@ -22,7 +22,6 @@ from pymatgen.core.structure import Structure
         "warnings", "tags",
 """
 
-
 def get_npts(data, simulator):
     out = []
     for cif in data['cif']:

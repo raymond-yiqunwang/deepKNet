@@ -8,7 +8,6 @@ import pandas as pd
 import multiprocessing
 from multiprocessing import Pool
 
-
 """ properties
         "material_id", "icsd_ids",
         "unit_cell_formula", "pretty_formula",
@@ -20,22 +19,20 @@ from multiprocessing import Pool
         "warnings", "tags",
 """
 
-
 # convert Cartesian coord to spherical
 def cart2sphere(cart_coord):
     x, y, z = cart_coord[0], cart_coord[1], cart_coord[2]
-    r = np.linalg.norm(cart_coord)
-    # the scaling factor is the approximated Ewald sphere radius
-    r_scale_factor = 2. / 1.54184
-    r_scaled = r / r_scale_factor # OUTPUT: [0, 1]
-    assert(1e-3 < r_scaled <= 1.)
+    r = np.linalg.norm(cart_coord) # [0, r_max]
     theta = math.acos(z/r) # [0, pi]
-    theta /= math.pi # OUTPUT: [0, 1]
-    assert(0. <= theta <= 1.)
     phi = math.atan2(y, x) # [-pi, pi]
-    phi = (phi+math.pi) / (2*math.pi) # convert to [0, 1]
-    assert(0. <= phi <= 1.)
-    return [r_scaled, theta, phi]
+    ### scale r, theta, phi to [0, 1]
+    r_scaled = r / (2. / 1.54184) # within the Ewald sphere
+    theta_scaled /= math.pi 
+    phi_scaled = (phi+math.pi) / (2*math.pi)
+    assert(1e-3 < r_scaled <= 1.)
+    assert(0. <= theta_scaled <= 1.)
+    assert(0. <= phi_scaled <= 1.)
+    return [r_scaled, theta_scaled, phi_scaled]
 
 
 def extend_and_truncate(input_list, npoints):
@@ -69,15 +66,15 @@ def generate_point_cloud(xrd_data, features_dir, target_dir, npoints):
         # spherical coordinate
         recip_xyz = [np.dot(np.array(recip_latt).T, np.array(hkl[idx])) for idx in range(len(hkl))]
         recip_spherical = [cart2sphere(recip_xyz[idx]) for idx in range(len(recip_xyz))]
+        # total intensity
+        intensity = np.array(i_hkl) / max(i_hkl)
         # atomic form factor
         aff = np.array(atomic_form_factor)
         aff = aff / np.maximum(1., aff.max(axis=1, keepdims=True))
         aff = aff.tolist()
-        # total intensity
-        intensity = np.array(i_hkl) / max(i_hkl)
         # build features
         features = [recip_spherical[idx] + [intensity[idx]] + aff[idx] \
-                    for idx in range(len(hkl))]
+                    for idx in range(len(recip_spherical))]
         feat = np.array(features).flatten()
         assert(np.max(np.abs(feat)) < 1+1e-12)
         features = pd.DataFrame(features)

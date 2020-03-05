@@ -12,7 +12,7 @@ from deepKNet.data import deepKNetDataset
 from deepKNet.data import get_train_val_test_loader
 from deepKNet.model import deepKNet
 
-parser = argparse.ArgumentParser(description='DeepKNet model')
+parser = argparse.ArgumentParser(description='deepKNet model')
 parser.add_argument('--root', default='./data/', metavar='DATA_ROOT',
                     help='path to root directory')
 parser.add_argument('--target', default='band_gap', metavar='TARGET_PROPERTY',
@@ -20,12 +20,12 @@ parser.add_argument('--target', default='band_gap', metavar='TARGET_PROPERTY',
                          'energy_per_atom', 'formation_energy per atom')")
 parser.add_argument('-j', '--num_workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
-parser.add_argument('--epochs', default=200, type=int, metavar='N',
+parser.add_argument('--epochs', default=40, type=int, metavar='N',
                     help='number of epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch start number (useful on restarts)')
-parser.add_argument('--lr-milestones', default=[50, 100], type=int, metavar='[N]',
-                    help='learning rate decay milestones (default: [50, 100])')
+parser.add_argument('--lr-milestones', default=[10, 20, 30], type=int, metavar='[N]',
+                    help='learning rate decay milestones (default: [10, 20, 30])')
 parser.add_argument('-b', '--batch-size', default=32, type=int, metavar='N',
                     help='mini-batch size (default: 32)')
 parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
@@ -76,9 +76,11 @@ def main():
 
     # define loss function (criterion) and optimizer
     criterion = nn.MSELoss()
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, 
-                          momentum=args.momentum,
-                          weight_decay=args.weight_decay)
+#    optimizer = optim.SGD(model.parameters(), lr=args.lr, 
+#                          momentum=args.momentum,
+#                          weight_decay=args.weight_decay)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, 
+                           weight_decay=args.weight_decay)
 
     # optionally resume from a checkpoint
     if args.resume:

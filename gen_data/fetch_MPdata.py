@@ -2,7 +2,6 @@ import os
 import pandas as pd
 from pymatgen import MPRester
 
-
 def fetch_materials_data():
     # properties of interest
     properties = [ 

@@ -9,7 +9,6 @@ import multiprocessing
 from multiprocessing import Pool
 from pymatgen.core.structure import Structure
 
-
 """ properties
         "material_id", "icsd_ids",
         "unit_cell_formula", "pretty_formula",
@@ -20,7 +19,6 @@ from pymatgen.core.structure import Structure
         "is_hubbard", "hubbards",
         "warnings", "tags",
 """
-
 
 def compute_xrd(data_raw, wavelength):
     xrd_data_batch = []

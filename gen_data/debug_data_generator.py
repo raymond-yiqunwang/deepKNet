@@ -228,9 +228,9 @@ def debug_training_features(chunksize=100):
 
 
 def main():
-    chunksize = 10
+    chunksize = 100
 
-    debug_compute_xrd(chunksize)
+#    debug_compute_xrd(chunksize)
 
     debug_training_features(chunksize)
 

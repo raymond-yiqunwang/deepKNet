@@ -24,7 +24,6 @@ from pymatgen.analysis.diffraction.xrd import XRDCalculator
 from pymatgen.core.structure import Structure
 from pymatgen import MPRester
 
-
 # XRD wavelengths in angstroms
 WAVELENGTHS = {
     "CrKa2": 2.29361,
@@ -53,11 +52,9 @@ WAVELENGTHS = {
     "AgKb1": 0.497082,
 }
 
-
 with open(os.path.join(os.path.dirname(__file__),
                        "atomic_scattering_params.json")) as f:
     ATOMIC_SCATTERING_PARAMS = json.load(f)
-
 
 class XRDSimulator(AbstractDiffractionPatternCalculator):
     """
