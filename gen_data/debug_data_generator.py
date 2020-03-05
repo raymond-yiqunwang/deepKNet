@@ -117,13 +117,13 @@ def debug_compute_xrd(chunksize=100):
 
         # threshold for numerical comparison
         threshold = 1e-12
-        
+
         # debug property 
         gap_debug, energy_debug, fenergy_debug = debug_feat(material_id)
         assert(abs(gap_debug-band_gap) < threshold)
         assert(abs(energy_debug-energy_per_atom) < threshold)
         assert(abs(fenergy_debug-formation_energy_per_atom) < threshold)
-        
+
         # debug primitive features
         debug_recip_latt, debug_dict = debug_xrd(material_id)
         diff = np.hstack(recip_latt) - np.hstack(debug_recip_latt)
@@ -139,7 +139,7 @@ def debug_compute_xrd(chunksize=100):
 
     print("All test cases passed for compute_xrd.csv\n")
 
-        
+
 def read_training(material_id):
     data_root = "../data/"
     features = pd.read_csv(data_root+'features/'+material_id+'.csv', \
@@ -149,8 +149,7 @@ def read_training(material_id):
     return features, target
            
 
-
-def cart2sphe(xyz):
+def cart2sphere(xyz):
     x, y, z = xyz[0], xyz[1], xyz[2]
     r = np.sqrt(x**2 + y**2 + z**2)
     theta = np.arccos([z/r])[0]
@@ -196,7 +195,7 @@ def debug_training_features(chunksize=100):
         atomic_form_factor = atomic_form_factor[:npoints]
         # process primitive features
         recip_xyz = [np.dot(np.transpose(recip_latt), hkl[idx]) for idx in range(len(hkl))]
-        recip_spherical = [cart2sphe(recip_xyz[idx]) for idx in range(len(recip_xyz))]
+        recip_spherical = [cart2sphere(recip_xyz[idx]) for idx in range(len(recip_xyz))]
         intensity = np.array(i_hkl) / max(i_hkl)
         for idx in range(len(atomic_form_factor)):
             imax = max(1, max(atomic_form_factor[idx]))
