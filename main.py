@@ -54,7 +54,7 @@ args = parser.parse_args()
 args.cuda = torch.cuda.is_available() and not args.disable_cuda
 if args.num_threads:
     torch.set_num_threads(args.num_threads)
-    print('=> manually set number of threads to {}'.format(args.num_threads))
+    print('=> manually set number of threads to {}'.format(args.num_threads), flush=True)
 best_mae = 1e8
 
 def main():
@@ -90,7 +90,7 @@ def main():
     # optionally resume from a checkpoint
     if args.resume:
         if os.path.isfile(args.resume):
-            print("=> loading checkpoint '{}'".format(args.resume))
+            print("=> loading checkpoint '{}'".format(args.resume), flush=True)
             checkpoint = torch.load(args.resume)
             args.start_epoch = checkpoint['epoch'] + 1
             best_mae = checkpoint['best_mae']
@@ -98,9 +98,9 @@ def main():
             optimizer.load_state_dict(checkpoint['optimizer'])
             normalizer.load_state_dict(checkpoint['normalizer'])
             print("=> loaded checkpoint '{}' (epoch {})"
-                  .format(args.resume, checkpoint['epoch']))
+                  .format(args.resume, checkpoint['epoch']), flush=True)
         else:
-            print("=> no checkpoint found at '{}'".format(args.resume))
+            print("=> no checkpoint found at '{}'".format(args.resume), flush=True)
 
     # evaluation only
 #    if args.evaluate:
@@ -322,7 +322,7 @@ class ProgressMeter(object):
     def display(self, batch):
         entries = [self.prefix + self.batch_fmtstr.format(batch)]
         entries += [str(meter) for meter in self.meters]
-        print('\t'.join(entries))
+        print('\t'.join(entries), flush=True)
 
     def _get_batch_fmtstr(self, num_batches):
         num_digits = len(str(num_batches // 1))
