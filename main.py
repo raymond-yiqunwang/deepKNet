@@ -54,7 +54,7 @@ args = parser.parse_args()
 args.cuda = torch.cuda.is_available() and not args.disable_cuda
 if args.num_threads:
     torch.set_num_threads(args.num_threads)
-    print('=> manually set number of threads to {}'.format(args.num_threads), flush=True)
+print('=> number of threads : {}'.format(torch.get_num_threads()), flush=True)
 best_mae = 1e8
 
 def main():
