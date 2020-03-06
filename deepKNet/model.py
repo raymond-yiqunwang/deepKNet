@@ -53,7 +53,7 @@ class deepKNet(nn.Module):
 
     def forward(self, point_cloud):
         # point_cloud size -- (batch_size, nfeatures, npoints)
-        # current settings -- (        32,    3+1+94,    npts)
+        # current settings -- (        32,    3+1+94,     512)
 
         net = F.relu(self.bn0(self.conv0(point_cloud)))
         #net = F.relu((self.conv0(point_cloud)))

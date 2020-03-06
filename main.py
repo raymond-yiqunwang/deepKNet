@@ -16,16 +16,16 @@ parser = argparse.ArgumentParser(description='deepKNet model')
 parser.add_argument('--root', default='./data/', metavar='DATA_ROOT',
                     help='path to root directory')
 parser.add_argument('--target', default='band_gap', metavar='TARGET_PROPERTY',
-                    help="target property ('band_gap', \
-                         'energy_per_atom', 'formation_energy per atom')")
+                    help="target property ('band_gap', 'energy_per_atom', \
+                                           'formation_energy per atom')")
 parser.add_argument('-j', '--num_workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
-parser.add_argument('--epochs', default=40, type=int, metavar='N',
+parser.add_argument('--epochs', default=30, type=int, metavar='N',
                     help='number of epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch start number (useful on restarts)')
-parser.add_argument('--lr-milestones', default=[10, 20, 30], type=int, metavar='[N]',
-                    help='learning rate decay milestones (default: [10, 20, 30])')
+parser.add_argument('--lr-milestones', default=[10, 20], type=int, metavar='[N]',
+                    help='learning rate decay milestones (default: [10, 20])')
 parser.add_argument('-b', '--batch-size', default=32, type=int, metavar='N',
                     help='mini-batch size (default: 32)')
 parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
@@ -51,6 +51,10 @@ parser.add_argument('--val-size', default=0.1, type=float, metavar='n/N',
 args = parser.parse_args()
 args.cuda = torch.cuda.is_available() and not args.disable_cuda
 best_mae = 1e8
+
+# TODO for baseline testing only, to be deleted..
+args.target = 'energy_per_atom'
+#args.target = 'formation_energy_per_atom'
 
 def main():
     global args, best_mae
@@ -104,7 +108,7 @@ def main():
 
     # TensorBoard writer
     summary_root = './runs/'
-    summary_file = summary_root + 'baseline'
+    summary_file = summary_root + args.target + '_baseline'
     if not os.path.exists(summary_root):
         os.mkdir(summary_root)
     if os.path.exists(summary_file):
@@ -253,10 +257,10 @@ def save_checkpoint(state, is_best):
     check_root = './checkpoints/'
     if not os.path.exists(check_root):
         os.mkdir(check_root)
-    filename = check_root + 'checkpoint.pth.tar'
+    filename = check_root + args.target + '_checkpoint.pth.tar'
     torch.save(state, filename)
     if is_best:
-        shutil.copyfile(filename, check_root+'model_best.pth.tar')
+        shutil.copyfile(filename, check_root+args.target+'_model_best.pth.tar')
 
 
 class Normalizer(object):
