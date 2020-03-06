@@ -23,6 +23,11 @@ conda install pytorch torchvision -c pytorch
 ```
 See more instructions at the PyTorch [website](https://pytorch.org/get-started/locally/).
 
+### Install TensorBoard
+```code
+pip install tensorboard
+```
+
 ### Install pymatgen
 ```code
 conda install --channel conda-forge pymatgen

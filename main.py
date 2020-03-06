@@ -52,6 +52,8 @@ parser.add_argument('--num_threads', default=0, type=int, metavar='N_thread',
 # define global variables
 args = parser.parse_args()
 args.cuda = torch.cuda.is_available() and not args.disable_cuda
+if args.cuda:
+    print('=> using cuda..', flush=True)
 if args.num_threads:
     torch.set_num_threads(args.num_threads)
 print('=> number of threads : {}'.format(torch.get_num_threads()), flush=True)
