@@ -78,8 +78,8 @@ def main():
         normalizer = Normalizer(sample_target)
 
     # build model
-    # model = deepKNet()
-    model = DeepKBert()
+    model = deepKNet()
+    #model = DeepKBert()
     if args.cuda: model.cuda()
 
     # define loss function (criterion) and optimizer
