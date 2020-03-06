@@ -96,11 +96,15 @@ def main():
 
     # define loss function (criterion) and optimizer
     criterion = nn.MSELoss()
-#    optimizer = optim.SGD(model.parameters(), lr=args.lr, 
-#                          momentum=args.momentum,
-#                          weight_decay=args.weight_decay)
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, 
-                           weight_decay=args.weight_decay)
+    if args.optim == 'Adam':
+        optimizer = optim.Adam(model.parameters(), lr=args.lr, 
+                               weight_decay=args.weight_decay)
+    elif args.optim == 'SGD':
+        optimizer = optim.SGD(model.parameters(), lr=args.lr, 
+                              momentum=args.momentum,
+                              weight_decay=args.weight_decay)
+    else:
+        raise NameError('Only Adam or SGD is allowed as --optim')
 
     # optionally resume from a checkpoint
     if args.resume:
