@@ -13,51 +13,62 @@ from deepKNet.data import get_train_val_test_loader
 from deepKNet.model import deepKNet, DeepKBert
 
 parser = argparse.ArgumentParser(description='deepKNet model')
+## data and target property
 parser.add_argument('--root', default='./data/', metavar='DATA_ROOT',
                     help='path to root directory')
 parser.add_argument('--target', default='band_gap', metavar='TARGET_PROPERTY',
                     help="target property ('band_gap', 'energy_per_atom', \
                                            'formation_energy_per_atom')")
+## training-relevant params
+parser.add_argument('--optim', default='Adam', type=str, metavar='OPTIM',
+                    help='torch.optim (Adam or SGD), (default: Adam)')
 parser.add_argument('--epochs', default=30, type=int, metavar='N',
                     help='number of epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch start number (useful on restarts)')
-parser.add_argument('--lr-milestones', default=[10, 20], type=int, metavar='[N]',
-                    help='learning rate decay milestones (default: [10, 20])')
-parser.add_argument('-b', '--batch-size', default=32, type=int, metavar='N',
+parser.add_argument('--batch-size', default=32, type=int, metavar='N',
                     help='mini-batch size (default: 32)')
 parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
-                    metavar='LR', help='initial learning rate', dest='lr')
-parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
-                    help='momentum')
-parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
-                    metavar='W', help='weigh decay (default: 1e-4)',
+                    metavar='LR', dest='lr',
+                    help='initial learning rate (default: 0.001)')
+parser.add_argument('--lr-milestones', default=[10, 20], type=int, metavar='[N]',
+                    help='learning rate decay milestones (default: [10, 20])')
+parser.add_argument('--wd', '--weight-decay', default=0, type=float,
+                    metavar='W', help='weigh decay (default: 0)',
                     dest='weight_decay')
-parser.add_argument('-p', '--print-freq', default=10, type=int, metavar='N',
+parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
+                    help='momentum for SGD optimizer')
+parser.add_argument('--train-ratio', default=0.9, type=float, metavar='n/N',
+                    help='fraction of data for training')
+parser.add_argument('--val-ratio', default=0.1, type=float, metavar='n/N',
+                    help='fraction of data for validation')
+parser.add_argument('--test-ratio', default=0.0, type=float, metavar='n/N',
+                    help='fraction of data for test')
+## misc
+n_threads = torch.get_num_threads()
+parser.add_argument('--num_threads', default=n_threads, type=int, metavar='N_thread',
+                    help='number of threads used for parallelizing CPU operations')
+parser.add_argument('--num_data_workers', default=4, type=int, metavar='N',
+                    help='number of data loading workers (default: 4)')
+parser.add_argument('--print-freq', default=10, type=int, metavar='N',
                     help='print frequency (default: 10)')
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: None)')
-parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
+parser.add_argument('--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
-parser.add_argument('--train-size', default=0.9, type=float, metavar='n/N',
-                    help='fraction of training data')
-parser.add_argument('--val-size', default=0.1, type=float, metavar='n/N',
-                    help='fraction of validation data')
 parser.add_argument('--disable-cuda', action='store_true',
                     help='disable CUDA')
-parser.add_argument('--num_data_workers', default=4, type=int, metavar='N',
-                    help='number of data loading workers (default: 4)')
-default_n_threads = torch.get_num_threads()
-parser.add_argument('--num_threads', default=default_n_threads, type=int, metavar='N_thread',
-                    help='number of threads used for parallelizing CPU operations')
-
-# print args
+# parse args
 args = parser.parse_args()
 args.cuda = torch.cuda.is_available() and not args.disable_cuda
-torch.set_num_threads(args.num_threads)
-print('Options:', flush=True)
+if args.num_threads != n_threads:
+    torch.set_num_threads(args.num_threads)
+
+# print out args
+print('User defined variables:', flush=True)
 for key, val in vars(args).items():
-    print(' => {:17s}: {}'.format(key, val), flush=True)
+    print('  => {:17s}: {}'.format(key, val), flush=True)
+
 best_mae = 1e8
 
 def main():
