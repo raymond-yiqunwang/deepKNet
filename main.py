@@ -79,7 +79,7 @@ def main():
     dataset = deepKNetDataset(root=args.root, target=args.target)
     train_loader, val_loader = get_train_val_test_loader(
         dataset=dataset, batch_size=args.batch_size, 
-        train_size=args.train_size, val_size=args.val_size, 
+        train_ratio=args.train_ratio, val_ratio=args.val_ratio, 
         num_data_workers=args.num_data_workers, pin_memory=args.cuda
     )
 
