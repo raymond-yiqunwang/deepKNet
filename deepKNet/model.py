@@ -102,7 +102,6 @@ class deepKNet(nn.Module):
 
 
 class BERTLayer(nn.Module):
-
     def __init__(self):
         super().__init__()
 
@@ -120,6 +119,7 @@ class BERTLayer(nn.Module):
         z = torch.relu(self.fc2(z))
         return self.norm2(y + z)
 
+
 class DeepKBert(nn.Module):
     def __init__(self):
         super().__init__()
@@ -132,7 +132,6 @@ class DeepKBert(nn.Module):
         self.bert = nn.ModuleList([BERTLayer() for _ in range(self.nbert)])
 
         self.fc = nn.Linear(128, 1)
-
 
     def forward(self, x):
         x = x.permute(2, 0, 1) # L x BS x NF
@@ -148,7 +147,3 @@ class DeepKBert(nn.Module):
         return self.fc(x)
 
 
-if __name__ == "__main__":
-    model = DeepKBert()
-    x = torch.randn(32, 98, 512)
-    print(model(x))
