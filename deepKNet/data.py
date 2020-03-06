@@ -8,7 +8,7 @@ from torch.utils.data.sampler import SubsetRandomSampler
 
 
 def get_train_val_test_loader(dataset, batch_size=32, train_size=0.9, val_size=0.1,
-                              num_workers=1, pin_memory=False):
+                              num_data_workers=1, pin_memory=False):
     # train-val split
     total_size = len(dataset)
     indices = list(range(total_size))
@@ -17,9 +17,9 @@ def get_train_val_test_loader(dataset, batch_size=32, train_size=0.9, val_size=0
     val_sampler = SubsetRandomSampler(indices[split:])
     # init DataLoader
     train_loader = DataLoader(dataset, batch_size=batch_size, sampler=train_sampler,
-                              num_workers=num_workers, pin_memory=pin_memory)
+                              num_workers=num_data_workers, pin_memory=pin_memory)
     val_loader = DataLoader(dataset, batch_size=batch_size, sampler=val_sampler,
-                              num_workers=num_workers, pin_memory=pin_memory)
+                              num_workers=num_data_workers, pin_memory=pin_memory)
     return train_loader, val_loader
 
 

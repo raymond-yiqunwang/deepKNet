@@ -45,18 +45,19 @@ parser.add_argument('--val-size', default=0.1, type=float, metavar='n/N',
                     help='fraction of validation data')
 parser.add_argument('--disable-cuda', action='store_true',
                     help='disable CUDA')
-parser.add_argument('-j', '--num_workers', default=4, type=int, metavar='N',
+parser.add_argument('--num_data_workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
-parser.add_argument('--num_threads', default=0, type=int, metavar='N_thread',
+default_n_threads = torch.get_num_threads()
+parser.add_argument('--num_threads', default=default_n_threads, type=int, metavar='N_thread',
                     help='number of threads used for parallelizing CPU operations')
-# define global variables
+
+# print args
 args = parser.parse_args()
 args.cuda = torch.cuda.is_available() and not args.disable_cuda
-if args.cuda:
-    print('=> using cuda..', flush=True)
-if args.num_threads:
-    torch.set_num_threads(args.num_threads)
-print('=> number of threads : {}'.format(torch.get_num_threads()), flush=True)
+torch.set_num_threads(args.num_threads)
+print('Options:', flush=True)
+for key, val in vars(args).items():
+    print(' => {:17s}: {}'.format(key, val), flush=True)
 best_mae = 1e8
 
 def main():
@@ -68,7 +69,7 @@ def main():
     train_loader, val_loader = get_train_val_test_loader(
         dataset=dataset, batch_size=args.batch_size, 
         train_size=args.train_size, val_size=args.val_size, 
-        num_workers=args.num_workers, pin_memory=args.cuda
+        num_data_workers=args.num_data_workers, pin_memory=args.cuda
     )
 
     # normalizer
