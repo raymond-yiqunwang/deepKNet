@@ -18,8 +18,6 @@ parser.add_argument('--root', default='./data/', metavar='DATA_ROOT',
 parser.add_argument('--target', default='band_gap', metavar='TARGET_PROPERTY',
                     help="target property ('band_gap', 'energy_per_atom', \
                                            'formation_energy per atom')")
-parser.add_argument('-j', '--num_workers', default=4, type=int, metavar='N',
-                    help='number of data loading workers (default: 4)')
 parser.add_argument('--epochs', default=30, type=int, metavar='N',
                     help='number of epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
@@ -41,20 +39,23 @@ parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: None)')
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
-parser.add_argument('--disable-cuda', action='store_true',
-                    help='disable CUDA')
 parser.add_argument('--train-size', default=0.9, type=float, metavar='n/N',
                     help='fraction of training data')
 parser.add_argument('--val-size', default=0.1, type=float, metavar='n/N',
                     help='fraction of validation data')
+parser.add_argument('--disable-cuda', action='store_true',
+                    help='disable CUDA')
+parser.add_argument('-j', '--num_workers', default=4, type=int, metavar='N',
+                    help='number of data loading workers (default: 4)')
+parser.add_argument('--num_threads', default=0, type=int, metavar='N_thread',
+                    help='number of threads used for parallelizing CPU operations')
 # define global variables
 args = parser.parse_args()
 args.cuda = torch.cuda.is_available() and not args.disable_cuda
+if args.num_threads:
+    torch.set_num_threads(args.num_threads)
+    print('=> manually set number of threads to {}'.format(args.num_threads))
 best_mae = 1e8
-
-# TODO for baseline testing only, to be deleted..
-args.target = 'energy_per_atom'
-#args.target = 'formation_energy_per_atom'
 
 def main():
     global args, best_mae
