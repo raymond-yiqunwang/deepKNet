@@ -10,14 +10,14 @@ from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.tensorboard import SummaryWriter
 from deepKNet.data import deepKNetDataset
 from deepKNet.data import get_train_val_test_loader
-from deepKNet.model import deepKNet
+from deepKNet.model import deepKNet, DeepKBert
 
 parser = argparse.ArgumentParser(description='deepKNet model')
 parser.add_argument('--root', default='./data/', metavar='DATA_ROOT',
                     help='path to root directory')
 parser.add_argument('--target', default='band_gap', metavar='TARGET_PROPERTY',
                     help="target property ('band_gap', 'energy_per_atom', \
-                                           'formation_energy per atom')")
+                                           'formation_energy_per_atom')")
 parser.add_argument('--epochs', default=30, type=int, metavar='N',
                     help='number of epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
@@ -76,7 +76,8 @@ def main():
         normalizer = Normalizer(sample_target)
 
     # build model
-    model = deepKNet()
+    # model = deepKNet()
+    model = DeepKBert()
     if args.cuda: model.cuda()
 
     # define loss function (criterion) and optimizer

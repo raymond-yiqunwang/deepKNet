@@ -99,5 +99,56 @@ class deepKNet(nn.Module):
         y_pred = self.fc4(net)
         
         return y_pred
- 
 
+
+class BERTLayer(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+
+        self.attn = nn.MultiheadAttention(128, 8)
+        self.norm1 = nn.LayerNorm(128)
+
+        self.fc1 = nn.Linear(128, 512)
+        self.fc2 = nn.Linear(512, 128)
+        self.norm2 = nn.LayerNorm(128)
+
+    def forward(self, x):
+        y, _ = self.attn(x, x, x)
+        y = self.norm1(x + y)
+        z = torch.relu(self.fc1(y))
+        z = torch.relu(self.fc2(z))
+        return self.norm2(y + z)
+
+class DeepKBert(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+
+        self.nbert = 12
+        self.prenet = nn.Linear(98, 128)
+        self.prenorm = nn.LayerNorm(128)
+
+        self.bert = nn.ModuleList([BERTLayer() for _ in range(self.nbert)])
+
+        self.fc = nn.Linear(128, 1)
+
+
+    def forward(self, x):
+        x = x.permute(2, 0, 1) # L x BS x NF
+        x = self.prenet(x)
+        x = self.prenorm(x)
+
+        for bert in self.bert:
+            x = bert(x)
+
+        # L x BS x NF -> BS x NF
+        # Average pooling
+        x = x.mean(0)
+        return self.fc(x)
+
+
+if __name__ == "__main__":
+    model = DeepKBert()
+    x = torch.randn(32, 98, 512)
+    print(model(x))

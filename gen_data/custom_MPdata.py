@@ -7,6 +7,7 @@ import XRD_simulator.xrd_simulator as xrd
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 import multiprocessing
+import matplotlib.pyplot as plt
 from multiprocessing import Pool
 from collections import defaultdict
 from pymatgen.core.structure import Structure
@@ -30,7 +31,7 @@ def get_npts(data, simulator):
     return out
 
 
-def show_statistics(data, compute_xrd=False):
+def show_statistics(data, compute_xrd=False, plot=False):
     # size of database
     print('>> Total number of materials: {:d}, number of properties: {:d}'\
             .format(data.shape[0], data.shape[1]))
@@ -98,6 +99,9 @@ def show_statistics(data, compute_xrd=False):
                 'std = {:.2f}, min = {:.2f}, max = {:.2f}' \
                 .format(energy_atom.mean(), energy_atom.median(), energy_atom.std(), \
                         energy_atom.min(), energy_atom.max()))
+    if plot:
+        energy_atom.plot.hist(bins=20)
+        plt.show()
 
     # formation energy per atom
     formation_atom = data['formation_energy_per_atom']
@@ -105,6 +109,9 @@ def show_statistics(data, compute_xrd=False):
                 'std = {:.2f}, min = {:.2f}, max = {:.2f}' \
                 .format(formation_atom.mean(), formation_atom.median(),\
                         formation_atom.std(), formation_atom.min(), formation_atom.max()))
+    if plot:
+        formation_atom.plot.hist(bins=20)
+        plt.show()
 
     # energy above hull
     e_above_hull = data['e_above_hull']
@@ -117,6 +124,11 @@ def show_statistics(data, compute_xrd=False):
     gap_threshold = 1E-3
     metals = data[data['band_gap'] <= gap_threshold]['band_gap']
     insulators = data[data['band_gap'] > gap_threshold]['band_gap']
+    if plot:
+        data['band_gap'].plot.hist(bins=20)
+        plt.show()
+        insulators.plot.hist(bins=20)
+        plt.show()
     print('>> Number of metals: {:d}, number of insulators: {:d}' \
                 .format(metals.size, insulators.size))
     print('     band gap of all dataset: mean = {:.2f}, median = {:.2f}, '
@@ -180,14 +192,14 @@ def main():
 
     # show statistics of raw data
     print('\nShowing raw data:')
-    show_statistics(data=data_raw, compute_xrd=False)
+    show_statistics(data=data_raw, compute_xrd=False, plot=False)
 
     # custom data
     data_custom = customize_data(data_raw)
 
     # show statistics of customized data
     print('\nShowing customized data:')
-    show_statistics(data=data_custom, compute_xrd=True)
+    show_statistics(data=data_custom, compute_xrd=True, plot=False)
 
     # write customized data
     data_custom.to_csv("./data_raw/custom_MPdata.csv", sep=';', columns=None, \
