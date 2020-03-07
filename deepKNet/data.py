@@ -7,12 +7,12 @@ from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
 
 
-def get_train_val_test_loader(dataset, batch_size=32, train_size=0.9, val_size=0.1,
+def get_train_val_test_loader(dataset, batch_size=32, train_ratio=0.9, val_ratio=0.1,
                               num_data_workers=1, pin_memory=False):
     # train-val split
     total_size = len(dataset)
     indices = list(range(total_size))
-    split = int(np.floor(total_size * train_size))
+    split = int(np.floor(total_size * train_ratio))
     train_sampler = SubsetRandomSampler(indices[:split])
     val_sampler = SubsetRandomSampler(indices[split:])
     # init DataLoader
