@@ -75,7 +75,7 @@ def main():
     # normalizer
     with torch.no_grad():
         sample_target = torch.tensor([dataset[i][1].item() for i in \
-                                     sample(range(len(dataset)), 500)])
+                                     sample(range(len(dataset)), 1000)])
         normalizer = Normalizer(sample_target)
 
     # build model
@@ -108,7 +108,7 @@ def main():
 
     # evaluation only
 #    if args.evaluate:
-#        validate(val_loader, model, criterion)
+#        validate(val_loader, model, criterion, epoch, writer, normalizer, device)
 #        return
 
     # TensorBoard writer
@@ -168,16 +168,16 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer, 
             target = target.cuda()
 
         # normalize target
-        #target_normed = normalizer.norm(target)
+        target_normed = normalizer.norm(target)
 
         # compute output
         output = model(point_cloud)
-        #loss = criterion(output, target_normed)
-        loss = criterion(output, target)
+        loss = criterion(output, target_normed)
+        #loss = criterion(output, target)
 
         # measure accuracy and record loss
-        #mae = compute_mae(target, normalizer.denorm(output))
-        mae = compute_mae(target, output)
+        mae = compute_mae(target, normalizer.denorm(output))
+        #mae = compute_mae(target, output)
         losses.update(loss.item(), target.size(0))
         maes.update(mae.item(), target.size(0))
         
@@ -226,16 +226,16 @@ def validate(val_loader, model, criterion, epoch, writer, normalizer, device):
                 target = target.cuda()
 
             # normalize target
-            #target_normed = normalizer.norm(target)
+            target_normed = normalizer.norm(target)
 
             # compute output
             output = model(point_cloud)
-            #loss = criterion(output, target_normed)
-            loss = criterion(output, target)
+            loss = criterion(output, target_normed)
+            #loss = criterion(output, target)
 
             # measure accuracy and record loss
-            #mae = compute_mae(target, normalizer.denorm(output))
-            mae = compute_mae(target, output)
+            mae = compute_mae(target, normalizer.denorm(output))
+            #mae = compute_mae(target, output)
             losses.update(loss.item(), target.size(0))
             maes.update(mae.item(), target.size(0))
 
