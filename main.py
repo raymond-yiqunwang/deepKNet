@@ -19,6 +19,8 @@ parser.add_argument('--root', default='./data/', metavar='DATA_ROOT',
 parser.add_argument('--target', default='band_gap', metavar='TARGET_PROPERTY',
                     help="target property ('band_gap', 'energy_per_atom', \
                                            'formation_energy_per_atom')")
+parser.add_argument('--norm-target', dest='norm_target', action='store_true',
+                    help='whether to normalize the target property (default: False)')
 ## training-relevant params
 parser.add_argument('--algo', default='deepKNet', type=str, metavar='NET',
                     help='neural network (deepKNet, deepKBert)')
@@ -33,9 +35,9 @@ parser.add_argument('--batch-size', default=32, type=int, metavar='N',
 parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                     metavar='LR', dest='lr',
                     help='initial learning rate (default: 0.001)')
-parser.add_argument('--lr-milestones', default=[100], nargs='+', 
+parser.add_argument('--lr-milestones', default=[50], nargs='+', 
                     type=int, metavar='[N]',
-                    help='learning rate decay milestones (default: [100])')
+                    help='learning rate decay milestones (default: [50])')
 parser.add_argument('--wd', '--weight-decay', default=0, type=float,
                     metavar='W', help='weigh decay (default: 0)',
                     dest='weight_decay')
@@ -193,17 +195,18 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer, 
             point_cloud = point_cloud.cuda()
             target = target.cuda()
 
-        # normalize target
-        target_normed = normalizer.norm(target)
-
         # compute output
         output = model(point_cloud)
-        loss = criterion(output, target_normed)
-        #loss = criterion(output, target)
 
         # measure accuracy and record loss
-        mae = compute_mae(target, normalizer.denorm(output))
-        #mae = compute_mae(target, output)
+        if args.norm_target:
+            # normalize target
+            target_normed = normalizer.norm(target)
+            loss = criterion(output, target_normed)
+            mae = compute_mae(target, normalizer.denorm(output))
+        else:
+            loss = criterion(output, target)
+            mae = compute_mae(target, output)
         losses.update(loss.item(), target.size(0))
         maes.update(mae.item(), target.size(0))
         
@@ -251,17 +254,18 @@ def validate(val_loader, model, criterion, epoch, writer, normalizer, device):
                 point_cloud = point_cloud.cuda()
                 target = target.cuda()
 
-            # normalize target
-            target_normed = normalizer.norm(target)
-
             # compute output
             output = model(point_cloud)
-            loss = criterion(output, target_normed)
-            #loss = criterion(output, target)
-
+        
             # measure accuracy and record loss
-            mae = compute_mae(target, normalizer.denorm(output))
-            #mae = compute_mae(target, output)
+            if args.norm_target:
+                # normalize target
+                target_normed = normalizer.norm(target)
+                loss = criterion(output, target_normed)
+                mae = compute_mae(target, normalizer.denorm(output))
+            else:
+                loss = criterion(output, target)
+                mae = compute_mae(target, output)
             losses.update(loss.item(), target.size(0))
             maes.update(mae.item(), target.size(0))
 
