@@ -16,7 +16,7 @@ parser.add_argument('--debug', dest='debug', action='store_true')
 args = parser.parse_args()
 
 # input -- material_id
-# output -- recip_latt, dict{(hkl): (i_hkl, atomic_form_factor)}
+# output -- recip_latt, dict{(hkl): (intensity_hkl, atomic_form_factor)}
 def debug_xrd(material_id):
     my_API_key = "gxTAyXSm2GvCdWer"
     m = MPRester(api_key=my_API_key)
@@ -69,13 +69,13 @@ def debug_xrd(material_id):
         fs = np.array(fs)
         atomic_f_hkl = fs * np.exp(2j * math.pi * g_dot_r)
         f_hkl = np.sum(atomic_f_hkl)
-        i_hkl = (f_hkl * f_hkl.conjugate()).real
+        intensity_hkl = (f_hkl * f_hkl.conjugate()).real
         aff = [0]*94
         for idx, Z in enumerate(zs):
             atom_f = atomic_f_hkl[idx]
             atomic_intensity = (atom_f * atom_f.conjugate()).real
             aff[Z-1] += atomic_intensity
-        ddict[tuple(hkl)] = (i_hkl, aff)
+        ddict[tuple(hkl)] = (intensity_hkl, aff)
 
     return recip_latt.matrix, ddict
 
@@ -112,11 +112,11 @@ def debug_compute_xrd(chunksize, xrd_filename):
         recip_latt = ast.literal_eval(sample['recip_latt'])
         # calculated point-specific features as dictionary
         hkl = ast.literal_eval(sample['hkl'])
-        i_hkl = ast.literal_eval(sample['i_hkl'])
+        intensity_hkl = ast.literal_eval(sample['intensity_hkl'])
         atomic_form_factor = ast.literal_eval(sample['atomic_form_factor'])
         ddict = dict()
         for idx, ihkl in enumerate(hkl):
-            ddict[tuple(ihkl)] = (i_hkl[idx], atomic_form_factor[idx])
+            ddict[tuple(ihkl)] = (intensity_hkl[idx], atomic_form_factor[idx])
 
         # threshold for numerical comparison
         threshold = 1e-12
@@ -162,14 +162,12 @@ def cart2sphere(xyz):
     return [r, theta, phi]
 
 
-def debug_training_features(chunksize, xrd_filename, train_data_root):
+def debug_training_features(chunksize, xrd_filename, train_data_root, npoints):
     if not os.path.isfile(xrd_filename):
         print("{} file does not exist, please generate it first..".format(xrd_filename))
         sys.exit(1)
     data_all = pd.read_csv(xrd_filename, sep=';', header=0, index_col=None, chunksize=chunksize)
 
-    npoints = 512
-    
     # loop over chunks
     for xrd_data in data_all:
         # randomly select 1 material data
@@ -185,10 +183,10 @@ def debug_training_features(chunksize, xrd_filename, train_data_root):
         while len(hkl) < npoints:
             hkl.extend(hkl)
         hkl = hkl[:npoints]
-        i_hkl = ast.literal_eval(sample['i_hkl'])
-        while len(i_hkl) < npoints:
-            i_hkl.extend(i_hkl)
-        i_hkl = i_hkl[:npoints]
+        intensity_hkl = ast.literal_eval(sample['intensity_hkl'])
+        while len(intensity_hkl) < npoints:
+            intensity_hkl.extend(intensity_hkl)
+        intensity_hkl = intensity_hkl[:npoints]
         atomic_form_factor = ast.literal_eval(sample['atomic_form_factor'])
         while len(atomic_form_factor) < npoints:
             atomic_form_factor.extend(atomic_form_factor)
@@ -196,7 +194,7 @@ def debug_training_features(chunksize, xrd_filename, train_data_root):
         # process primitive features
         recip_xyz = [np.dot(np.transpose(recip_latt), hkl[idx]) for idx in range(len(hkl))]
         recip_spherical = [cart2sphere(recip_xyz[idx]) for idx in range(len(recip_xyz))]
-        intensity = np.array(i_hkl) / max(i_hkl)
+        intensity = np.array(intensity_hkl) / max(intensity_hkl)
         for idx in range(len(atomic_form_factor)):
             imax = max(1, max(atomic_form_factor[idx]))
             atomic_form_factor[idx] = (np.array(atomic_form_factor[idx])/imax).tolist()
@@ -235,15 +233,16 @@ def main():
         xrd_filename = "./data_raw/compute_xrd.csv"
         train_data_root = "../data/"
     else:
-        chunksize = 10
-        xrd_filename = "./data_raw/debug_compute_xrd.csv"
+        chunksize = 20
         train_data_root = "./data_raw/debug_data/"
+        xrd_filename = train_data_root + "debug_compute_xrd.csv"
 
     # debug xrd data
     debug_compute_xrd(chunksize, xrd_filename)
     
     # debug training data
-    debug_training_features(chunksize, xrd_filename, train_data_root)
+    npoints = 4096
+    debug_training_features(chunksize, xrd_filename, train_data_root, npoints)
 
 
 if __name__ == "__main__":

@@ -203,7 +203,7 @@ def main():
 
     # write customized data
     out_file = "./data_raw/custom_MPdata.csv"
-    data_custom.to_csv(out_file, sep=';', columns=None, mode='w'\
+    data_custom.to_csv(out_file, sep=';', columns=None, mode='w', \
                        header=data_custom.columns, index=None)
 
 

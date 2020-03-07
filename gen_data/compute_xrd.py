@@ -109,7 +109,7 @@ def main():
 
     # parallel processing
     MP_data_chunk = np.array_split(MP_data, n_slices)
-    print("Start computing xrd..")
+    print("start computing xrd..")
     # 'serial parallel' processing
     for idx, chunk in enumerate(MP_data_chunk):
         # generate xrd point cloud representations
