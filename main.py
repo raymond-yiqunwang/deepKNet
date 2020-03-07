@@ -33,8 +33,9 @@ parser.add_argument('--batch-size', default=32, type=int, metavar='N',
 parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                     metavar='LR', dest='lr',
                     help='initial learning rate (default: 0.001)')
-parser.add_argument('--lr-milestones', default=[10, 20], type=int, metavar='[N]',
-                    help='learning rate decay milestones (default: [10, 20])')
+parser.add_argument('--lr-milestones', default=[100], nargs='+', 
+                    type=int, metavar='[N]',
+                    help='learning rate decay milestones (default: [100])')
 parser.add_argument('--wd', '--weight-decay', default=0, type=float,
                     metavar='W', help='weigh decay (default: 0)',
                     dest='weight_decay')
