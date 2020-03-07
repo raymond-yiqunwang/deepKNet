@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from pymatgen import MPRester
 
-def fetch_materials_data():
+def fetch_materials_data(out_file):
     # properties of interest
     properties = [ 
         "material_id", "icsd_ids",
@@ -32,16 +32,19 @@ def fetch_materials_data():
         data_origin.append(plist)
 
     data_origin = pd.DataFrame(data_origin)
+    data_origin.to_csv(out_file, sep=';', index=False, header=properties, mode='w')
+
+
+def main():
+    # specify IO
     root_dir = "./data_raw/"
     if not os.path.exists(root_dir):
         print("{} folder does not exist, making directory..".format(root_dir))
         os.mkdir(root_dir)
-    data_origin.to_csv(root_dir+"fetch_MPdata.csv", sep=';', index=False, header=properties)
+    out_file = root_dir + "fetch_MPdata.csv"
 
-
-def main():
     # fetch raw data from the Materials Project
-    fetch_materials_data()
+    fetch_materials_data(out_file)
 
 
 if __name__ == "__main__":

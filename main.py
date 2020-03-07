@@ -103,6 +103,7 @@ def main():
     # pring number of trainable model parameters
     trainable_params = sum(p.numel() for p in model.parameters() 
                            if p.requires_grad)
+    print('=> number of trainable model parameters: {:d}'.format(trainable_params))
 
     # define loss function (criterion) and optimizer
     criterion = nn.MSELoss()

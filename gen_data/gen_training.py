@@ -62,24 +62,24 @@ def generate_point_cloud(xrd_data, features_dir, target_dir, npoints):
         recip_latt = ast.literal_eval(irow['recip_latt'])
         hkl = ast.literal_eval(irow['hkl'])
         hkl = extend_and_truncate(hkl, npoints)
-        i_hkl = ast.literal_eval(irow['i_hkl'])
-        i_hkl = extend_and_truncate(i_hkl, npoints)
+        intensity_hkl = ast.literal_eval(irow['intensity_hkl'])
+        intensity_hkl = extend_and_truncate(intensity_hkl, npoints)
         atomic_form_factor = ast.literal_eval(irow['atomic_form_factor'])
         atomic_form_factor = extend_and_truncate(atomic_form_factor, npoints)
         
         """!!! please construct features wisely !!!"""
-        # spherical coordinate
-        recip_xyz = [np.dot(np.array(recip_latt).T, np.array(hkl[idx])) for idx in range(len(hkl))]
-        recip_spherical = [cart2sphere(recip_xyz[idx]) for idx in range(len(recip_xyz))]
+        # spherical coordinates
+        recip_xyz = [np.dot(np.array(recip_latt).T, np.array(hkl[idx])) for idx in range(npoints)]
+        recip_spherical = [cart2sphere(recip_xyz[idx]) for idx in range(npoints)]
         # total intensity
-        intensity = np.array(i_hkl) / max(i_hkl)
+        intensity = np.array(intensity_hkl) / max(intensity_hkl)
         # atomic form factor
         aff = np.array(atomic_form_factor)
-        aff = aff / np.maximum(1., aff.max(axis=1, keepdims=True))
+        aff /= np.maximum(1., aff.max(axis=1, keepdims=True))
         aff = aff.tolist()
         # build features
         features = [recip_spherical[idx] + [intensity[idx]] + aff[idx] \
-                    for idx in range(len(recip_spherical))]
+                    for idx in range(npoints)]
         feat = np.array(features).flatten()
         assert(np.max(np.abs(feat)) < 1+1e-12)
         features = pd.DataFrame(features)
@@ -89,7 +89,7 @@ def generate_point_cloud(xrd_data, features_dir, target_dir, npoints):
         assert(features_T.shape[0] == 3+1+94)
         assert(features_T.shape[1] == npoints)
         # write features_T
-        features_T.to_csv(features_dir+filename, sep=';', header=None, index=False)
+        features_T.to_csv(features_dir+filename, sep=';', header=None, index=False, mode='w')
 
         # target properties
         band_gap = irow['band_gap'] 
@@ -99,7 +99,7 @@ def generate_point_cloud(xrd_data, features_dir, target_dir, npoints):
         properties = [[band_gap, energy_per_atom, formation_energy_per_atom]]
         header_target = ['band_gap', 'energy_per_atom', 'formation_energy_per_atom']
         properties = pd.DataFrame(properties)
-        properties.to_csv(target_dir+filename, sep=';', header=header_target, index=False)
+        properties.to_csv(target_dir+filename, sep=';', header=header_target, index=False, mode='w')
 
 
 def main():
@@ -114,8 +114,8 @@ def main():
         filename = "./data_raw/compute_xrd.csv"
         root_dir = '../data/'
     else:
-        filename = "./data_raw/debug_compute_xrd.csv"
         root_dir = './data_raw/debug_data/'
+        filename = root_dir + "debug_compute_xrd.csv"
     if not os.path.isfile(filename):
         print("{} file does not exist, please generate it first..".format(filename))
         sys.exit(1)
@@ -134,7 +134,7 @@ def main():
     
     # parameters
     nworkers = max(multiprocessing.cpu_count()-4, 1)
-    npoints = 512 # number of kpoints to consider
+    npoints = 4096 # number of k-points
     """ 
     P.S. no k-point truncation in compute_xrd.csv,
          all k-points in the Ewald sphere are stored,

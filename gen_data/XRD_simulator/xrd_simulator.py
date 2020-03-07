@@ -253,18 +253,17 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
                 (math.sin(theta) ** 2 * math.cos(theta))
 
             # Intensity for hkl is modulus square of structure factor.
-            i_hkl = (f_hkl * f_hkl.conjugate()).real
+            intensity_hkl = (f_hkl * f_hkl.conjugate()).real
 
             # compute atomic form factor
             atomic_form_factor = [0.] * 94
-            for idx in range(zs.size):
+            for idx, Z in enumerate(zs):
                 atom_f = atomic_f_hkl[idx]
-                z = zs[idx]
                 atomic_intensity = (atom_f * atom_f.conjugate()).real
-                atomic_form_factor[z-1] += atomic_intensity
+                atomic_form_factor[Z-1] += atomic_intensity
             
             # add to features 
-            ifeat = [hkl, i_hkl, atomic_form_factor]
+            ifeat = [hkl, intensity_hkl, atomic_form_factor]
             features.append(ifeat)
 
             ### for diffractin pattern plotting only
@@ -276,10 +275,10 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
             ind = np.where(np.abs(np.subtract(two_thetas, two_theta)) <
                            AbstractDiffractionPatternCalculator.TWO_THETA_TOL)
             if len(ind[0]) > 0:
-                peaks[two_thetas[ind[0][0]]][0] += i_hkl * lorentz_factor
+                peaks[two_thetas[ind[0][0]]][0] += intensity_hkl * lorentz_factor
                 peaks[two_thetas[ind[0][0]]][1].append(tuple(hkl))
             else:
-                peaks[two_theta] = [i_hkl * lorentz_factor, [tuple(hkl)],
+                peaks[two_theta] = [intensity_hkl * lorentz_factor, [tuple(hkl)],
                                     d_hkl]
                 two_thetas.append(two_theta)
 
@@ -302,7 +301,7 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
         if scale_intensity:
             xrd.normalize(mode="max", value=100)
 
-        return xrd, features, recip_latt.matrix
+        return xrd, recip_latt.matrix, features
 
     def get_npoints(self, structure):
         latt = structure.lattice

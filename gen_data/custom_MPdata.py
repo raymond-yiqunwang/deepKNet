@@ -156,9 +156,10 @@ def customize_data(data_raw):
     if True:
         data_custom = data_custom[data_custom['icsd_ids'] != '[]']
 
-    # get rid of extreme volumes
+    # get rid of extreme volumes TODO determine threshold
     if True:
-        data_custom = data_custom[data_custom['volume'] < 2000]
+        data_custom = data_custom[data_custom['volume'] > 200]
+        data_custom = data_custom[data_custom['volume'] < 800]
 
     # get rid of rare elements
     if True:
@@ -201,7 +202,8 @@ def main():
     show_statistics(data=data_custom, compute_xrd=True, plot=False)
 
     # write customized data
-    data_custom.to_csv("./data_raw/custom_MPdata.csv", sep=';', columns=None, \
+    out_file = "./data_raw/custom_MPdata.csv"
+    data_custom.to_csv(out_file, sep=';', columns=None, mode='w'\
                        header=data_custom.columns, index=None)
 
 

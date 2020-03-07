@@ -53,7 +53,7 @@ In order to check the correctness of simulated XRD data, debug
 code is als available in the `./gen_data/` folder:
 ```code
 (DEBUG) cd ./gen_data
-(DEBUG)   python debug_data_generator.py
+(DEBUG)   python check_data.py
 ```
 
 

@@ -31,15 +31,15 @@ def compute_xrd(data_raw, wavelength):
     for idx, irow in data_raw.iterrows():
         # obtain xrd features
         struct = Structure.from_str(irow['cif'], fmt="cif")
-        _, features, recip_latt = xrd_simulator.get_pattern(structure=struct)
+        _, recip_latt, features = xrd_simulator.get_pattern(structure=struct)
         """
           features: nrow = number of reciprocal k-points
-          features: ncol = (hkl  , i_hkl , atomic_form_factor)
-                            [1x3], scalar, [1x94]
+          features: ncol = (hkl  , intensity_hkl , atomic_form_factor)
+                            [1x3], scalar        , [1x94]
         """
         # regroup features
         hkl = [ipoint[0] for ipoint in features]
-        i_hkl = [ipoint[1] for ipoint in features]
+        intensity_hkl = [ipoint[1] for ipoint in features]
         atomic_form_factor = [ipoint[2] for ipoint in features]
 
         # properties of interest
@@ -53,7 +53,7 @@ def compute_xrd(data_raw, wavelength):
         # features for post-processing
         ifeat.append(recip_latt.tolist())
         # point-specific features
-        ifeat.extend([hkl, i_hkl, atomic_form_factor])
+        ifeat.extend([hkl, intensity_hkl, atomic_form_factor])
         xrd_data_batch.append(ifeat)
     
     return pd.DataFrame(xrd_data_batch)
@@ -88,24 +88,28 @@ def main():
     if not args.debug:
         out_file = "./data_raw/compute_xrd.csv"
     else:
-        out_file = "./data_raw/debug_compute_xrd.csv"
+        out_dir = "./data_raw/debug_data/"
+        if not os.path.exists(out_dir):
+            print("{} folder does not exist, making directory..".format(out_dir))
+            os.mkdir(out_dir)
+        out_file = out_dir + "debug_compute_xrd.csv"
     # safeguard
     if os.path.exists(out_file):
         _ = input("Attention, the existing xrd data will be deleted and regenerated.. \
             \n>> Hit Enter to continue, Ctrl+c to terminate..")
-        print("Started recomputing xrd..")
     header = [['material_id', 'band_gap', 'energy_per_atom', 'formation_energy_per_atom', \
-               'recip_latt', 'hkl', 'i_hkl', 'atomic_form_factor']]
+               'recip_latt', 'hkl', 'intensity_hkl', 'atomic_form_factor']]
     df = pd.DataFrame(header)
     df.to_csv(out_file, sep=';', header=None, index=False, mode='w')
     
     # parameters
-    n_slices = MP_data.shape[0] // 480 + 1 # number of batches to split
+    n_slices = MP_data.shape[0] // 500 + 1 # number of batches to split
     wavelength = 'CuKa' # X-ray wavelength
     nworkers = max(multiprocessing.cpu_count()-4, 1)
 
     # parallel processing
     MP_data_chunk = np.array_split(MP_data, n_slices)
+    print("Start computing xrd..")
     # 'serial parallel' processing
     for idx, chunk in enumerate(MP_data_chunk):
         # generate xrd point cloud representations
