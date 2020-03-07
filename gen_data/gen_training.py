@@ -3,10 +3,15 @@ import sys
 import math
 import shutil
 import ast
+import argparse
 import numpy as np
 import pandas as pd
 import multiprocessing
 from multiprocessing import Pool
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--debug', dest='debug', action='store_true')
+args = parser.parse_args()
 
 """ properties
         "material_id", "icsd_ids",
@@ -27,7 +32,7 @@ def cart2sphere(cart_coord):
     phi = math.atan2(y, x) # [-pi, pi]
     ### scale r, theta, phi to [0, 1]
     r_scaled = r / (2. / 1.54184) # within the Ewald sphere
-    theta_scaled /= math.pi 
+    theta_scaled = theta / math.pi 
     phi_scaled = (phi+math.pi) / (2*math.pi)
     assert(1e-3 < r_scaled <= 1.)
     assert(0. <= theta_scaled <= 1.)
@@ -38,7 +43,7 @@ def cart2sphere(cart_coord):
 def extend_and_truncate(input_list, npoints):
     # extend list
     while len(input_list) < npoints:
-        input_list.extend(features)
+        input_list.extend(input_list)
     # cutoff to a certain length
     return input_list[:npoints]
     
@@ -98,18 +103,23 @@ def generate_point_cloud(xrd_data, features_dir, target_dir, npoints):
 
 
 def main():
+    global args
+
     # safeguard
     _ = input("Attention, all existing training data will be deleted and regenerated.. \
         \n>> Hit Enter to continue, Ctrl+c to terminate..")
     
     # read xrd raw data
-    filename = "./data_raw/compute_xrd.csv"
+    if not args.debug:
+        filename = "./data_raw/compute_xrd.csv"
+        root_dir = '../data/'
+    else:
+        filename = "./data_raw/debug_compute_xrd.csv"
+        root_dir = './data_raw/debug_data/'
     if not os.path.isfile(filename):
         print("{} file does not exist, please generate it first..".format(filename))
         sys.exit(1)
-    
     # remove existing output files
-    root_dir = '../data/'
     if not os.path.exists(root_dir):
         print('making directory {}'.format(root_dir))
         os.mkdir(root_dir)

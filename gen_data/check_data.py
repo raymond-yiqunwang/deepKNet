@@ -3,12 +3,17 @@ import sys
 import ast
 import math
 import json
+import argparse
 import numpy as np
 import pandas as pd
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 from pymatgen import MPRester
 from pymatgen.core.structure import Structure
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--debug', dest='debug', action='store_true')
+args = parser.parse_args()
 
 # input -- material_id
 # output -- recip_latt, dict{(hkl): (i_hkl, atomic_form_factor)}
@@ -89,13 +94,11 @@ def debug_feat(material_id):
            mp_data[0]["formation_energy_per_atom"]
 
 
-def debug_compute_xrd(chunksize=100):
-    # read stored data
-    filename = "./data_raw/compute_xrd.csv"
-    if not os.path.isfile(filename):
-        print("{} file does not exist, please generate it first..".format(filename))
+def debug_compute_xrd(chunksize, xrd_filename):
+    if not os.path.isfile(xrd_filename):
+        print("{} file does not exist, please generate it first..".format(xrd_filename))
         sys.exit(1)
-    data_all = pd.read_csv(filename, sep=';', header=0, index_col=None, chunksize=chunksize)
+    data_all = pd.read_csv(xrd_filename, sep=';', header=0, index_col=None, chunksize=chunksize)
     
     # loop over chunks
     for xrd_data in data_all:
@@ -140,11 +143,10 @@ def debug_compute_xrd(chunksize=100):
     print("All test cases passed for compute_xrd.csv\n")
 
 
-def read_training(material_id):
-    data_root = "../data/"
-    features = pd.read_csv(data_root+'features/'+material_id+'.csv', \
+def read_training(material_id, train_data_root):
+    features = pd.read_csv(train_data_root+'features/'+material_id+'.csv', \
                            sep=';', header=None, index_col=None)
-    target = pd.read_csv(data_root+'target/'+material_id+'.csv', \
+    target = pd.read_csv(train_data_root+'target/'+material_id+'.csv', \
                           sep=';', header=0, index_col=None)
     return features, target
            
@@ -160,13 +162,11 @@ def cart2sphere(xyz):
     return [r, theta, phi]
 
 
-def debug_training_features(chunksize=100):
-    # read stored data
-    filename = "./data_raw/compute_xrd.csv"
-    if not os.path.isfile(filename):
-        print("{} file does not exist, please generate it first..".format(filename))
+def debug_training_features(chunksize, xrd_filename, train_data_root):
+    if not os.path.isfile(xrd_filename):
+        print("{} file does not exist, please generate it first..".format(xrd_filename))
         sys.exit(1)
-    data_all = pd.read_csv(filename, sep=';', header=0, index_col=None, chunksize=chunksize)
+    data_all = pd.read_csv(xrd_filename, sep=';', header=0, index_col=None, chunksize=chunksize)
 
     npoints = 512
     
@@ -202,7 +202,7 @@ def debug_training_features(chunksize=100):
             atomic_form_factor[idx] = (np.array(atomic_form_factor[idx])/imax).tolist()
 
         # read training features
-        features, target = read_training(material_id)
+        features, target = read_training(material_id, train_data_root)
         
         # threshold for numerical comparison
         threshold = 1e-12
@@ -228,11 +228,22 @@ def debug_training_features(chunksize=100):
 
 
 def main():
-    chunksize = 100
+    global args
 
-#    debug_compute_xrd(chunksize)
+    if not args.debug:
+        chunksize = 100
+        xrd_filename = "./data_raw/compute_xrd.csv"
+        train_data_root = "../data/"
+    else:
+        chunksize = 10
+        xrd_filename = "./data_raw/debug_compute_xrd.csv"
+        train_data_root = "./data_raw/debug_data/"
 
-    debug_training_features(chunksize)
+    # debug xrd data
+    debug_compute_xrd(chunksize, xrd_filename)
+    
+    # debug training data
+    debug_training_features(chunksize, xrd_filename, train_data_root)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 import os
 import sys
+import argparse
 import numpy as np
 import pandas as pd
 import warnings
@@ -8,6 +9,10 @@ import XRD_simulator.xrd_simulator as xrd
 import multiprocessing
 from multiprocessing import Pool
 from pymatgen.core.structure import Structure
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--debug', dest='debug', action='store_true')
+args = parser.parse_args()
 
 """ properties
         "material_id", "icsd_ids",
@@ -66,15 +71,24 @@ def parallel_computing(df_in, wavelength, nworkers=1):
 
 
 def main():
+    global args
+
     filename = "./data_raw/custom_MPdata.csv"
     if not os.path.isfile(filename):
         print("{} file does not exist, please generate it first..".format(filename))
         sys.exit(1)
     # read customized data
     MP_data = pd.read_csv(filename, sep=';', header=0, index_col=None)
+    
+    # random subsample in debug mode
+    if args.debug:
+        MP_data = MP_data.sample(n=1000, replace=False, random_state=1, axis=0)
 
     # specify output
-    out_file = "./data_raw/compute_xrd.csv"
+    if not args.debug:
+        out_file = "./data_raw/compute_xrd.csv"
+    else:
+        out_file = "./data_raw/debug_compute_xrd.csv"
     # safeguard
     if os.path.exists(out_file):
         _ = input("Attention, the existing xrd data will be deleted and regenerated.. \

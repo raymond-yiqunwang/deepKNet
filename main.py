@@ -100,6 +100,9 @@ def main():
     else:
         raise NameError('Only deepKNet or deepKBert available')
     if args.cuda: model.cuda()
+    # pring number of trainable model parameters
+    trainable_params = sum(p.numel() for p in model.parameters() 
+                           if p.requires_grad)
 
     # define loss function (criterion) and optimizer
     criterion = nn.MSELoss()
