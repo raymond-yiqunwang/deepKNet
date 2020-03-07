@@ -20,6 +20,8 @@ parser.add_argument('--target', default='band_gap', metavar='TARGET_PROPERTY',
                     help="target property ('band_gap', 'energy_per_atom', \
                                            'formation_energy_per_atom')")
 ## training-relevant params
+parser.add_argument('--algo', default='deepKNet', type=str, metavar='NET',
+                    help='neural network (deepKNet, deepKBert)')
 parser.add_argument('--optim', default='Adam', type=str, metavar='OPTIM',
                     help='torch.optim (Adam or SGD), (default: Adam)')
 parser.add_argument('--epochs', default=30, type=int, metavar='N',
@@ -90,8 +92,12 @@ def main():
         normalizer = Normalizer(sample_target)
 
     # build model
-    model = deepKNet()
-    #model = DeepKBert()
+    if args.algo == 'deepKNet':
+        model = deepKNet()
+    elif args.algo == 'deepKBert':
+        model = DeepKBert()
+    else:
+        raise NameError('Only deepKNet or deepKBert available')
     if args.cuda: model.cuda()
 
     # define loss function (criterion) and optimizer
