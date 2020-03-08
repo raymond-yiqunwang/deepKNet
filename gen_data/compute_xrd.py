@@ -81,8 +81,9 @@ def main():
     MP_data = pd.read_csv(filename, sep=';', header=0, index_col=None)
     
     # random subsample in debug mode
+    subsample_size = 1000
     if args.debug:
-        MP_data = MP_data.sample(n=1000, replace=False, random_state=1, axis=0)
+        MP_data = MP_data.sample(n=subsample_size, replace=False, random_state=1, axis=0)
 
     # specify output
     if not args.debug:

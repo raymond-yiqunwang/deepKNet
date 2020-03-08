@@ -26,13 +26,13 @@ parser.add_argument('--algo', default='deepKNet', type=str, metavar='NET',
                     help='neural network (deepKNet, deepKBert)')
 parser.add_argument('--optim', default='Adam', type=str, metavar='OPTIM',
                     help='torch.optim (Adam or SGD), (default: Adam)')
-parser.add_argument('--epochs', default=30, type=int, metavar='N',
-                    help='number of epochs to run')
+parser.add_argument('--epochs', default=50, type=int, metavar='N',
+                    help='number of epochs to run (default: 50)')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch start number (useful on restarts)')
-parser.add_argument('--batch-size', default=32, type=int, metavar='N',
-                    help='mini-batch size (default: 32)')
-parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
+parser.add_argument('--batch-size', default=64, type=int, metavar='N',
+                    help='mini-batch size (default: 64)')
+parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                     metavar='LR', dest='lr',
                     help='initial learning rate (default: 0.001)')
 parser.add_argument('--lr-milestones', default=[50], nargs='+', 
@@ -43,11 +43,11 @@ parser.add_argument('--wd', '--weight-decay', default=0, type=float,
                     dest='weight_decay')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum for SGD optimizer')
-parser.add_argument('--train-ratio', default=0.9, type=float, metavar='n/N',
+parser.add_argument('--train-ratio', default=0.8, type=float, metavar='n/N',
                     help='fraction of data for training')
 parser.add_argument('--val-ratio', default=0.1, type=float, metavar='n/N',
                     help='fraction of data for validation')
-parser.add_argument('--test-ratio', default=0.0, type=float, metavar='n/N',
+parser.add_argument('--test-ratio', default=0.1, type=float, metavar='n/N',
                     help='fraction of data for test')
 ## misc
 n_threads = torch.get_num_threads()
@@ -82,17 +82,19 @@ def main():
 
     # load data
     dataset = deepKNetDataset(root=args.root, target=args.target)
-    train_loader, val_loader = get_train_val_test_loader(
+    train_loader, val_loader, test_loader = get_train_val_test_loader(
         dataset=dataset, batch_size=args.batch_size, 
         train_ratio=args.train_ratio, val_ratio=args.val_ratio, 
-        num_data_workers=args.num_data_workers, pin_memory=args.cuda
-    )
+        test_ratio=args.test_ratio, pin_memory=args.cuda, 
+        num_data_workers=args.num_data_workers)
 
     # normalizer
     with torch.no_grad():
+        sample_size = 500
         sample_target = torch.tensor([dataset[i][1].item() for i in \
-                                     sample(range(len(dataset)), 1000)])
+                                     sample(range(len(dataset)), sample_size)])
         normalizer = Normalizer(sample_target)
+        print('Normalizer: {}'.format(normalizer.state_dict()))
 
     # build model
     if args.algo == 'deepKNet':
@@ -102,10 +104,11 @@ def main():
     else:
         raise NameError('Only deepKNet or deepKBert available')
     if args.cuda: model.cuda()
-    # pring number of trainable model parameters
+    # number of trainable model parameters
     trainable_params = sum(p.numel() for p in model.parameters() 
                            if p.requires_grad)
-    print('=> number of trainable model parameters: {:d}'.format(trainable_params))
+    print('=> number of trainable model parameters: {:d}' \
+           .format(trainable_params), flush=True)
 
     # define loss function (criterion) and optimizer
     criterion = nn.MSELoss()
@@ -132,7 +135,9 @@ def main():
             print("=> loaded checkpoint '{}' (epoch {})"
                   .format(args.resume, checkpoint['epoch']), flush=True)
         else:
-            print("=> no checkpoint found at '{}'".format(args.resume), flush=True)
+            print("=> no checkpoint found at '{}', existing.." \
+                   .format(args.resume), flush=True)
+            sys.exit(1)
 
     # evaluation only
 #    if args.evaluate:
@@ -173,14 +178,21 @@ def main():
             'normalizer': normalizer.state_dict()
         }, is_best)
 
+    # test best model
+    print('---------Evaluate Model on Test Set---------------')
+    best_model = load_best_model()
+    model.load_state_dict(best_model['state_dict'])
+    validate(test_loader, model, criterion, epoch, writer, normalizer, device, test_mode=True)
+
 
 def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer, device):
     batch_time = AverageMeter('Time', ':4.2f')
+    data_time = AverageMeter('Data', ':4.2f')
     losses = AverageMeter('Loss', ':6.3f')
     maes = AverageMeter('MAE', ':6.3f')
     progress = ProgressMeter(
         len(train_loader),
-        [batch_time, losses, maes],
+        [batch_time, data_time, losses, maes],
         prefix="Epoch: [{}]".format(epoch)
     )
 
@@ -195,6 +207,9 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer, 
             point_cloud = point_cloud.cuda()
             target = target.cuda()
 
+        # measure data loading time
+        data_time.update(time.time() - end)
+
         # compute output
         output = model(point_cloud)
 
@@ -203,7 +218,7 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer, 
             # normalize target
             target_normed = normalizer.norm(target)
             loss = criterion(output, target_normed)
-            mae = compute_mae(target, normalizer.denorm(output))
+            mae = compute_mae(normalizer.denorm(output), target)
         else:
             loss = criterion(output, target)
             mae = compute_mae(target, output)
@@ -232,10 +247,11 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer, 
             running_loss = 0.0
 
 
-def validate(val_loader, model, criterion, epoch, writer, normalizer, device):
+def validate(val_loader, model, criterion, epoch, writer, normalizer, device, test_mode=False):
     batch_time = AverageMeter('Time', ':4.2f')
     losses = AverageMeter('Loss', ':6.3f')
     maes = AverageMeter('MAE', ':6.3f')
+    prefix = 'Validate: ' if not test_mode else 'Test: '
     progress = ProgressMeter(
         len(val_loader),
         [batch_time, losses, maes],
@@ -262,7 +278,7 @@ def validate(val_loader, model, criterion, epoch, writer, normalizer, device):
                 # normalize target
                 target_normed = normalizer.norm(target)
                 loss = criterion(output, target_normed)
-                mae = compute_mae(target, normalizer.denorm(output))
+                mae = compute_mae(normalizer.denorm(output), target)
             else:
                 loss = criterion(output, target)
                 mae = compute_mae(target, output)
@@ -278,12 +294,13 @@ def validate(val_loader, model, criterion, epoch, writer, normalizer, device):
                 progress.display(idx)
         
             # write to TensorBoard
-            running_loss += loss.item()
-            if (idx+1) % args.print_freq == 0:
-                writer.add_scalar('validation loss',
-                                running_loss / args.print_freq,
-                                epoch * len(val_loader) + idx)
-                running_loss = 0.0
+            if not test_mode:
+                running_loss += loss.item()
+                if (idx+1) % args.print_freq == 0:
+                    writer.add_scalar('validation loss',
+                                    running_loss / args.print_freq,
+                                    epoch * len(val_loader) + idx)
+                    running_loss = 0.0
     
     return maes.avg
 
@@ -296,6 +313,18 @@ def save_checkpoint(state, is_best):
     torch.save(state, filename)
     if is_best:
         shutil.copyfile(filename, check_root+args.target+'_model_best.pth.tar')
+
+
+def load_best_model():
+    check_root = './checkpoints/'
+    if not os.path.exists(check_root):
+        print('{} dir does not exist, exiting...')
+        sys.exit(1)
+    filename = check_root + args.target + '_model_best.pth.tar'
+    if not os.path.isfile(filename):
+        print('checkpoint {} not found, exiting...')
+        sys.exit(1)
+    return torch.load(filename)
 
 
 class Normalizer(object):
