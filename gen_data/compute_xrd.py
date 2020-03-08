@@ -104,9 +104,9 @@ def main():
     df.to_csv(out_file, sep=';', header=None, index=False, mode='w')
     
     # parameters
-    n_slices = MP_data.shape[0] // 500 + 1 # number of batches to split
     wavelength = 'CuKa' # X-ray wavelength
     nworkers = max(multiprocessing.cpu_count()-4, 1)
+    n_slices = MP_data.shape[0] // (20*nworkers) + 1 # number of batches to split
 
     # parallel processing
     MP_data_chunk = np.array_split(MP_data, n_slices)

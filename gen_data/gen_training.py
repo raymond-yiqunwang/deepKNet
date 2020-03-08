@@ -74,19 +74,20 @@ def generate_point_cloud(xrd_data, features_dir, target_dir, npoints):
         # total intensity
         intensity = np.array(intensity_hkl) / max(intensity_hkl)
         # atomic form factor
-        aff = np.array(atomic_form_factor)
-        aff /= np.maximum(1., aff.max(axis=1, keepdims=True))
-        aff = aff.tolist()
+#        aff = np.array(atomic_form_factor)
+#        aff /= np.maximum(1., aff.max(axis=1, keepdims=True))
+#        aff = aff.tolist()
         # build features
-        features = [recip_spherical[idx] + [intensity[idx]] + aff[idx] \
-                    for idx in range(npoints)]
-        feat = np.array(features).flatten()
-        assert(np.max(np.abs(feat)) < 1+1e-12)
+#        features = [recip_spherical[idx] + [intensity[idx]] + aff[idx] \
+#                    for idx in range(npoints)]
+        features = [recip_spherical[idx] + [intensity[idx]] for idx in range(npoints)]
+        assert(np.max(np.abs(np.array(features).flatten()))-1 < 1e-12)
         features = pd.DataFrame(features)
         
         # transpose features to accommodate PyTorch tensor style
         features_T = features.transpose()
-        assert(features_T.shape[0] == 3+1+94)
+#        assert(features_T.shape[0] == 3+1+94)
+        assert(features_T.shape[0] == 3+1)
         assert(features_T.shape[1] == npoints)
         # write features_T
         features_T.to_csv(features_dir+filename, sep=';', header=None, index=False, mode='w')
@@ -143,7 +144,7 @@ def main():
     """
     
     # process in chunks due to large size
-    data_all = pd.read_csv(filename, sep=';', header=0, index_col=None, chunksize=nworkers*100)
+    data_all = pd.read_csv(filename, sep=';', header=0, index_col=None, chunksize=nworkers*50)
     cnt = 0
     for idx, xrd_data in enumerate(data_all):
         # parallel processing

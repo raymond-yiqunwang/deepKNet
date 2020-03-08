@@ -19,7 +19,7 @@ parser.add_argument('--root', default='./data/', metavar='DATA_ROOT',
 parser.add_argument('--target', default='band_gap', metavar='TARGET_PROPERTY',
                     help="target property ('band_gap', 'energy_per_atom', \
                                            'formation_energy_per_atom')")
-parser.add_argument('--norm-target', dest='norm_target', action='store_true',
+parser.add_argument('--DNnorm-target', dest='norm_target', action='store_false',
                     help='whether to normalize the target property (default: False)')
 ## training-relevant params
 parser.add_argument('--algo', default='deepKNet', type=str, metavar='NET',
