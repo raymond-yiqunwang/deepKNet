@@ -33,8 +33,7 @@ class deepKNetDataset(Dataset):
     def __init__(self, root, target):
         self.root = root
         self.target = target
-        self.file_names = list(sorted(os.listdir(os.path.join(self.root, 'target')),
-                                 key=lambda x:int(x[3:].split('.')[0])))
+        self.file_names = list(os.listdir(os.path.join(self.root, 'target/')))
 
     def __getitem__(self, idx):
         # load point_cloud

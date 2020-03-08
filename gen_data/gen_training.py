@@ -135,7 +135,7 @@ def main():
     
     # parameters
     nworkers = max(multiprocessing.cpu_count()-4, 1)
-    npoints = 4096 # number of k-points
+    npoints = 2048 # number of k-points
     """ 
     P.S. no k-point truncation in compute_xrd.csv,
          all k-points in the Ewald sphere are stored,

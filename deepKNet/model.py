@@ -54,7 +54,6 @@ class deepKNet(nn.Module):
 
     def forward(self, point_cloud):
         # point_cloud size -- (batch_size, nfeatures, npoints)
-        # current settings -- (        64,       3+1,    4096)
 
         net = F.relu(self.bn0(self.conv0(point_cloud)))
         #net = F.relu((self.conv0(point_cloud)))
@@ -126,8 +125,10 @@ class DeepKBert(nn.Module):
         super().__init__()
 
 
-        self.nbert = 12
-        self.prenet = nn.Linear(98, 128)
+#        self.nbert = 12
+        self.nbert = 5
+#        self.prenet = nn.Linear(98, 128)
+        self.prenet = nn.Linear(4, 128)
         self.prenorm = nn.LayerNorm(128)
 
         self.bert = nn.ModuleList([BERTLayer() for _ in range(self.nbert)])

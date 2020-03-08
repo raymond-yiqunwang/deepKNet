@@ -153,9 +153,17 @@ def read_training(material_id, train_data_root):
 
 def cart2sphere(xyz):
     x, y, z = xyz[0], xyz[1], xyz[2]
-    r = np.sqrt(x**2 + y**2 + z**2)
-    theta = np.arccos([z/r])[0]
-    phi = np.arctan2(y, x)
+    r = np.linalg.norm(xyz)
+    theta = math.acos(z/r)
+    phi = math.atan2(y, x)
+    ### minor
+    r2 = np.sqrt(x**2 + y**2 + z**2)
+    theta2 = np.arccos([z/r])[0]
+    phi2 = np.arctan2(y, x)
+    assert(abs(r-r2) < 1e-12)
+    assert(abs(theta-theta2) < 1e-12)
+    assert(abs(phi-phi2) < 1e-12)
+    ###
     r = r / (2/1.54184)
     theta /= math.pi
     phi = 0.5*(phi/math.pi)+0.5
@@ -187,17 +195,21 @@ def debug_training_features(chunksize, xrd_filename, train_data_root, npoints):
         while len(intensity_hkl) < npoints:
             intensity_hkl.extend(intensity_hkl)
         intensity_hkl = intensity_hkl[:npoints]
+        """
         atomic_form_factor = ast.literal_eval(sample['atomic_form_factor'])
         while len(atomic_form_factor) < npoints:
             atomic_form_factor.extend(atomic_form_factor)
         atomic_form_factor = atomic_form_factor[:npoints]
+        """
         # process primitive features
         recip_xyz = [np.dot(np.transpose(recip_latt), hkl[idx]) for idx in range(len(hkl))]
         recip_spherical = [cart2sphere(recip_xyz[idx]) for idx in range(len(recip_xyz))]
         intensity = np.array(intensity_hkl) / max(intensity_hkl)
+        """
         for idx in range(len(atomic_form_factor)):
             imax = max(1, max(atomic_form_factor[idx]))
             atomic_form_factor[idx] = (np.array(atomic_form_factor[idx])/imax).tolist()
+        """
 
         # read training features
         features, target = read_training(material_id, train_data_root)
@@ -217,9 +229,11 @@ def debug_training_features(chunksize, xrd_filename, train_data_root, npoints):
             for j in range(len(recip_spherical[i])):
                 # check spherical coord
                 assert(abs(recip_spherical[i][j]-features.iloc[j, i]) < threshold)
+            """
             for k in range(len(atomic_form_factor[i])):
                 # check aff
                 assert(abs(atomic_form_factor[i][k]-features.iloc[4+k, i]) < threshold)
+            """
         print('>> passing one chunk in the training set..')
 
     print("All test cases passed for training data, good to go start training!")
@@ -241,7 +255,7 @@ def main():
     debug_compute_xrd(chunksize, xrd_filename)
     
     # debug training data
-    npoints = 4096
+    npoints = 2048
     debug_training_features(chunksize, xrd_filename, train_data_root, npoints)
 
 

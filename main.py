@@ -19,13 +19,13 @@ parser.add_argument('--root', default='./data/', metavar='DATA_ROOT',
 parser.add_argument('--target', default='band_gap', metavar='TARGET_PROPERTY',
                     help="target property ('band_gap', 'energy_per_atom', \
                                            'formation_energy_per_atom')")
-parser.add_argument('--DNnorm-target', dest='norm_target', action='store_false',
+parser.add_argument('--norm-target', dest='norm_target', action='store_true',
                     help='whether to normalize the target property (default: False)')
 ## training-relevant params
 parser.add_argument('--algo', default='deepKNet', type=str, metavar='NET',
                     help='neural network (deepKNet, deepKBert)')
-parser.add_argument('--optim', default='Adam', type=str, metavar='OPTIM',
-                    help='torch.optim (Adam or SGD), (default: Adam)')
+parser.add_argument('--optim', default='SGD', type=str, metavar='OPTIM',
+                    help='torch.optim (Adam or SGD), (default: SGD)')
 parser.add_argument('--epochs', default=50, type=int, metavar='N',
                     help='number of epochs to run (default: 50)')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
@@ -34,9 +34,8 @@ parser.add_argument('--batch-size', default=64, type=int, metavar='N',
                     help='mini-batch size (default: 64)')
 parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                     metavar='LR', dest='lr',
-                    help='initial learning rate (default: 0.001)')
-parser.add_argument('--lr-milestones', default=[50], nargs='+', 
-                    type=int, metavar='[N]',
+                    help='initial learning rate (default: 0.01)')
+parser.add_argument('--lr-milestones', default=[20, 40], nargs='+', type=int,
                     help='learning rate decay milestones (default: [50])')
 parser.add_argument('--wd', '--weight-decay', default=0, type=float,
                     metavar='W', help='weigh decay (default: 0)',
@@ -107,7 +106,7 @@ def main():
     # number of trainable model parameters
     trainable_params = sum(p.numel() for p in model.parameters() 
                            if p.requires_grad)
-    print('=> number of trainable model parameters: {:d}' \
+    print('Number of trainable model parameters: {:d}' \
            .format(trainable_params), flush=True)
 
     # define loss function (criterion) and optimizer
