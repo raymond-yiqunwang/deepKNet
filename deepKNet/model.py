@@ -7,7 +7,7 @@ class deepKNet(nn.Module):
         super(deepKNet, self).__init__()
         # layer 0
 #        self.conv0 = nn.Conv1d(98, 128, 1)
-        self.conv0 = nn.Conv1d(4, 128, 1)
+        self.conv0 = nn.Conv1d(4, 128, 3)
         self.bn0 = nn.BatchNorm1d(128)
         
         # wave1
@@ -56,34 +56,36 @@ class deepKNet(nn.Module):
         # point_cloud size -- (batch_size, nfeatures, npoints)
 
         net = F.relu(self.bn0(self.conv0(point_cloud)))
-        #net = F.relu((self.conv0(point_cloud)))
 
         # wave1
         net = F.relu(self.bn1(self.conv1(net)))
-        #net = F.relu((self.conv1(net)))
+        """
         for i in range(self.nwave1):
             intmp = net
             net = self.wave1_bns[i](self.wave1_convs[i](net))
             net += intmp # residue connection
             net = F.relu(net)
+        """
 
         # wave2
         net = F.relu(self.bn2(self.conv2(net)))
-        #net = F.relu((self.conv2(net)))
+        """
         for i in range(self.nwave2):
             intmp = net
             net = self.wave2_bns[i](self.wave2_convs[i](net))
             net += intmp # residue connection
             net = F.relu(net)
+        """
 
         # wave3
         net = F.relu(self.bn3(self.conv3(net)))
-        #net = F.relu((self.conv3(net)))
+        """
         for i in range(self.nwave3):
             intmp = net
             net = self.wave3_bns[i](self.wave3_convs[i](net))
             net += intmp # residue connection
             net = F.relu(net)
+        """
         
         # max pooling
         net = torch.max(net, dim=2, keepdim=True)[0]
@@ -93,9 +95,6 @@ class deepKNet(nn.Module):
         net = F.relu(self.bn_fc1(self.fc1(net)))
         net = F.relu(self.bn_fc2(self.fc2(net)))
         net = F.relu(self.bn_fc3(self.fc3(net)))
-        #net = F.relu((self.fc1(net)))
-        #net = F.relu((self.fc2(net)))
-        #net = F.relu((self.fc3(net)))
         y_pred = self.fc4(net)
         
         return y_pred
