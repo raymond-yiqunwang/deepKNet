@@ -22,7 +22,6 @@ def fetch_materials_data(out_file):
     # query data with calculated band structures
     mp_data = m.query(criteria={
         "has": "bandstructure",
-        "material_id" : {"$eq": "mp-22862"}
     }, properties=properties)
     
     data_origin = []

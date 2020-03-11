@@ -158,11 +158,11 @@ def customize_data(data_raw):
 
     # get rid of extreme volumes TODO determine threshold
     if True:
-        data_custom = data_custom[data_custom['volume'] > 00]
+#        data_custom = data_custom[data_custom['volume'] > 200]
         data_custom = data_custom[data_custom['volume'] < 1000]
 
     # get rid of rare elements
-    if False:
+    if True:
         # identify rare elements
         elem_dict = defaultdict(int)
         for entry in data_custom['elements']:
