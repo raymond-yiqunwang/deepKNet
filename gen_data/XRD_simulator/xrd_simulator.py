@@ -256,14 +256,15 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
             intensity_hkl = (f_hkl * f_hkl.conjugate()).real
 
             # compute atomic form factor
-            atomic_form_factor = [0.] * 94
+            aff_phase = [0.] * 94
             for idx, Z in enumerate(zs):
                 atom_f = atomic_f_hkl[idx]
-                atomic_intensity = (atom_f * atom_f.conjugate()).real
-                atomic_form_factor[Z-1] += atomic_intensity
+                aff_phase[Z-1] += atom_f
+#                atomic_intensity = (atom_f * atom_f.conjugate()).real
+#                atomic_form_factor[Z-1] += atomic_intensity
             
             # add to features 
-            ifeat = [hkl, intensity_hkl, atomic_form_factor]
+            ifeat = [hkl, f_hkl, aff_phase]
             features.append(ifeat)
 
             ### for diffractin pattern plotting only

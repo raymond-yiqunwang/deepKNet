@@ -34,13 +34,13 @@ def compute_xrd(data_raw, wavelength):
         _, recip_latt, features = xrd_simulator.get_pattern(structure=struct)
         """
           features: nrow = number of reciprocal k-points
-          features: ncol = (hkl  , intensity_hkl , atomic_form_factor)
+          features: ncol = (hkl  , f_hkl , aff_phase)
                             [1x3], scalar        , [1x94]
         """
         # regroup features
         hkl = [ipoint[0] for ipoint in features]
-        intensity_hkl = [ipoint[1] for ipoint in features]
-        atomic_form_factor = [ipoint[2] for ipoint in features]
+        f_hkl = [ipoint[1] for ipoint in features]
+        aff_phase = [ipoint[2] for ipoint in features]
 
         # properties of interest
         material_id = irow['material_id']
@@ -53,7 +53,7 @@ def compute_xrd(data_raw, wavelength):
         # features for post-processing
         ifeat.append(recip_latt.tolist())
         # point-specific features
-        ifeat.extend([hkl, intensity_hkl, atomic_form_factor])
+        ifeat.extend([hkl, f_hkl, aff_phase])
         xrd_data_batch.append(ifeat)
     
     return pd.DataFrame(xrd_data_batch)
@@ -99,7 +99,7 @@ def main():
         _ = input("Attention, the existing xrd data will be deleted and regenerated.. \
             \n>> Hit Enter to continue, Ctrl+c to terminate..")
     header = [['material_id', 'band_gap', 'energy_per_atom', 'formation_energy_per_atom', \
-               'recip_latt', 'hkl', 'intensity_hkl', 'atomic_form_factor']]
+               'recip_latt', 'hkl', 'f_hkl', 'aff_phase']]
     df = pd.DataFrame(header)
     df.to_csv(out_file, sep=';', header=None, index=False, mode='w')
     
