@@ -19,7 +19,7 @@ import json
 import math
 import numpy as np
 from pymatgen.analysis.diffraction.core import AbstractDiffractionPatternCalculator,\
-                                                 DiffractionPattern, get_unique_families
+                                               DiffractionPattern, get_unique_families
 from pymatgen.analysis.diffraction.xrd import XRDCalculator
 from pymatgen.core.structure import Structure
 from pymatgen import MPRester
@@ -256,15 +256,16 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
             intensity_hkl = (f_hkl * f_hkl.conjugate()).real
 
             # compute atomic form factor
-            aff_phase = [0.] * 94
-            for idx, Z in enumerate(zs):
-                atom_f = atomic_f_hkl[idx]
-                aff_phase[Z-1] += atom_f
+#            aff_phase = [0.] * 94
+#            for idx, Z in enumerate(zs):
+#                atom_f = atomic_f_hkl[idx]
+#                aff_phase[Z-1] += atom_f
 #                atomic_intensity = (atom_f * atom_f.conjugate()).real
 #                atomic_form_factor[Z-1] += atomic_intensity
             
             # add to features 
-            ifeat = [hkl, f_hkl, aff_phase]
+#            ifeat = [hkl, f_hkl, aff_phase]
+            ifeat = [hkl, intensity_hkl]
             features.append(ifeat)
 
             ### for diffractin pattern plotting only

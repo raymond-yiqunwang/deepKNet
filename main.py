@@ -13,7 +13,7 @@ from deepKNet.data import get_train_val_test_loader
 from deepKNet.model import deepKNet, DeepKBert
 
 parser = argparse.ArgumentParser(description='deepKNet model')
-## data and target property
+## dataset and target property
 parser.add_argument('--root', default='./data/', metavar='DATA_ROOT',
                     help='path to root directory')
 parser.add_argument('--target', default='band_gap', metavar='TARGET_PROPERTY',
@@ -137,11 +137,6 @@ def main():
             print("=> no checkpoint found at '{}', existing.." \
                    .format(args.resume), flush=True)
             sys.exit(1)
-
-    # evaluation only
-#    if args.evaluate:
-#        validate(val_loader, model, criterion, epoch, writer, normalizer, device)
-#        return
 
     # TensorBoard writer
     summary_root = './runs/'
@@ -300,7 +295,6 @@ def validate(val_loader, model, criterion, epoch, writer, normalizer, device, te
                                     running_loss / args.print_freq,
                                     epoch * len(val_loader) + idx)
                     running_loss = 0.0
-    
     return maes.avg
 
 

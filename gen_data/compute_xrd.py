@@ -34,13 +34,12 @@ def compute_xrd(data_raw, wavelength):
         _, recip_latt, features = xrd_simulator.get_pattern(structure=struct)
         """
           features: nrow = number of reciprocal k-points
-          features: ncol = (hkl  , f_hkl , aff_phase)
-                            [1x3], scalar        , [1x94]
+          features: ncol = (hkl, intensity_hkl)
         """
         # regroup features
         hkl = [ipoint[0] for ipoint in features]
-        f_hkl = [ipoint[1] for ipoint in features]
-        aff_phase = [ipoint[2] for ipoint in features]
+        intensity_hkl = [ipoint[1] for ipoint in features]
+#        aff_phase = [ipoint[2] for ipoint in features]
 
         # properties of interest
         material_id = irow['material_id']
@@ -53,7 +52,8 @@ def compute_xrd(data_raw, wavelength):
         # features for post-processing
         ifeat.append(recip_latt.tolist())
         # point-specific features
-        ifeat.extend([hkl, f_hkl, aff_phase])
+#        ifeat.extend([hkl, f_hkl, aff_phase])
+        ifeat.extend([hkl, intensity_hkl])
         xrd_data_batch.append(ifeat)
     
     return pd.DataFrame(xrd_data_batch)
@@ -80,9 +80,9 @@ def main():
     # read customized data
     MP_data = pd.read_csv(filename, sep=';', header=0, index_col=None)
     
-    # random subsample in debug mode
-    subsample_size = 1000
     if args.debug:
+        # random subsample in debug mode
+        subsample_size = 1000
         MP_data = MP_data.sample(n=subsample_size, replace=False, random_state=1, axis=0)
 
     # specify output
@@ -94,19 +94,19 @@ def main():
             print("{} folder does not exist, making directory..".format(out_dir))
             os.mkdir(out_dir)
         out_file = out_dir + "debug_compute_xrd.csv"
-    # safeguard
+    # output safeguard
     if os.path.exists(out_file):
         _ = input("Attention, the existing xrd data will be deleted and regenerated.. \
             \n>> Hit Enter to continue, Ctrl+c to terminate..")
     header = [['material_id', 'band_gap', 'energy_per_atom', 'formation_energy_per_atom', \
-               'recip_latt', 'hkl', 'f_hkl', 'aff_phase']]
+               'recip_latt', 'hkl', 'intensity_hkl']]
     df = pd.DataFrame(header)
     df.to_csv(out_file, sep=';', header=None, index=False, mode='w')
     
     # parameters
     wavelength = 'CuKa' # X-ray wavelength
     nworkers = max(multiprocessing.cpu_count()-4, 1)
-    n_slices = MP_data.shape[0] // (20*nworkers) + 1 # number of batches to split
+    n_slices = MP_data.shape[0] // (20*nworkers) # number of batches to split into
 
     # parallel processing
     MP_data_chunk = np.array_split(MP_data, n_slices)
