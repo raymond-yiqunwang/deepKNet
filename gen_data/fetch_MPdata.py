@@ -24,14 +24,7 @@ def fetch_materials_data(out_file):
         "has": "bandstructure",
     }, properties=properties)
     
-    data_origin = []
-    for entry in mp_data:
-        plist = []
-        for _, val in entry.items():
-            plist.append(val)
-        data_origin.append(plist)
-
-    data_origin = pd.DataFrame(data_origin)
+    data_origin = pd.DataFrame(entry.values() for entry in mp_data)
     data_origin.to_csv(out_file, sep=';', index=False, header=properties, mode='w')
 
 

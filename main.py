@@ -14,17 +14,17 @@ from deepKNet.model import deepKNet, DeepKBert
 
 parser = argparse.ArgumentParser(description='deepKNet model')
 ## dataset and target property
-parser.add_argument('--root', default='./data/', metavar='DATA_ROOT',
-                    help='path to root directory')
+parser.add_argument('--data', default='./data/', metavar='DATA_DIR',
+                    help='path to data directory')
 parser.add_argument('--target', default='band_gap', metavar='TARGET_PROPERTY',
                     help="target property ('band_gap', 'energy_per_atom', \
                                            'formation_energy_per_atom')")
-parser.add_argument('--norm-target', dest='norm_target', action='store_true',
+parser.add_argument('--normalize', dest='normalize_target', action='store_true',
                     help='whether to normalize the target property (default: False)')
 ## training-relevant params
-parser.add_argument('--algo', default='deepKNet', type=str, metavar='NET',
-                    help='neural network (deepKNet, deepKBert)')
-parser.add_argument('--optim', default='SGD', type=str, metavar='OPTIM',
+parser.add_argument('--algo', default='deepKNet', type=str, metavar='NETWORK',
+                    help='neural network (deepKNet, deepKBert, CGCNN)')
+parser.add_argument('--optim', default='Adam', type=str, metavar='OPTIM',
                     help='torch.optim (Adam or SGD), (default: SGD)')
 parser.add_argument('--epochs', default=50, type=int, metavar='N',
                     help='number of epochs to run (default: 50)')
@@ -36,7 +36,7 @@ parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                     metavar='LR', dest='lr',
                     help='initial learning rate (default: 0.01)')
 parser.add_argument('--lr-milestones', default=[20, 40], nargs='+', type=int,
-                    help='learning rate decay milestones (default: [50])')
+                    help='learning rate decay milestones (default: [20, 40])')
 parser.add_argument('--wd', '--weight-decay', default=0, type=float,
                     metavar='W', help='weigh decay (default: 0)',
                     dest='weight_decay')
@@ -44,9 +44,9 @@ parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum for SGD optimizer')
 parser.add_argument('--train-ratio', default=0.8, type=float, metavar='n/N',
                     help='fraction of data for training')
-parser.add_argument('--val-ratio', default=0.1, type=float, metavar='n/N',
+parser.add_argument('--val-ratio', default=0.2, type=float, metavar='n/N',
                     help='fraction of data for validation')
-parser.add_argument('--test-ratio', default=0.1, type=float, metavar='n/N',
+parser.add_argument('--test-ratio', default=0.0, type=float, metavar='n/N',
                     help='fraction of data for test')
 ## misc
 n_threads = torch.get_num_threads()
@@ -61,7 +61,7 @@ parser.add_argument('--resume', default='', type=str, metavar='PATH',
 parser.add_argument('--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
 parser.add_argument('--disable-cuda', action='store_true',
-                    help='disable CUDA')
+                    help='disable CUDA (default: False)')
 # parse args
 args = parser.parse_args()
 args.cuda = torch.cuda.is_available() and not args.disable_cuda

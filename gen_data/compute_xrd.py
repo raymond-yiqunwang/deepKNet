@@ -32,14 +32,6 @@ def compute_xrd(data_raw, wavelength):
         # obtain xrd features
         struct = Structure.from_str(irow['cif'], fmt="cif")
         _, recip_latt, features = xrd_simulator.get_pattern(structure=struct)
-        """
-          features: nrow = number of reciprocal k-points
-          features: ncol = (hkl, intensity_hkl)
-        """
-        # regroup features
-        hkl = [ipoint[0] for ipoint in features]
-        intensity_hkl = [ipoint[1] for ipoint in features]
-#        aff_phase = [ipoint[2] for ipoint in features]
 
         # properties of interest
         material_id = irow['material_id']
@@ -48,12 +40,9 @@ def compute_xrd(data_raw, wavelength):
         formation_energy_per_atom = irow['formation_energy_per_atom']
 
         # property list
-        ifeat = [material_id, band_gap, energy_per_atom, formation_energy_per_atom] 
-        # features for post-processing
-        ifeat.append(recip_latt.tolist())
-        # point-specific features
-#        ifeat.extend([hkl, f_hkl, aff_phase])
-        ifeat.extend([hkl, intensity_hkl])
+        ifeat = [material_id, features, recip_latt.tolist(), \
+                 band_gap, energy_per_atom, formation_energy_per_atom]
+        # append to dataset
         xrd_data_batch.append(ifeat)
     
     return pd.DataFrame(xrd_data_batch)
@@ -94,12 +83,13 @@ def main():
             print("{} folder does not exist, making directory..".format(out_dir))
             os.mkdir(out_dir)
         out_file = out_dir + "debug_compute_xrd.csv"
+    
     # output safeguard
     if os.path.exists(out_file):
         _ = input("Attention, the existing xrd data will be deleted and regenerated.. \
             \n>> Hit Enter to continue, Ctrl+c to terminate..")
-    header = [['material_id', 'band_gap', 'energy_per_atom', 'formation_energy_per_atom', \
-               'recip_latt', 'hkl', 'intensity_hkl']]
+    header = [['material_id', 'features', 'recip_latt', \
+               'band_gap', 'energy_per_atom', 'formation_energy_per_atom']]
     df = pd.DataFrame(header)
     df.to_csv(out_file, sep=';', header=None, index=False, mode='w')
     
@@ -111,7 +101,6 @@ def main():
     # parallel processing
     MP_data_chunk = np.array_split(MP_data, n_slices)
     print("start computing xrd..")
-    # 'serial parallel' processing
     for idx, chunk in enumerate(MP_data_chunk):
         # generate xrd point cloud representations
         xrd_data = parallel_computing(chunk, wavelength, nworkers)
