@@ -33,16 +33,16 @@ class deepKNetDataset(Dataset):
     def __init__(self, root, target):
         self.root = root
         self.target = target
-        self.file_names = list(os.listdir(os.path.join(self.root, 'target/')))
+        self.file_names = [fname.split('.')[0] for fname in \
+                           os.listdir(os.path.join(self.root, 'target/'))]
 
     def __getitem__(self, idx):
         # load point_cloud
-        point_cloud = pd.read_csv(self.root+'/features/'+self.file_names[idx],
-                                  sep=';', header=None, index_col=None)
-        point_cloud = torch.Tensor(point_cloud.values)
+        point_cloud = np.load(self.root+'/features/'+self.file_names[idx]+'.npy')
+        point_cloud = torch.Tensor(point_cloud)
         # load target property
-        properties = pd.read_csv(self.root+'/target/'+self.file_names[idx],
-                             sep=';', header=0, index_col=None)
+        properties = pd.read_csv(self.root+'/target/'+self.file_names[idx]+'.csv',
+                                 sep=';', header=0, index_col=None)
         prop = torch.Tensor(properties[self.target].values)
         return point_cloud, prop
 

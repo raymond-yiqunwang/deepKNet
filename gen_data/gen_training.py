@@ -20,9 +20,6 @@ def generate_dataset(xrd_data, features_dir, target_dir):
         # unique material ID
         material_id = irow['material_id']
         filename = str(material_id)
-        if os.path.exists(features_dir+filename):
-            print('duplicate material_id detected, check data source..')
-            sys.exit(1)
 
         # all primitive features
         recip_latt = np.array(ast.literal_eval(irow['recip_latt']))
@@ -59,7 +56,8 @@ def generate_dataset(xrd_data, features_dir, target_dir):
         properties = [[band_gap, energy_per_atom, formation_energy_per_atom]]
         header_target = ['band_gap', 'energy_per_atom', 'formation_energy_per_atom']
         properties = pd.DataFrame(properties)
-        properties.to_csv(target_dir+filename, sep=';', header=header_target, index=False, mode='w')
+        properties.to_csv(target_dir+filename+'.csv', sep=';', \
+                          header=header_target, index=False, mode='w')
 
 
 def main():

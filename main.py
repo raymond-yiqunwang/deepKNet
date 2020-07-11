@@ -8,14 +8,13 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.tensorboard import SummaryWriter
-from deepKNet.data import deepKNetDataset
-from deepKNet.data import get_train_val_test_loader
-from deepKNet.model import deepKNet, DeepKBert
+from deepKNet.data import deepKNetDataset, get_train_val_test_loader
+from deepKNet.model import deepKNet
 
 parser = argparse.ArgumentParser(description='deepKNet model')
 ## dataset and target property
-parser.add_argument('--data', default='./data/', metavar='DATA_DIR',
-                    help='path to data directory')
+parser.add_argument('--root', default='./data/', metavar='DATA_DIR',
+                    help='path to data root directory')
 parser.add_argument('--target', default='band_gap', metavar='TARGET_PROPERTY',
                     help="target property ('band_gap', 'energy_per_atom', \
                                            'formation_energy_per_atom')")
@@ -24,7 +23,7 @@ parser.add_argument('--normalize', dest='normalize_target', action='store_true',
 ## training-relevant params
 parser.add_argument('--algo', default='deepKNet', type=str, metavar='NETWORK',
                     help='neural network (deepKNet, deepKBert, CGCNN)')
-parser.add_argument('--optim', default='Adam', type=str, metavar='OPTIM',
+parser.add_argument('--optim', default='SGD', type=str, metavar='OPTIM',
                     help='torch.optim (Adam or SGD), (default: SGD)')
 parser.add_argument('--epochs', default=50, type=int, metavar='N',
                     help='number of epochs to run (default: 50)')
@@ -98,8 +97,8 @@ def main():
     # build model
     if args.algo == 'deepKNet':
         model = deepKNet()
-    elif args.algo == 'deepKBert':
-        model = DeepKBert()
+#    elif args.algo == 'deepKBert':
+#        model = DeepKBert()
     else:
         raise NameError('Only deepKNet or deepKBert available')
     if args.cuda: model.cuda()
@@ -172,11 +171,13 @@ def main():
             'normalizer': normalizer.state_dict()
         }, is_best)
 
+    """
     # test best model
     print('---------Evaluate Model on Test Set---------------')
     best_model = load_best_model()
     model.load_state_dict(best_model['state_dict'])
     validate(test_loader, model, criterion, epoch, writer, normalizer, device, test_mode=True)
+    """
 
 
 def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer, device):
@@ -196,19 +197,19 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer, 
     end = time.time()
     running_loss = 0.0
     for idx, data in enumerate(train_loader):
-        point_cloud, target = data
+        image, target = data
         if args.cuda:
-            point_cloud = point_cloud.cuda()
+            image = image.cuda()
             target = target.cuda()
 
         # measure data loading time
         data_time.update(time.time() - end)
 
         # compute output
-        output = model(point_cloud)
+        output = model(image)
 
         # measure accuracy and record loss
-        if args.norm_target:
+        if args.normalize_target:
             # normalize target
             target_normed = normalizer.norm(target)
             loss = criterion(output, target_normed)
@@ -259,16 +260,16 @@ def validate(val_loader, model, criterion, epoch, writer, normalizer, device, te
         end = time.time()
         running_loss = 0.0
         for idx, data in enumerate(val_loader):
-            point_cloud, target = data
+            image, target = data
             if args.cuda:
-                point_cloud = point_cloud.cuda()
+                image = image.cuda()
                 target = target.cuda()
 
             # compute output
-            output = model(point_cloud)
+            output = model(image)
         
             # measure accuracy and record loss
-            if args.norm_target:
+            if args.normalize_target:
                 # normalize target
                 target_normed = normalizer.norm(target)
                 loss = criterion(output, target_normed)
