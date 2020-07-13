@@ -1,28 +1,33 @@
 import argparse
+import sys
 import os
 import shutil
 import time
+import numpy as np
 from random import sample
+from sklearn import metrics
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.tensorboard import SummaryWriter
 from deepKNet.data import deepKNetDataset, get_train_val_test_loader
-from deepKNet.model import deepKNet
+from deepKNet.model import LeNet5
 
 parser = argparse.ArgumentParser(description='deepKNet model')
 ## dataset and target property
 parser.add_argument('--root', default='./data/', metavar='DATA_DIR',
                     help='path to data root directory')
-parser.add_argument('--target', default='band_gap', metavar='TARGET_PROPERTY',
+parser.add_argument('--target', default='MIT', metavar='TARGET_PROPERTY',
                     help="target property ('band_gap', 'energy_per_atom', \
-                                           'formation_energy_per_atom')")
+                                           'formation_energy_per_atom', 'MIT')")
+parser.add_argument('--task', choices=['regression', 'classification'],
+                    default='classification', help='complete a regression or '
+                    'classification task (default: regression)')
 parser.add_argument('--normalize', dest='normalize_target', action='store_true',
                     help='whether to normalize the target property (default: False)')
 ## training-relevant params
-parser.add_argument('--algo', default='deepKNet', type=str, metavar='NETWORK',
-                    help='neural network (deepKNet, deepKBert, CGCNN)')
+parser.add_argument('--algo', default='LeNet5', type=str, metavar='NETWORK')
 parser.add_argument('--optim', default='SGD', type=str, metavar='OPTIM',
                     help='torch.optim (Adam or SGD), (default: SGD)')
 parser.add_argument('--epochs', default=50, type=int, metavar='N',
@@ -41,11 +46,11 @@ parser.add_argument('--wd', '--weight-decay', default=0, type=float,
                     dest='weight_decay')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum for SGD optimizer')
-parser.add_argument('--train-ratio', default=0.8, type=float, metavar='n/N',
+parser.add_argument('--train-ratio', default=0.7, type=float, metavar='n/N',
                     help='fraction of data for training')
 parser.add_argument('--val-ratio', default=0.2, type=float, metavar='n/N',
                     help='fraction of data for validation')
-parser.add_argument('--test-ratio', default=0.0, type=float, metavar='n/N',
+parser.add_argument('--test-ratio', default=0.1, type=float, metavar='n/N',
                     help='fraction of data for test')
 ## misc
 n_threads = torch.get_num_threads()
@@ -61,18 +66,21 @@ parser.add_argument('--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
 parser.add_argument('--disable-cuda', action='store_true',
                     help='disable CUDA (default: False)')
+
 # parse args
 args = parser.parse_args()
 args.cuda = torch.cuda.is_available() and not args.disable_cuda
 if args.num_threads != n_threads:
     torch.set_num_threads(args.num_threads)
-
 # print out args
 print('User defined variables:', flush=True)
 for key, val in vars(args).items():
     print('  => {:17s}: {}'.format(key, val), flush=True)
 
-best_mae = 1e8
+if args.task == 'classification':
+    best_mae = 0.
+else:
+    best_mae = 1E10
 
 def main():
     global args, best_mae
@@ -88,20 +96,26 @@ def main():
 
     # normalizer
     with torch.no_grad():
-        sample_size = 500
-        sample_target = torch.tensor([dataset[i][1].item() for i in \
-                                     sample(range(len(dataset)), sample_size)])
-        normalizer = Normalizer(sample_target)
+        if args.task == 'classification':
+            normalizer = Normalizer(torch.zeros(2))
+            normalizer.load_state_dict({'mean': 0., 'std': 1.})
+        else:
+            sample_target = torch.tensor([dataset[i][1].item() for i in \
+                                          sample(range(len(dataset)), 800)])
+            normalizer = Normalizer(sample_target)
         print('Normalizer: {}'.format(normalizer.state_dict()))
 
     # build model
-    if args.algo == 'deepKNet':
-        model = deepKNet()
+    if args.algo == 'LeNet5':
+        model = LeNet5()
 #    elif args.algo == 'deepKBert':
 #        model = DeepKBert()
     else:
-        raise NameError('Only deepKNet or deepKBert available')
+        raise NameError('Specified algorithm not implemented yet..')
+
+    # send to GPU if applicable
     if args.cuda: model.cuda()
+
     # number of trainable model parameters
     trainable_params = sum(p.numel() for p in model.parameters() 
                            if p.requires_grad)
@@ -109,7 +123,12 @@ def main():
            .format(trainable_params), flush=True)
 
     # define loss function (criterion) and optimizer
-    criterion = nn.MSELoss()
+    if args.task == 'classification':
+        criterion = nn.NLLLoss()
+    else:
+        criterion = nn.MSELoss()
+
+    # optimization algo
     if args.optim == 'Adam':
         optimizer = optim.Adam(model.parameters(), lr=args.lr, 
                                weight_decay=args.weight_decay)
@@ -153,16 +172,24 @@ def main():
     # training
     for epoch in range(args.start_epoch, args.epochs):
         # train for one epoch
-        train(train_loader, model, criterion, optimizer, epoch, writer, normalizer, device)
+        train(train_loader, model, criterion, optimizer, epoch, writer, normalizer)
 
         # evaluate on validation set
-        mae = validate(val_loader, model, criterion, epoch, writer, normalizer, device)
+        mae = validate(val_loader, model, criterion, epoch, writer, normalizer)
+
+        if np.isnan(mae):
+            print('Exit due to NaN')
+            sys.exit(1)
 
         scheduler.step()
 
         # remember best mae and save checkpoint
-        is_best = mae < best_mae
-        best_mae = min(mae, best_mae)
+        if args.task == 'classification':
+            is_best = mae > best_mae
+            best_mae = max(mae, best_mae)
+        else:
+            is_best = mae < best_mae
+            best_mae = min(mae, best_mae)
         save_checkpoint({
             'epoch': epoch,
             'state_dict': model.state_dict(),
@@ -171,25 +198,35 @@ def main():
             'normalizer': normalizer.state_dict()
         }, is_best)
 
-    """
     # test best model
     print('---------Evaluate Model on Test Set---------------')
     best_model = load_best_model()
     model.load_state_dict(best_model['state_dict'])
-    validate(test_loader, model, criterion, epoch, writer, normalizer, device, test_mode=True)
-    """
+    validate(test_loader, model, criterion, epoch, writer, normalizer, test_mode=True)
 
 
-def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer, device):
+def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':4.2f')
     losses = AverageMeter('Loss', ':6.3f')
-    maes = AverageMeter('MAE', ':6.3f')
-    progress = ProgressMeter(
-        len(train_loader),
-        [batch_time, data_time, losses, maes],
-        prefix="Epoch: [{}]".format(epoch)
-    )
+    if args.task == 'classification':
+        accuracies = AverageMeter('Accu', ':6.3f')
+        precisions = AverageMeter('Prec', ':6.3f')
+        recalls = AverageMeter('Rec', ':6.3f')
+        fscores = AverageMeter('Fsc', ':6.3f')
+        auc_scores = AverageMeter('AUC', ':6.3f')
+        progress = ProgressMeter(
+            len(train_loader),
+            [batch_time, data_time, losses, accuracies, precisions, recalls, fscores, auc_scores],
+            prefix="Epoch: [{}]".format(epoch)
+        )
+    else:
+        maes = AverageMeter('MAE', ':6.3f')
+        progress = ProgressMeter(
+            len(train_loader),
+            [batch_time, data_time, losses, maes],
+            prefix="Epoch: [{}]".format(epoch)
+        )
 
     # switch to training mode
     model.train()
@@ -209,17 +246,29 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer, 
         output = model(image)
 
         # measure accuracy and record loss
-        if args.normalize_target:
-            # normalize target
-            target_normed = normalizer.norm(target)
-            loss = criterion(output, target_normed)
-            mae = compute_mae(normalizer.denorm(output), target)
-        else:
+        if args.task == 'classification':
+            # TODO is this necessary?
+            target = target.view(-1).long()
             loss = criterion(output, target)
-            mae = compute_mae(target, output)
-        losses.update(loss.item(), target.size(0))
-        maes.update(mae.item(), target.size(0))
-        
+            accuracy, precision, recall, fscore, auc_score =\
+                class_eval(output, target)
+            losses.update(loss.item(), target.size(0))
+            accuracies.update(accuracy.item(), target.size(0))
+            precisions.update(precision.item(), target.size(0))
+            recalls.update(recall.item(), target.size(0))
+            fscores.update(fscore.item(), target.size(0))
+            auc_scores.update(auc_score.item(), target.size(0))
+        else:
+            if args.normalize_target:
+                target_normed = normalizer.norm(target)
+                loss = criterion(output, target_normed)
+                mae = compute_mae(normalizer.denorm(output), target)
+            else:
+                loss = criterion(output, target)
+                mae = compute_mae(output, target)
+            losses.update(loss.item(), target.size(0))
+            maes.update(mae.item(), target.size(0))
+
         # compute gradient and optimize
         optimizer.zero_grad()
         loss.backward()
@@ -229,29 +278,37 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer, 
         batch_time.update(time.time() - end)
         end = time.time()
 
-        # print progress
-        if idx % args.print_freq == 0:
-            progress.display(idx)
-        
-        # write to TensorBoard
+        # print progress and write to TensorBoard
         running_loss += loss.item()
         if (idx+1) % args.print_freq == 0:
+            progress.display(idx)
             writer.add_scalar('training loss',
                             running_loss / args.print_freq,
                             epoch * len(train_loader) + idx)
             running_loss = 0.0
 
 
-def validate(val_loader, model, criterion, epoch, writer, normalizer, device, test_mode=False):
+def validate(val_loader, model, criterion, epoch, writer, normalizer, test_mode=False):
     batch_time = AverageMeter('Time', ':4.2f')
     losses = AverageMeter('Loss', ':6.3f')
-    maes = AverageMeter('MAE', ':6.3f')
-    prefix = 'Validate: ' if not test_mode else 'Test: '
-    progress = ProgressMeter(
-        len(val_loader),
-        [batch_time, losses, maes],
-        prefix='Validate: '
-    )
+    if args.task == 'classification':
+        accuracies = AverageMeter('Accu', ':6.3f')
+        precisions = AverageMeter('Prec', ':6.3f')
+        recalls = AverageMeter('Rec', ':6.3f')
+        fscores = AverageMeter('Fsc', ':6.3f')
+        auc_scores = AverageMeter('AUC', ':6.3f')
+        progress = ProgressMeter(
+            len(val_loader),
+            [batch_time, losses, accuracies, precisions, recalls, fscores, auc_scores],
+            prefix='Validate: ' if not test_mode else 'Test: '
+        )
+    else:   
+        maes = AverageMeter('MAE', ':6.3f')
+        progress = ProgressMeter(
+            len(val_loader),
+            [batch_time, losses, maes],
+            prefix='Validate: ' if not test_mode else 'Test: '
+        )
     
     # switch to evaluation mode
     model.eval()
@@ -269,34 +326,61 @@ def validate(val_loader, model, criterion, epoch, writer, normalizer, device, te
             output = model(image)
         
             # measure accuracy and record loss
-            if args.normalize_target:
-                # normalize target
-                target_normed = normalizer.norm(target)
-                loss = criterion(output, target_normed)
-                mae = compute_mae(normalizer.denorm(output), target)
-            else:
+            if args.task == 'classification':
+                # TODO is this necessary?
+                target = target.view(-1).long()
                 loss = criterion(output, target)
-                mae = compute_mae(target, output)
-            losses.update(loss.item(), target.size(0))
-            maes.update(mae.item(), target.size(0))
+                accuracy, precision, recall, fscore, auc_score =\
+                    class_eval(output, target)
+                losses.update(loss.item(), target.size(0))
+                accuracies.update(accuracy.item(), target.size(0))
+                precisions.update(precision.item(), target.size(0))
+                recalls.update(recall.item(), target.size(0))
+                fscores.update(fscore.item(), target.size(0))
+                auc_scores.update(auc_score.item(), target.size(0))
+                if test_mode:
+                    test_pred = torch.exp(output)
+                    test_target = target
+                    assert test_pred.shape[1] == 2
+                    test_preds += test_pred[:, 1].tolist()
+                    test_targets += test_target.view(-1).tolist()
+            else:
+                if args.normalize_target:
+                    target_normed = normalizer.norm(target)
+                    loss = criterion(output, target_normed)
+                    mae = compute_mae(normalizer.denorm(output), target)
+                else:
+                    loss = criterion(output, target)
+                    mae = compute_mae(output, target)
+                losses.update(loss.item(), target.size(0))
+                maes.update(mae.item(), target.size(0))
+                if test_mode:
+                    test_pred = normalizer.denorm(output) if args.normalize_target \
+                                    else output
+                    test_target = target
+                    test_preds += test_pred.view(-1).tolist()
+                    test_targets += test_target.view(-1).tolist()
 
             # measure elapsed time
             batch_time.update(time.time() - end)
             end = time.time()
 
-            # print progress
-            if idx % args.print_freq == 0:
-                progress.display(idx)
-        
-            # write to TensorBoard
+            # print progress and  write to TensorBoard
             if not test_mode:
                 running_loss += loss.item()
                 if (idx+1) % args.print_freq == 0:
+                    progress.display(idx)
                     writer.add_scalar('validation loss',
                                     running_loss / args.print_freq,
                                     epoch * len(val_loader) + idx)
                     running_loss = 0.0
-    return maes.avg
+    
+    if args.task == 'classification':
+        print(' * AUC {auc.avg:.3f}'.format(auc=auc_scores), flush=True)
+        return auc_scores.avg
+    else:
+        print(' * MAE {maes.avg:.3f}'.format(maes=maes), flush=True)
+        return maes.avg
 
 
 def save_checkpoint(state, is_best):

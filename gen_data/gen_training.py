@@ -15,6 +15,9 @@ parser.add_argument('--debug', dest='debug', action='store_true')
 args = parser.parse_args()
 
 def generate_dataset(xrd_data, features_dir, target_dir):
+    # add MIT column
+    xrd_data['MIT'] = (xrd_data['band_gap'] > 1E-3).astype(float)
+
     # store point cloud representation for each material
     for _, irow in xrd_data.iterrows():
         # unique material ID
