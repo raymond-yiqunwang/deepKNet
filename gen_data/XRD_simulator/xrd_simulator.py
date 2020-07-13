@@ -255,7 +255,7 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
             i_hkl = (f_hkl * f_hkl.conjugate()).real
 
             # add to features 
-            features.append([hkl, i_hkl])
+            features.append([hkl[0], hkl[1], hkl[2], i_hkl])
 
             ### for diffractin pattern plotting only
             two_theta = math.degrees(2 * theta)

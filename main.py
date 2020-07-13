@@ -103,7 +103,7 @@ def main():
             sample_target = torch.tensor([dataset[i][1].item() for i in \
                                           sample(range(len(dataset)), 800)])
             normalizer = Normalizer(sample_target)
-        print('Normalizer: {}'.format(normalizer.state_dict()))
+        print('Normalizer: {}'.format(normalizer.state_dict()), flush=True)
 
     # build model
     if args.algo == 'LeNet5':
@@ -158,7 +158,7 @@ def main():
 
     # TensorBoard writer
     summary_root = './runs/'
-    summary_file = summary_root + args.target + '_baseline'
+    summary_file = summary_root + args.target
     if not os.path.exists(summary_root):
         os.mkdir(summary_root)
     if os.path.exists(summary_file):
@@ -199,7 +199,7 @@ def main():
         }, is_best)
 
     # test best model
-    print('---------Evaluate Model on Test Set---------------')
+    print('---------Evaluate Model on Test Set---------------', flush=True)
     best_model = load_best_model()
     model.load_state_dict(best_model['state_dict'])
     validate(test_loader, model, criterion, epoch, writer, normalizer, test_mode=True)
@@ -279,7 +279,7 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer):
 
         # print progress and write to TensorBoard
         running_loss += loss.item()
-        if idx % args.print_freq == 0:
+        if idx%args.print_freq == 0:
             progress.display(idx)
             writer.add_scalar('training loss',
                             running_loss / args.print_freq,
@@ -308,6 +308,9 @@ def validate(val_loader, model, criterion, epoch, writer, normalizer, test_mode=
             [batch_time, losses, maes],
             prefix='Validate: ' if not test_mode else 'Test: '
         )
+    if test_mode:
+        test_targets = []
+        test_preds = []
     
     # switch to evaluation mode
     model.eval()
@@ -366,12 +369,15 @@ def validate(val_loader, model, criterion, epoch, writer, normalizer, test_mode=
             # print progress and  write to TensorBoard
             if not test_mode:
                 running_loss += loss.item()
-                if (idx+1) % args.print_freq == 0:
+                if idx%args.print_freq == 0:
                     progress.display(idx)
                     writer.add_scalar('validation loss',
                                     running_loss / args.print_freq,
                                     epoch * len(val_loader) + idx)
                     running_loss = 0.0
+            else:
+                if idx%args.print_freq == 0:
+                    progress.display(idx)
     
     if args.task == 'classification':
         print(' * AUC {auc.avg:.3f}'.format(auc=auc_scores), flush=True)
@@ -394,11 +400,11 @@ def save_checkpoint(state, is_best):
 def load_best_model():
     check_root = './checkpoints/'
     if not os.path.exists(check_root):
-        print('{} dir does not exist, exiting...')
+        print('{} dir does not exist, exiting...', flush=True)
         sys.exit(1)
     filename = check_root + args.target + '_model_best.pth.tar'
     if not os.path.isfile(filename):
-        print('checkpoint {} not found, exiting...')
+        print('checkpoint {} not found, exiting...', flush=True)
         sys.exit(1)
     return torch.load(filename)
 
@@ -435,7 +441,7 @@ def class_eval(prediction, target):
     target_label = np.squeeze(target)
     if prediction.shape[1] == 2:
         precision, recall, fscore, _ = metrics.precision_recall_fscore_support(
-            target_label, pred_label, average='binary')
+            target_label, pred_label, average='binary', warn_for=tuple())
         auc_score = metrics.roc_auc_score(target_label, prediction[:, 1])
         accuracy = metrics.accuracy_score(target_label, pred_label)
     else:

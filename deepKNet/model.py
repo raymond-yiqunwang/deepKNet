@@ -6,19 +6,22 @@ class LeNet5(nn.Module):
     def __init__(self):
         super(LeNet5, self).__init__()
         self.conv1 = nn.Conv2d(3, 6, kernel_size=5,stride=1, padding=0)
+        self.bn1 = nn.BatchNorm2d(6)
         self.conv2 = nn.Conv2d(6, 16, kernel_size=5, stride=1, padding=0)
-        self.fc1   = nn.Linear(16*14*14, 120)
-        self.fc2   = nn.Linear(120, 84)
-        self.fc3   = nn.Linear(84, 2)
+        self.bn2 = nn.BatchNorm2d(16)
+        self.fc1   = nn.Linear(2704, 128)
+        self.fc2   = nn.Linear(128, 32)
+        self.fc3   = nn.Linear(32, 2)
+        self.logsoftmax = nn.LogSoftmax(dim=1)
 
     def forward(self, image):
         # image size -- (BS, C, H, W)
-        net = F.max_pool2d(F.relu(self.conv1(image)), kernel_size=2)
-        net = F.max_pool2d(F.relu(self.conv2(net)), kernel_size=2)
+        net = F.max_pool2d(F.relu(self.bn1(self.conv1(image))), kernel_size=2)
+        net = F.max_pool2d(F.relu(self.bn2(self.conv2(net))), kernel_size=2)
         net = net.view(-1, self.num_flat_features(net))
         net = F.relu(self.fc1(net))
         net = F.relu(self.fc2(net))
-        y_pred = self.fc3(net)
+        y_pred = self.logsoftmax(self.fc3(net))
         return y_pred
 
     def num_flat_features(self, x):

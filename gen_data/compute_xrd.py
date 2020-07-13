@@ -33,6 +33,15 @@ def compute_xrd(data_raw, wavelength):
         struct = Structure.from_str(irow['cif'], fmt="cif")
         _, recip_latt, features = xrd_simulator.get_pattern(structure=struct)
 
+        # check centrosymmetry
+        if args.debug:
+            check_feat = pd.DataFrame(features, columns=['h', 'k', 'l', 'I'])
+            for idx, feat in check_feat.iterrows():
+                inversion_point = check_feat.loc[(check_feat['h']==-1*feat['h']) &\
+                                                 (check_feat['k']==-1*feat['k']) &\
+                                                 (check_feat['l']==-1*feat['l']), 'I']
+                assert(np.abs(feat['I']-inversion_point.values[0])<1E-6)
+
         # properties of interest
         material_id = irow['material_id']
         band_gap = irow['band_gap']
@@ -53,8 +62,8 @@ def parallel_computing(df_in, wavelength, nworkers=1):
     # initialize pool of workers
     pool = Pool(processes=nworkers)
     df_split = np.array_split(df_in, nworkers)
-    args = [(data, wavelength) for data in df_split]
-    df_out = pd.concat(pool.starmap(compute_xrd, args), axis=0)
+    pargs = [(data, wavelength) for data in df_split]
+    df_out = pd.concat(pool.starmap(compute_xrd, pargs), axis=0)
     pool.close()
     pool.join()
     return df_out
@@ -96,7 +105,7 @@ def main():
     
     # parameters
     wavelength = 'CuKa' # X-ray wavelength
-    nworkers = max(multiprocessing.cpu_count()-4, 1)
+    nworkers = max(multiprocessing.cpu_count()-2, 1)
     n_slices = MP_data.shape[0] // (20*nworkers) # number of batches to split into
 
     # parallel processing

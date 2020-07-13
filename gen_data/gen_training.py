@@ -23,23 +23,39 @@ def generate_dataset(xrd_data, features_dir, target_dir):
 
         # all primitive features
         recip_latt = np.array(ast.literal_eval(irow['recip_latt']))
-        features = ast.literal_eval(irow['features'])
-        npoints = len(features)
+        features = np.array(ast.literal_eval(irow['features']))
 
-        recip_pos = np.array([np.dot(recip_latt.T, np.array(features[idx][0])) \
-                             for idx in range(npoints)])
-        
-        n_grid = 64
+        # reciprocal points in Cartesian coordinate
+        recip_pos = np.dot(features[:,:-1], recip_latt)
+
+        # TODO 3D rotation for data augmentation
+
+        n_grid = 65 # (-32 -- 0 -- 32)
         image = np.zeros((n_grid, n_grid, n_grid))
         max_r = 2. / 1.54184
-        dx = (2 * max_r) / n_grid
-        x_grid = (n_grid/2 + recip_pos[:, 0]//dx).astype(int)
-        y_grid = (n_grid/2 + recip_pos[:, 1]//dx).astype(int)
-        z_grid = (n_grid/2 + recip_pos[:, 2]//dx).astype(int)
+        # make sure all points are within with limiting sphere
+        assert(np.all(np.linalg.norm(recip_pos, axis=1)<2./1.54184))
+        dx = max_r / (n_grid//2)
+        x_grid = (n_grid//2+np.round(recip_pos[:,0]/dx)).astype(int)
+        y_grid = (n_grid//2+np.round(recip_pos[:,1]/dx)).astype(int)
+        z_grid = (n_grid//2+np.round(recip_pos[:,2]/dx)).astype(int)
         for idx in range(len(recip_pos)):
-            image[x_grid[idx], y_grid[idx], z_grid[idx]] += features[idx][1]
+            image[x_grid[idx], y_grid[idx], z_grid[idx]] += features[idx,-1]
         # normalize
         image /= np.amax(image)
+
+        # check centrosymmetry
+        if args.debug:
+            for ix in range(int(image.shape[0]/2)):
+                for iy in range(int(image.shape[1]/2)):
+                    for iz in range(int(image.shape[2]/2)):
+                        jx, jy, jz = 64-ix, 64-iy, 64-iz
+                        try:
+                            assert(np.abs(image[ix, iy, iz]-image[jx, jy, jz])<1E-8)
+                        except:
+                            print(ix, iy, iz)
+                            print(image[ix, iy, iz], image[jx, jy, jz])
+
 
         multi_view = np.zeros((3, n_grid, n_grid))
         multi_view[0,:,:] = image.sum(axis=0)
@@ -92,7 +108,7 @@ def main():
     os.mkdir(features_dir)
     
     # parameters
-    nworkers = max(multiprocessing.cpu_count()-4, 1)
+    nworkers = max(multiprocessing.cpu_count()-2, 1)
     
     # process in chunks due to large size
     data_all = pd.read_csv(filename, sep=';', header=0, index_col=None, chunksize=nworkers*50)
@@ -101,8 +117,8 @@ def main():
         # parallel processing
         xrd_data_chunk = np.array_split(xrd_data, nworkers)
         pool = Pool(nworkers)
-        args = [(data, features_dir, target_dir) for data in xrd_data_chunk]
-        pool.starmap(generate_dataset, args)
+        pargs = [(data, features_dir, target_dir) for data in xrd_data_chunk]
+        pool.starmap(generate_dataset, pargs)
         pool.close()
         pool.join()
         cnt += xrd_data.shape[0]
