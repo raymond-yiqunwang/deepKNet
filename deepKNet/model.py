@@ -4,37 +4,28 @@ import torch.nn.functional as F
 
 class LeNet5(nn.Module):
     def __init__(self):
-        super(deepKNet, self).__init__()
-        # layer 1
-        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, stride=1, padding=1)
-        self.bn1 = nn.BatchNorm2d(32)
-        self.max_pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
-
-        # layer 2
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
-        self.bn2 = nn.BatchNorm2d(64)
-        self.max_pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
-        
-        # fc1
-        self.fc1 = nn.Linear(16384, 1024)
-        self.fc2 = nn.Linear(1024, 64)
-        self.fc3 = nn.Linear(64, 1)
+        super(LeNet5, self).__init__()
+        self.conv1 = nn.Conv2d(3, 6, kernel_size=5,stride=1, padding=0)
+        self.conv2 = nn.Conv2d(6, 16, kernel_size=5, stride=1, padding=0)
+        self.fc1   = nn.Linear(16*14*14, 120)
+        self.fc2   = nn.Linear(120, 84)
+        self.fc3   = nn.Linear(84, 2)
 
     def forward(self, image):
         # image size -- (BS, C, H, W)
-        net = F.relu(self.bn1(self.conv1(image)))
-        net = self.max_pool1(net)
-
-        net = F.relu(self.bn2(self.conv2(net)))
-        net = self.max_pool2(net)
-
-        net = net.reshape(net.shape[0], -1)
-
+        net = F.max_pool2d(F.relu(self.conv1(image)), kernel_size=2)
+        net = F.max_pool2d(F.relu(self.conv2(net)), kernel_size=2)
+        net = net.view(-1, self.num_flat_features(net))
         net = F.relu(self.fc1(net))
         net = F.relu(self.fc2(net))
         y_pred = self.fc3(net)
-        
         return y_pred
+
+    def num_flat_features(self, x):
+        num_features = 1
+        for s in x.size()[1:]:
+            num_features *= s
+        return num_features
 
 
 class ResNet50(nn.Module):
@@ -51,7 +42,7 @@ class ResNet50(nn.Module):
 
 class waveNet(nn.Module):
     def __init__(self):
-        super(deepKNet, self).__init__()
+        super(waveNet, self).__init__()
         # layer 0
 #        self.conv0 = nn.Conv1d(98, 128, 1)
         self.conv0 = nn.Conv1d(4, 128, 3)

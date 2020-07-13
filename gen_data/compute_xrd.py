@@ -38,10 +38,11 @@ def compute_xrd(data_raw, wavelength):
         band_gap = irow['band_gap']
         energy_per_atom = irow['energy_per_atom']
         formation_energy_per_atom = irow['formation_energy_per_atom']
+        MIT = float(band_gap > 1E-3)
 
         # property list
         ifeat = [material_id, features, recip_latt.tolist(), \
-                 band_gap, energy_per_atom, formation_energy_per_atom]
+                 band_gap, energy_per_atom, formation_energy_per_atom, MIT]
         # append to dataset
         xrd_data_batch.append(ifeat)
     
@@ -89,7 +90,7 @@ def main():
         _ = input("Attention, the existing xrd data will be deleted and regenerated.. \
             \n>> Hit Enter to continue, Ctrl+c to terminate..")
     header = [['material_id', 'features', 'recip_latt', \
-               'band_gap', 'energy_per_atom', 'formation_energy_per_atom']]
+               'band_gap', 'energy_per_atom', 'formation_energy_per_atom', 'MIT']]
     df = pd.DataFrame(header)
     df.to_csv(out_file, sep=';', header=None, index=False, mode='w')
     

@@ -247,7 +247,6 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer):
 
         # measure accuracy and record loss
         if args.task == 'classification':
-            # TODO is this necessary?
             target = target.view(-1).long()
             loss = criterion(output, target)
             accuracy, precision, recall, fscore, auc_score =\
@@ -280,7 +279,7 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, normalizer):
 
         # print progress and write to TensorBoard
         running_loss += loss.item()
-        if (idx+1) % args.print_freq == 0:
+        if idx % args.print_freq == 0:
             progress.display(idx)
             writer.add_scalar('training loss',
                             running_loss / args.print_freq,
@@ -327,7 +326,6 @@ def validate(val_loader, model, criterion, epoch, writer, normalizer, test_mode=
         
             # measure accuracy and record loss
             if args.task == 'classification':
-                # TODO is this necessary?
                 target = target.view(-1).long()
                 loss = criterion(output, target)
                 accuracy, precision, recall, fscore, auc_score =\
@@ -428,6 +426,21 @@ class Normalizer(object):
 
 def compute_mae(y_pred, y_true):
     return torch.mean(torch.abs(y_pred - y_true))
+
+
+def class_eval(prediction, target):
+    prediction = np.exp(prediction.detach().numpy())
+    target = target.numpy()
+    pred_label = np.argmax(prediction, axis=1)
+    target_label = np.squeeze(target)
+    if prediction.shape[1] == 2:
+        precision, recall, fscore, _ = metrics.precision_recall_fscore_support(
+            target_label, pred_label, average='binary')
+        auc_score = metrics.roc_auc_score(target_label, prediction[:, 1])
+        accuracy = metrics.accuracy_score(target_label, pred_label)
+    else:
+        raise NotImplementedError
+    return accuracy, precision, recall, fscore, auc_score
 
 
 class AverageMeter(object):

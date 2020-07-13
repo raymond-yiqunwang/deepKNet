@@ -15,9 +15,6 @@ parser.add_argument('--debug', dest='debug', action='store_true')
 args = parser.parse_args()
 
 def generate_dataset(xrd_data, features_dir, target_dir):
-    # add MIT column
-    xrd_data['MIT'] = (xrd_data['band_gap'] > 1E-3).astype(float)
-
     # store point cloud representation for each material
     for _, irow in xrd_data.iterrows():
         # unique material ID
@@ -55,9 +52,10 @@ def generate_dataset(xrd_data, features_dir, target_dir):
         band_gap = irow['band_gap'] 
         energy_per_atom = irow['energy_per_atom'] 
         formation_energy_per_atom = irow['formation_energy_per_atom']
+        MIT = irow['MIT']
         # write target
-        properties = [[band_gap, energy_per_atom, formation_energy_per_atom]]
-        header_target = ['band_gap', 'energy_per_atom', 'formation_energy_per_atom']
+        properties = [[band_gap, energy_per_atom, formation_energy_per_atom, MIT]]
+        header_target = ['band_gap', 'energy_per_atom', 'formation_energy_per_atom', 'MIT']
         properties = pd.DataFrame(properties)
         properties.to_csv(target_dir+filename+'.csv', sep=';', \
                           header=header_target, index=False, mode='w')
