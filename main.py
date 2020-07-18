@@ -12,7 +12,7 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.tensorboard import SummaryWriter
 from deepKNet.data import deepKNetDataset, get_train_val_test_loader
-from deepKNet.model import LeNet
+from deepKNet.model import LeNet5
 
 parser = argparse.ArgumentParser(description='deepKNet model')
 ## dataset and target property
@@ -27,10 +27,10 @@ parser.add_argument('--task', choices=['regression', 'classification'],
 parser.add_argument('--normalize', dest='normalize_target', action='store_false',
                     help='whether to normalize the target property (default: True)')
 ## training-relevant params
-parser.add_argument('--algo', default='LeNet', type=str, metavar='NETWORK')
+parser.add_argument('--algo', default='LeNet5', type=str, metavar='NETWORK')
 parser.add_argument('--optim', default='SGD', type=str, metavar='OPTIM',
                     help='torch.optim (Adam or SGD), (default: SGD)')
-parser.add_argument('--epochs', default=10, type=int, metavar='N',
+parser.add_argument('--epochs', default=20, type=int, metavar='N',
                     help='number of epochs to run (default: 100)')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch start number (useful on restarts)')
@@ -101,8 +101,8 @@ def main():
     print('Normalizer: {}'.format(normalizer.state_dict()), flush=True)
 
     # build model
-    if args.algo == 'LeNet':
-        model = LeNet(classification = args.task=='classification')
+    if args.algo == 'LeNet5':
+        model = LeNet5(classification = args.task=='classification')
 #    elif args.algo == 'deepKBert':
 #        model = DeepKBert()
     else:
