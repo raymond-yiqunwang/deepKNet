@@ -3,32 +3,55 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class LeNet5(nn.Module):
-    def __init__(self):
+    def __init__(self, classification=True):
         super(LeNet5, self).__init__()
-        self.conv1 = nn.Conv2d(3, 6, kernel_size=5,stride=1, padding=0)
-        self.bn1 = nn.BatchNorm2d(6)
-        self.conv2 = nn.Conv2d(6, 16, kernel_size=5, stride=1, padding=0)
+        self.classification = classification
+        self.conv1 = nn.Conv2d(3, 32, kernel_size=7,stride=1, padding=0)
+        self.bn1 = nn.BatchNorm2d(32)
+        self.pooling1 = nn.MaxPool2d(2, stride=2, padding=0)
+
+        self.conv2 = nn.Conv2d(32, 16, kernel_size=7,stride=1, padding=0)
         self.bn2 = nn.BatchNorm2d(16)
-        self.fc1   = nn.Linear(2704, 128)
-        self.fc2   = nn.Linear(128, 32)
-        self.fc3   = nn.Linear(32, 2)
-        self.logsoftmax = nn.LogSoftmax(dim=1)
+        self.pooling2 = nn.MaxPool2d(2, stride=2, padding=0)
+
+        self.conv3 = nn.Conv2d(16, 8, kernel_size=7,stride=1, padding=0)
+        self.bn3 = nn.BatchNorm2d(8)
+
+        self.fc1   = nn.Linear(200, 64)
+        self.bn4 = nn.BatchNorm1d(64)
+        if self.classification:
+            self.fc_out   = nn.Linear(64, 2)
+            self.logsoftmax = nn.LogSoftmax(dim=1)
+        else:
+            self.fc_out   = nn.Linear(64, 1)
+            
 
     def forward(self, image):
         # image size -- (BS, C, H, W)
-        net = F.max_pool2d(F.relu(self.bn1(self.conv1(image))), kernel_size=2)
-        net = F.max_pool2d(F.relu(self.bn2(self.conv2(net))), kernel_size=2)
+        net = F.relu(self.bn1(self.conv1(image)))
+        net = self.pooling1(net)
+        
+        net = F.relu(self.bn2(self.conv2(net)))
+        net = self.pooling2(net)
+
+        net = F.relu(self.bn3(self.conv3(net)))
+
         net = net.view(-1, self.num_flat_features(net))
-        net = F.relu(self.fc1(net))
-        net = F.relu(self.fc2(net))
-        y_pred = self.logsoftmax(self.fc3(net))
-        return y_pred
+
+        net = F.relu(self.bn4(self.fc1(net)))
+
+        out = self.fc_out(net)
+        if self.classification:
+            out = self.logsoftmax(out)
+
+        return out
 
     def num_flat_features(self, x):
         num_features = 1
         for s in x.size()[1:]:
             num_features *= s
         return num_features
+
 
 
 class ResNet50(nn.Module):

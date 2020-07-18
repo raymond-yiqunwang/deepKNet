@@ -120,8 +120,8 @@ def show_statistics(data, plot=False):
     print('>> Number of entries with no warnings: {:d}'.format(no_warnings.shape[0]))
 
 
-def customize_data(data_raw):
-    data_custom = data_raw.copy()
+def customize_data(raw_data):
+    data_custom = raw_data.copy()
 
     # only take no-warning entries
     if True:
@@ -158,26 +158,26 @@ def customize_data(data_raw):
 
 
 def main():
-    filename = "./data_raw/fetch_MPdata.csv"
+    filename = "./raw_data/fetch_MPdata.csv"
     if not os.path.isfile(filename):
         print("{} file does not exist, please generate it first..".format(filename))
         sys.exit(1)
     # get raw data from Materials Project
-    data_raw = pd.read_csv(filename, sep=';', header=0, index_col=None)
+    raw_data = pd.read_csv(filename, sep=';', header=0, index_col=None)
 
     # show statistics of raw data
     print('\nShowing raw data:')
-    show_statistics(data=data_raw, plot=False)
+    show_statistics(data=raw_data, plot=False)
 
     # custom data
-    data_custom = customize_data(data_raw)
+    data_custom = customize_data(raw_data)
 
     # show statistics of customized data
     print('\nShowing customized data:')
     show_statistics(data=data_custom, plot=False)
 
     # write customized data
-    out_file = "./data_raw/custom_MPdata.csv"
+    out_file = "./raw_data/custom_MPdata.csv"
     data_custom.to_csv(out_file, sep=';', columns=None, mode='w', \
                        header=data_custom.columns, index=None)
 

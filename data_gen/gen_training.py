@@ -86,10 +86,10 @@ def main():
     
     # read xrd raw data
     if not args.debug:
-        root_dir = '../data/'
-        filename = "./data_raw/compute_xrd.csv"
+        root_dir = './data/'
+        filename = "./raw_data/compute_xrd.csv"
     else:
-        root_dir = './data_raw/debug_data/'
+        root_dir = './raw_data/debug_data/'
         filename = root_dir + "debug_compute_xrd.csv"
     if not os.path.isfile(filename):
         print("{} file does not exist, please generate it first..".format(filename))

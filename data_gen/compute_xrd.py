@@ -25,10 +25,10 @@ args = parser.parse_args()
         "warnings", "tags",
 """
 
-def compute_xrd(data_raw, wavelength):
+def compute_xrd(raw_data, wavelength):
     xrd_data_batch = []
     xrd_simulator = xrd.XRDSimulator(wavelength=wavelength)
-    for idx, irow in data_raw.iterrows():
+    for idx, irow in raw_data.iterrows():
         # obtain xrd features
         struct = Structure.from_str(irow['cif'], fmt="cif")
         _, recip_latt, features = xrd_simulator.get_pattern(structure=struct)
@@ -72,7 +72,7 @@ def parallel_computing(df_in, wavelength, nworkers=1):
 def main():
     global args
 
-    filename = "./data_raw/custom_MPdata.csv"
+    filename = "./raw_data/custom_MPdata.csv"
     if not os.path.isfile(filename):
         print("{} file does not exist, please generate it first..".format(filename))
         sys.exit(1)
@@ -81,14 +81,14 @@ def main():
     
     if args.debug:
         # random subsample in debug mode
-        subsample_size = 1000
+        subsample_size = 800
         MP_data = MP_data.sample(n=subsample_size, replace=False, random_state=1, axis=0)
 
     # specify output
     if not args.debug:
-        out_file = "./data_raw/compute_xrd.csv"
+        out_file = "./raw_data/compute_xrd.csv"
     else:
-        out_dir = "./data_raw/debug_data/"
+        out_dir = "./raw_data/debug_data/"
         if not os.path.exists(out_dir):
             print("{} folder does not exist, making directory..".format(out_dir))
             os.mkdir(out_dir)

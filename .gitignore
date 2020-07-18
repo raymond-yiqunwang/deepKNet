@@ -1,7 +1,6 @@
-__pycache__/
-gen_data/XRD_simulator/__pycache__/
-.*.swp
-data/
-gen_data/data_raw/
+*.log
 runs/
 checkpoints/
+data_gen/data/
+data_gen/raw_data/
+*/__pycache__/
