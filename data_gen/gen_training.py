@@ -9,6 +9,7 @@ import pandas as pd
 import multiprocessing
 from PIL import Image
 from multiprocessing import Pool
+from pyquaternion import Quaternion
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--debug', dest='debug', action='store_true')
@@ -28,39 +29,62 @@ def generate_dataset(xrd_data, features_dir, target_dir):
         # reciprocal points in Cartesian coordinate
         recip_pos = np.dot(features[:,:-1], recip_latt)
 
-        # TODO 3D rotation for data augmentation
-
         n_grid = 65 # (-32 -- 0 -- 32)
-        image = np.zeros((n_grid, n_grid, n_grid))
+        multi_view = np.zeros((21, n_grid, n_grid))
+
+        # rotation matrices
+        rot_matrices = [
+            # identity
+            [[1, 0, 0],
+             [0, 1, 0],
+             [0, 0, 1]],
+            # 60 degrees along z axis
+            [[np.cos(np.pi/3), np.sin(np.pi/3), 0], 
+             [-np.sin(np.pi/3), np.cos(np.pi/3), 0], 
+             [0, 0, 1]],
+            # 120 degrees along z axis
+            [[np.cos(2*np.pi/3), np.sin(2*np.pi/3), 0], 
+             [-np.sin(2*np.pi/3), np.cos(2*np.pi/3), 0], 
+             [0, 0, 1]],
+            # 60 degrees along y axis
+            [[np.cos(np.pi/3), 0, np.sin(np.pi/3)], 
+             [0, 1, 0],
+             [-np.sin(np.pi/3), 0, np.cos(np.pi/3)]], 
+            # 120 degrees along y axis
+            [[np.cos(2*np.pi/3), 0, np.sin(2*np.pi/3)], 
+             [0, 1, 0],
+             [-np.sin(2*np.pi/3), 0, np.cos(2*np.pi/3)]], 
+            # 60 degrees along x axis
+            [[1, 0, 0],
+             [0, np.cos(np.pi/3), np.sin(np.pi/3)], 
+             [0, -np.sin(np.pi/3), np.cos(np.pi/3)]], 
+            # 120 degrees along x axis
+            [[1, 0, 0],
+             [0, np.cos(2*np.pi/3), np.sin(2*np.pi/3)], 
+             [0, -np.sin(2*np.pi/3), np.cos(2*np.pi/3)]]
+        ]
+
         max_r = 2. / 1.54184
-        # make sure all points are within with limiting sphere
-        assert(np.all(np.linalg.norm(recip_pos, axis=1)<2./1.54184))
-        dx = max_r / (n_grid//2)
-        x_grid = (n_grid//2+np.round(recip_pos[:,0]/dx)).astype(int)
-        y_grid = (n_grid//2+np.round(recip_pos[:,1]/dx)).astype(int)
-        z_grid = (n_grid//2+np.round(recip_pos[:,2]/dx)).astype(int)
-        for idx in range(len(recip_pos)):
-            image[x_grid[idx], y_grid[idx], z_grid[idx]] += features[idx,-1]
-        # normalize
-        image /= np.amax(image)
+        dx = 2 * max_r / n_grid
+        view_id = 0
+        for rot_matrix in rot_matrices:
+            image = np.zeros((n_grid, n_grid, n_grid))
+            # rotate
+            recip_pos_rot = np.dot(recip_pos, rot_matrix)
+            # assign to gird
+            x_grid = (n_grid//2+np.round(recip_pos_rot[:,0]/dx)).astype(int)
+            y_grid = (n_grid//2+np.round(recip_pos_rot[:,1]/dx)).astype(int)
+            z_grid = (n_grid//2+np.round(recip_pos_rot[:,2]/dx)).astype(int)
+            for idx in range(len(recip_pos_rot)):
+                image[x_grid[idx], y_grid[idx], z_grid[idx]] += features[idx,-1]
+            # normalize
+            image /= np.amax(image)
 
-        # check centrosymmetry
-        if args.debug:
-            for ix in range(int(image.shape[0]/2)):
-                for iy in range(int(image.shape[1]/2)):
-                    for iz in range(int(image.shape[2]/2)):
-                        jx, jy, jz = 64-ix, 64-iy, 64-iz
-                        try:
-                            assert(np.abs(image[ix, iy, iz]-image[jx, jy, jz])<1E-8)
-                        except:
-                            print(ix, iy, iz)
-                            print(image[ix, iy, iz], image[jx, jy, jz])
-
-
-        multi_view = np.zeros((3, n_grid, n_grid))
-        multi_view[0,:,:] = image.sum(axis=0)
-        multi_view[1,:,:] = image.sum(axis=1)
-        multi_view[2,:,:] = image.sum(axis=2)
+            multi_view[view_id,:,:] = image.sum(axis=0)
+            multi_view[view_id+1,:,:] = image.sum(axis=1)
+            multi_view[view_id+2,:,:] = image.sum(axis=2)
+            view_id += 3
+        
         # write to file
         np.save(features_dir+filename, multi_view)
 
