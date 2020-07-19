@@ -300,7 +300,8 @@ if __name__ == "__main__":
     # obtain material cif file
     my_API_key = "gxTAyXSm2GvCdWer"
     m = MPRester(api_key=my_API_key)
-    mp_data = m.query(criteria={"material_id": { "$eq" : "mp-2885" }}, properties=['cif'])
+    #mp_data = m.query(criteria={"material_id": { "$eq" : "mp-2885" }}, properties=['cif'])
+    mp_data = m.query(criteria={"material_id": { "$eq" : "mp-10163" }}, properties=['cif'])
     struct = Structure.from_str(mp_data[0]['cif'], fmt='cif')
     
     # compute XRD diffraction pattern and compare outputs

@@ -40,7 +40,7 @@ class deepKNetDataset(Dataset):
     def __getitem__(self, idx):
         # load image
         image = np.load(self.root+'/features/'+self.file_names[idx]+'.npy')
-        image = torch.Tensor(image)
+        image = torch.Tensor(image[:3])
         # load target property
         properties = pd.read_csv(self.root+'/target/'+self.file_names[idx]+'.csv',
                                  sep=';', header=0, index_col=None)

@@ -81,7 +81,7 @@ def main():
     
     if args.debug:
         # random subsample in debug mode
-        subsample_size = 800
+        subsample_size = 500
         MP_data = MP_data.sample(n=subsample_size, replace=False, random_state=1, axis=0)
 
     # specify output
