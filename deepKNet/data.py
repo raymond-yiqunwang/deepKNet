@@ -8,11 +8,12 @@ from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
 
 
-def get_train_val_test_loader(dataset, batch_size=32, train_ratio=0.8, val_ratio=0.1, 
-                              test_ratio=0.1, num_data_workers=1, pin_memory=False):
+def get_train_val_test_loader(dataset, batch_size=64, train_ratio=0.7, val_ratio=0.15, 
+                              test_ratio=0.15, num_data_workers=1, pin_memory=False):
     # train-val split
     total_size = len(dataset)
     indices = list(range(total_size))
+    random.seed(5)
     random.shuffle(indices)
     train_split = int(np.floor(total_size * train_ratio))
     train_sampler = SubsetRandomSampler(indices[:train_split])
@@ -40,7 +41,7 @@ class deepKNetDataset(Dataset):
     def __getitem__(self, idx):
         # load image
         image = np.load(self.root+'/features/'+self.file_names[idx]+'.npy')
-        image = torch.Tensor(image[:3])
+        image = torch.Tensor(image)
         # load target property
         properties = pd.read_csv(self.root+'/target/'+self.file_names[idx]+'.csv',
                                  sep=';', header=0, index_col=None)

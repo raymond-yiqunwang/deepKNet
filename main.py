@@ -12,7 +12,7 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.tensorboard import SummaryWriter
 from deepKNet.data import deepKNetDataset, get_train_val_test_loader
-from deepKNet.model import LeNet5, ResNet, BasicBlock
+from deepKNet.model2D import LeNet5, ResNet, BasicBlock
 
 parser = argparse.ArgumentParser(description='deepKNet model')
 ## dataset and target property
@@ -22,6 +22,8 @@ parser.add_argument('--target', default='MIT', metavar='TARGET_PROPERTY',
                     help="target property ('band_gap', 'energy_per_atom', \
                                            'formation_energy_per_atom', 'MIT')")
 ## training-relevant params
+parser.add_argument('--dim', default=2, type=int, metavar='FEATURE DIMENSION',
+                    help='select 2D multi-view CNN or 3D pointnet model')
 parser.add_argument('--algo', default='LeNet5', type=str, metavar='NETWORK')
 parser.add_argument('--optim', default='SGD', type=str, metavar='OPTIM',
                     help='torch.optim (Adam or SGD), (default: SGD)')
@@ -84,9 +86,9 @@ def main():
         num_data_workers=args.num_data_workers)
 
     # build model
-    if args.algo == 'LeNet5':
+    if args.algo == 'LeNet5' and args.dim == 2:
         model = LeNet5()
-    elif args.algo == 'ResNet':
+    elif args.algo == 'ResNet' and args.dim == 2:
         model = ResNet(BasicBlock, [3, 4, 6, 3])
     else:
         raise NameError('Specified algorithm not implemented yet..')

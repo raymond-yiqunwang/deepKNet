@@ -7,13 +7,13 @@ class LeNet5(nn.Module):
     def __init__(self):
         super(LeNet5, self).__init__()
         # conv1
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=7,stride=1, padding=3)
+        self.conv1 = nn.Conv2d(12, 64, kernel_size=5, stride=1, padding=2)
         self.bn1 = nn.BatchNorm2d(64)
         self.pooling1 = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
         # conv2
-        self.conv2 = nn.Conv2d(64, 128, kernel_size=7, stride=1, padding=3)
+        self.conv2 = nn.Conv2d(64, 128, kernel_size=5, stride=1, padding=2)
         self.bn2 = nn.BatchNorm2d(128)
-        self.pooling2 = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+#        self.pooling2 = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
         # FC layers
         self.fc1 = nn.Linear(256, 128)
         self.bn3 = nn.BatchNorm1d(128)
@@ -28,7 +28,7 @@ class LeNet5(nn.Module):
         net = self.pooling1(net)
 
         net = F.relu(self.bn2(self.conv2(net)))
-        net = self.pooling2(net)
+#        net = self.pooling2(net)
         
         # pooling multi-views
         net = torch.max(net, dim=1, keepdim=True)[0]
@@ -77,7 +77,7 @@ class ResNet(nn.Module):
         super(ResNet, self).__init__()
         self.inplanes = 64
         self.dilation = 1
-        self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3)
+        self.conv1 = nn.Conv2d(12, self.inplanes, kernel_size=5, stride=2, padding=2)
         self.bn1 = nn.BatchNorm2d(64)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, 64, layers[0])

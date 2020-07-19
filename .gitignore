@@ -1,7 +1,8 @@
 *.log
 runs/
 checkpoints/
-data_gen/data/
+data_gen/data_multiview/
+data_gen/data_pointnet/
 data_gen/raw_data/
 */__pycache__/
 */*/__pycache__/
