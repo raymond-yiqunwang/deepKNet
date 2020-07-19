@@ -7,10 +7,10 @@ import argparse
 import numpy as np
 import pandas as pd
 import multiprocessing
-from PIL import Image
 from multiprocessing import Pool
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--root', default='./', metavar='DATA_DIR')
 parser.add_argument('--debug', dest='debug', action='store_true')
 args = parser.parse_args()
 
@@ -28,81 +28,14 @@ def generate_dataset(xrd_data, features_dir, target_dir):
         # reciprocal points in Cartesian coordinate
         recip_pos = np.dot(features[:,:-1], recip_latt)
 
-        # rotation matrices
-        rot_matrices = [
-            # identity
-            [[1, 0, 0],
-             [0, 1, 0],
-             [0, 0, 1]],
-            # 90 degrees along z axis
-            [[np.cos(np.pi/2), np.sin(np.pi/2), 0], 
-             [-np.sin(np.pi/2), np.cos(np.pi/2), 0], 
-             [0, 0, 1]],
-            # 90 degrees along y axis
-            [[np.cos(np.pi/2), 0, np.sin(np.pi/2)], 
-             [0, 1, 0],
-             [-np.sin(np.pi/2), 0, np.cos(np.pi/2)]],
-            # 90 degrees along x axis
-            [[0, np.cos(np.pi/2), np.sin(np.pi/2)], 
-             [1, 0, 0],
-             [0, -np.sin(np.pi/2), np.cos(np.pi/2)]],
-        ]
-        """
-            # 60 degrees along z axis
-            [[np.cos(np.pi/3), np.sin(np.pi/3), 0], 
-             [-np.sin(np.pi/3), np.cos(np.pi/3), 0], 
-             [0, 0, 1]],
-            # 120 degrees along z axis
-            [[np.cos(2*np.pi/3), np.sin(2*np.pi/3), 0], 
-             [-np.sin(2*np.pi/3), np.cos(2*np.pi/3), 0], 
-             [0, 0, 1]],
-            # 60 degrees along y axis
-            [[np.cos(np.pi/3), 0, np.sin(np.pi/3)], 
-             [0, 1, 0],
-             [-np.sin(np.pi/3), 0, np.cos(np.pi/3)]], 
-            # 120 degrees along y axis
-            [[np.cos(2*np.pi/3), 0, np.sin(2*np.pi/3)], 
-             [0, 1, 0],
-             [-np.sin(2*np.pi/3), 0, np.cos(2*np.pi/3)]], 
-            # 60 degrees along x axis
-            [[1, 0, 0],
-             [0, np.cos(np.pi/3), np.sin(np.pi/3)], 
-             [0, -np.sin(np.pi/3), np.cos(np.pi/3)]], 
-            # 120 degrees along x axis
-            [[1, 0, 0],
-             [0, np.cos(2*np.pi/3), np.sin(2*np.pi/3)], 
-             [0, -np.sin(2*np.pi/3), np.cos(2*np.pi/3)]]
-        ]
-        """
+        # diffraction intensity
+        intensity = features[:,-1]
+        intensity /= np.amax(intensity)
+        intensity = intensity.reshape(-1, 1)
 
-        #n_grid = 65 # (-32 -- 0 -- 32)
-        n_grid = 33 # (-16 -- 0 -- 16)
-        multi_view = np.zeros((3*len(rot_matrices), n_grid, n_grid))
-        max_r = 2. / 1.54184 # CuKa by default
-        dx = 2 * max_r / n_grid
-        
-        view_id = 0
-        for rot_matrix in rot_matrices:
-            image = np.zeros((n_grid, n_grid, n_grid))
-            # rotate
-            recip_pos_rot = np.dot(recip_pos, rot_matrix)
-            # assign to gird
-            x_grid = (n_grid//2+np.round(recip_pos_rot[:,0]/dx)).astype(int)
-            y_grid = (n_grid//2+np.round(recip_pos_rot[:,1]/dx)).astype(int)
-            z_grid = (n_grid//2+np.round(recip_pos_rot[:,2]/dx)).astype(int)
-            for idx in range(len(recip_pos_rot)):
-                image[x_grid[idx], y_grid[idx], z_grid[idx]] += features[idx,-1]
-
-            multi_view[view_id,:,:] = image.sum(axis=0)
-            multi_view[view_id+1,:,:] = image.sum(axis=1)
-            multi_view[view_id+2,:,:] = image.sum(axis=2)
-            view_id += 3
-            
-        # normalize
-        multi_view /= np.amax(multi_view)
-        
-        # write to file
-        np.save(features_dir+filename, multi_view)
+        # generate pointnet and write to file
+        pointnet = np.concatenate((recip_pos, intensity), axis=1)
+        np.save(features_dir+filename, pointnet)
 
         # target properties
         band_gap = irow['band_gap'] 
@@ -126,11 +59,11 @@ def main():
     
     # read xrd raw data
     if not args.debug:
-        root_dir = './data_multiview/'
-        xrd_file = "./raw_data/compute_xrd.csv"
+        root_dir = os.path.join(args.root, 'data_pointnet/')
+        xrd_file = os.path.join(args.root, 'raw_data/compute_xrd.csv')
     else:
-        root_dir = './raw_data/debug_data/debug_data_multiview/'
-        xrd_file = "./raw_data/debug_data/debug_compute_xrd.csv"
+        root_dir = os.path.join(args.root, 'raw_data/debug_data/debug_data_pointnet/')
+        xrd_file = os.path.join(args.root, 'raw_data/debug_data/debug_compute_xrd.csv')
     if not os.path.isfile(xrd_file):
         print("{} file does not exist, please generate it first..".format(xrd_file))
         sys.exit(1)

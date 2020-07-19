@@ -7,10 +7,10 @@ import argparse
 import numpy as np
 import pandas as pd
 import multiprocessing
-from PIL import Image
 from multiprocessing import Pool
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--root', default='./', metavar='DATA_DIR')
 parser.add_argument('--debug', dest='debug', action='store_true')
 args = parser.parse_args()
 
@@ -126,11 +126,11 @@ def main():
     
     # read xrd raw data
     if not args.debug:
-        root_dir = './data_multiview/'
-        xrd_file = "./raw_data/compute_xrd.csv"
+        root_dir = os.path.join(args.root, 'data_multiview/')
+        xrd_file = os.path.join(args.root, 'raw_data/compute_xrd.csv')
     else:
-        root_dir = './raw_data/debug_data/debug_data_multiview/'
-        xrd_file = "./raw_data/debug_data/debug_compute_xrd.csv"
+        root_dir = os.path.join(args.root, 'raw_data/debug_data/debug_data_multiview/')
+        xrd_file = os.path.join(args.root, 'raw_data/debug_data/debug_compute_xrd.csv')
     if not os.path.isfile(xrd_file):
         print("{} file does not exist, please generate it first..".format(xrd_file))
         sys.exit(1)

@@ -11,6 +11,7 @@ from multiprocessing import Pool
 from pymatgen.core.structure import Structure
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--root', default='./', metavar='DATA_DIR')
 parser.add_argument('--debug', dest='debug', action='store_true')
 args = parser.parse_args()
 
@@ -72,7 +73,7 @@ def parallel_computing(df_in, wavelength, nworkers=1):
 def main():
     global args
 
-    filename = "./raw_data/custom_MPdata.csv"
+    filename = os.path.join(args.root, "raw_data/custom_MPdata.csv")
     if not os.path.isfile(filename):
         print("{} file does not exist, please generate it first..".format(filename))
         sys.exit(1)
@@ -86,13 +87,13 @@ def main():
 
     # specify output
     if not args.debug:
-        out_file = "./raw_data/compute_xrd.csv"
+        out_file = os.path.join(args.root, "raw_data/compute_xrd.csv")
     else:
-        out_dir = "./raw_data/debug_data/"
+        out_dir = os.path.join(args.root, "raw_data/debug_data")
         if not os.path.exists(out_dir):
             print("{} folder does not exist, making directory..".format(out_dir))
             os.mkdir(out_dir)
-        out_file = out_dir + "debug_compute_xrd.csv"
+        out_file = os.path.join(out_dir, "debug_compute_xrd.csv")
     
     # output safeguard
     if os.path.exists(out_file):

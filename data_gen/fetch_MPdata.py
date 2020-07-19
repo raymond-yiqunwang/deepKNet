@@ -1,6 +1,11 @@
 import os
+import argparse
 import pandas as pd
 from pymatgen import MPRester
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--root', default='./', metavar='DATA_DIR')
+args = parser.parse_args()
 
 def fetch_materials_data(out_file):
     # properties of interest
@@ -30,11 +35,11 @@ def fetch_materials_data(out_file):
 
 def main():
     # specify IO
-    root_dir = "./raw_data/"
+    root_dir = os.path.join(args.root, "raw_data")
     if not os.path.exists(root_dir):
         print("{} folder does not exist, making directory..".format(root_dir))
         os.mkdir(root_dir)
-    out_file = root_dir + "fetch_MPdata.csv"
+    out_file = os.path.join(root_dir, "fetch_MPdata.csv")
 
     # fetch raw data from the Materials Project
     fetch_materials_data(out_file)
