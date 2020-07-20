@@ -60,10 +60,13 @@ parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: None)')
 parser.add_argument('--disable-cuda', action='store_true',
                     help='disable CUDA (default: False)')
+parser.add_argument('--gpu-id', default=0, type=int, metavar='GPUID',
+                    help='GPU ID (default: 0)')
 
 # parse args
 args = parser.parse_args()
 args.cuda = torch.cuda.is_available() and not args.disable_cuda
+cuda_device = torch.device('cuda:{}'.format(args.gpu_id)) if args.cuda else None
 if args.num_threads != n_threads:
     torch.set_num_threads(args.num_threads)
 # print out args
@@ -74,7 +77,7 @@ for key, val in vars(args).items():
 best_auc = 0.
 
 def main():
-    global args, best_auc
+    global args, best_auc, cuda_device
 
     # load data
     data_root = os.path.join(args.root, 'data_pointnet') if args.dim == 3 \
@@ -103,8 +106,7 @@ def main():
 
     if args.cuda:
         print('running on GPU..', flush=True)
-        with torch.cuda.device(args.gpu_id):
-            model = model.cuda()
+        model = model.cuda(device=cuda_device)
     else:
         print('running on CPU..', flush=True)
 
@@ -207,9 +209,8 @@ def train(train_loader, model, criterion, optimizer, epoch, writer):
         target = target.view(-1).long()
 
         if args.cuda:
-            with torch.cuda.device(args.gpu_id):
-                image = image.cuda()
-                target = target.cuda()
+            image = image.cuda(device=cuda_device)
+            target = target.cuda(device=cuda_device)
 
         # compute output
         output = model(image)
@@ -273,9 +274,8 @@ def validate(val_loader, model, criterion, epoch, writer, test_mode=False):
             target = target.view(-1).long()
 
             if args.cuda:
-                with torch.cuda.device(args.gpu_id):
-                    image = image.cuda()
-                    target = target.cuda()
+                image = image.cuda(device=cuda_device)
+                target = target.cuda(device=cuda_device)
 
             # compute output
             output = model(image)

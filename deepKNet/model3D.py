@@ -39,8 +39,8 @@ class STNkd(nn.Module):
                            .view(1, self.k*self.k) \
                            .repeat(batchsize,1)
         if x.is_cuda:
-            print(x.get_device())
-            iden = iden.cuda()
+            cuda_device = 'cuda:{}'.format(x.get_device())
+            iden = iden.cuda(device=cuda_device)
         x = x + iden
         x = x.view(-1, self.k, self.k)
         return x
