@@ -13,25 +13,24 @@ from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.tensorboard import SummaryWriter
 from deepKNet.data import deepKNetDataset, get_train_val_test_loader
 from deepKNet.model2D import LeNet5, ResNet, BasicBlock
+from deepKNet.model3D import PointNet
 
 parser = argparse.ArgumentParser(description='deepKNet model')
 ## dataset and target property
-parser.add_argument('--root', default='./data_gen/data/', metavar='DATA_DIR',
+parser.add_argument('--root', default='./data_gen/', metavar='DATA_DIR',
                     help='path to data root directory')
-parser.add_argument('--target', default='MIT', metavar='TARGET_PROPERTY',
-                    help="target property ('band_gap', 'energy_per_atom', \
-                                           'formation_energy_per_atom', 'MIT')")
+parser.add_argument('--target', default='MIT', metavar='TARGET_PROPERTY')
 ## training-relevant params
-parser.add_argument('--dim', default=2, type=int, metavar='FEATURE DIMENSION',
+parser.add_argument('--dim', default=3, type=int, metavar='FEATURE DIMENSION',
                     help='select 2D multi-view CNN or 3D pointnet model')
-parser.add_argument('--algo', default='LeNet5', type=str, metavar='NETWORK')
+parser.add_argument('--algo', default='PointNet', type=str, metavar='NETWORK')
 parser.add_argument('--optim', default='SGD', type=str, metavar='OPTIM',
                     help='torch.optim (Adam or SGD), (default: SGD)')
-parser.add_argument('--epochs', default=10, type=int, metavar='N',
+parser.add_argument('--epochs', default=20, type=int, metavar='N',
                     help='number of epochs to run (default: 100)')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch start number (useful on restarts)')
-parser.add_argument('--batch-size', default=64, type=int, metavar='N',
+parser.add_argument('--batch-size', default=32, type=int, metavar='N',
                     help='mini-batch size (default: 64)')
 parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                     metavar='LR', dest='lr',
@@ -78,7 +77,9 @@ def main():
     global args, best_auc
 
     # load data
-    dataset = deepKNetDataset(root=args.root, target=args.target)
+    data_root = os.path.join(args.root, 'data_pointnet') if args.dim == 3 \
+                else os.path.join(args.root, 'data_multiview')
+    dataset = deepKNetDataset(root=data_root, target=args.target)
     train_loader, val_loader, test_loader = get_train_val_test_loader(
         dataset=dataset, batch_size=args.batch_size, 
         train_ratio=args.train_ratio, val_ratio=args.val_ratio, 
@@ -86,7 +87,9 @@ def main():
         num_data_workers=args.num_data_workers)
 
     # build model
-    if args.algo == 'LeNet5' and args.dim == 2:
+    if args.algo == 'PointNet' and args.dim == 3:
+        model = PointNet()
+    elif args.algo == 'LeNet5' and args.dim == 2:
         model = LeNet5()
     elif args.algo == 'ResNet' and args.dim == 2:
         model = ResNet(BasicBlock, [3, 4, 6, 3])
@@ -233,7 +236,7 @@ def train(train_loader, model, criterion, optimizer, epoch, writer):
 
         # print progress and write to TensorBoard
         running_loss += loss.item()
-        if idx % args.print_freq == 0:
+        if idx % args.print_freq == 0 and idx != 0:
             progress.display(idx)
             writer.add_scalar('training loss',
                             running_loss / args.print_freq,
@@ -300,7 +303,7 @@ def validate(val_loader, model, criterion, epoch, writer, test_mode=False):
 
             # print progress and  write to TensorBoard
             running_loss += loss.item()
-            if idx % args.print_freq == 0:
+            if idx % args.print_freq == 0 and idx != 0:
                 progress.display(idx)
                 writer.add_scalar('validation loss',
                                 running_loss / args.print_freq,

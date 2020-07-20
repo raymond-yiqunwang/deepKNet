@@ -13,8 +13,6 @@ def get_train_val_test_loader(dataset, batch_size=64, train_ratio=0.7, val_ratio
     # train-val split
     total_size = len(dataset)
     indices = list(range(total_size))
-    random.seed(5)
-    random.shuffle(indices)
     train_split = int(np.floor(total_size * train_ratio))
     train_sampler = SubsetRandomSampler(indices[:train_split])
     val_split = train_split + int(np.floor(total_size * val_ratio))
@@ -37,6 +35,8 @@ class deepKNetDataset(Dataset):
         self.target = target
         self.file_names = [fname.split('.')[0] for fname in \
                            os.listdir(os.path.join(self.root, 'target/'))]
+        random.seed(123)
+        random.shuffle(self.file_names)
 
     def __getitem__(self, idx):
         # load image

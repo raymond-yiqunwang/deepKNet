@@ -129,7 +129,7 @@ def main():
         root_dir = os.path.join(args.root, 'data_multiview/')
         xrd_file = os.path.join(args.root, 'raw_data/compute_xrd.csv')
     else:
-        root_dir = os.path.join(args.root, 'raw_data/debug_data/debug_data_multiview/')
+        root_dir = os.path.join(args.root, 'raw_data/debug_data/data_multiview/')
         xrd_file = os.path.join(args.root, 'raw_data/debug_data/debug_compute_xrd.csv')
     if not os.path.isfile(xrd_file):
         print("{} file does not exist, please generate it first..".format(xrd_file))

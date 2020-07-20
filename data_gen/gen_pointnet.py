@@ -14,7 +14,7 @@ parser.add_argument('--root', default='./', metavar='DATA_DIR')
 parser.add_argument('--debug', dest='debug', action='store_true')
 args = parser.parse_args()
 
-def generate_dataset(xrd_data, features_dir, target_dir):
+def generate_dataset(xrd_data, features_dir, target_dir, threshold=5000):
     # store point cloud representation for each material
     for _, irow in xrd_data.iterrows():
         # unique material ID
@@ -27,15 +27,24 @@ def generate_dataset(xrd_data, features_dir, target_dir):
 
         # reciprocal points in Cartesian coordinate
         recip_pos = np.dot(features[:,:-1], recip_latt)
+        max_r = 2. / 1.54184 # CuKa by default
+        recip_pos /= max_r
+        assert(np.amax(recip_pos) <= 1.0)
+        assert(np.amin(recip_pos) >= -1.0)
 
         # diffraction intensity
         intensity = features[:,-1]
         intensity /= np.amax(intensity)
         intensity = intensity.reshape(-1, 1)
+        assert(np.amax(intensity) <= 1.0)
+        assert(np.amin(intensity) >= 0.)
 
         # generate pointnet and write to file
         pointnet = np.concatenate((recip_pos, intensity), axis=1)
-        np.save(features_dir+filename, pointnet)
+        while pointnet.shape[0] < threshold:
+            pointnet = np.repeat(pointnet, 2, axis=0)
+        pointnet = pointnet[:threshold, :]
+        np.save(features_dir+filename, pointnet.transpose())
 
         # target properties
         band_gap = irow['band_gap'] 
@@ -62,7 +71,7 @@ def main():
         root_dir = os.path.join(args.root, 'data_pointnet/')
         xrd_file = os.path.join(args.root, 'raw_data/compute_xrd.csv')
     else:
-        root_dir = os.path.join(args.root, 'raw_data/debug_data/debug_data_pointnet/')
+        root_dir = os.path.join(args.root, 'raw_data/debug_data/data_pointnet/')
         xrd_file = os.path.join(args.root, 'raw_data/debug_data/debug_compute_xrd.csv')
     if not os.path.isfile(xrd_file):
         print("{} file does not exist, please generate it first..".format(xrd_file))
