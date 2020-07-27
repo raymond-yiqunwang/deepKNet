@@ -43,6 +43,8 @@ parser.add_argument('--wd', '--weight_decay', default=0, type=float,
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum for SGD optimizer')
 parser.add_argument('--dropout', default=0.3, type=float, metavar='DROPOUT')
+parser.add_argument('--stn', action='store_true',
+                    help='apply STNkd (default: False)')
 parser.add_argument('--train_ratio', default=0.7, type=float, metavar='n/N',
                     help='fraction of data for training')
 parser.add_argument('--val_ratio', default=0.15, type=float, metavar='n/N',
@@ -93,7 +95,7 @@ def main():
 
     # build model
     if args.algo == 'PointNetCls' and args.dim == 3:
-        model = PointNetCls(k=4, dp=args.dropout)
+        model = PointNetCls(k=4, dp=args.dropout, stn=args.stn)
     elif args.algo == 'LeNet5' and args.dim == 2:
         model = LeNet5()
     elif args.algo == 'ResNet' and args.dim == 2:
@@ -180,6 +182,7 @@ def main():
     # test best model
     print('---------Evaluate Model on Test Set---------------', flush=True)
     best_model = load_best_model()
+    print('best validation AUC: {}'.format(best_model['best_auc']))
     model.load_state_dict(best_model['state_dict'])
     validate(test_loader, model, criterion, epoch, writer, test_mode=True)
 
