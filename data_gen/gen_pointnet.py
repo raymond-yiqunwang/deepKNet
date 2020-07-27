@@ -33,10 +33,9 @@ def generate_dataset(xrd_data, features_dir, target_dir, threshold=5000):
         assert(np.amin(recip_pos) >= -1.0)
 
         # diffraction intensity
-        intensity = features[:,-1]
-        intensity /= np.amax(intensity)
+        intensity = np.log(features[:,-1]+1) / 15
         intensity = intensity.reshape(-1, 1)
-        assert(np.amax(intensity) <= 1.0)
+#        assert(np.amax(intensity) <= 1.0)
         assert(np.amin(intensity) >= 0.)
 
         # generate pointnet and write to file

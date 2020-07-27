@@ -3,13 +3,15 @@ import random
 import torch
 import numpy as np
 import pandas as pd
-from torch.utils.data import Dataset
-from torch.utils.data import DataLoader
+from torch.utils.data import Dataset, DataLoader
+from torch.utils.data.dataloader import default_collate
 from torch.utils.data.sampler import SubsetRandomSampler
 
 
-def get_train_val_test_loader(dataset, batch_size=64, train_ratio=0.7, val_ratio=0.15, 
-                              test_ratio=0.15, num_data_workers=1, pin_memory=False):
+def get_train_val_test_loader(dataset, collate_fn=default_collate,
+                              batch_size=64, train_ratio=0.7,
+                              val_ratio=0.15, test_ratio=0.15,
+                              num_data_workers=1, pin_memory=False):
     # train-val split
     total_size = len(dataset)
     indices = list(range(total_size))
@@ -19,12 +21,15 @@ def get_train_val_test_loader(dataset, batch_size=64, train_ratio=0.7, val_ratio
     val_sampler = SubsetRandomSampler(indices[train_split:val_split])
     test_sampler = SubsetRandomSampler(indices[val_split:])
     # init DataLoader
-    train_loader = DataLoader(dataset, batch_size=batch_size, sampler=train_sampler,
-                              num_workers=num_data_workers, pin_memory=pin_memory)
-    val_loader = DataLoader(dataset, batch_size=batch_size, sampler=val_sampler,
-                              num_workers=num_data_workers, pin_memory=pin_memory)
-    test_loader = DataLoader(dataset, batch_size=batch_size, sampler=test_sampler,
-                              num_workers=num_data_workers, pin_memory=pin_memory)
+    train_loader = DataLoader(dataset, batch_size=batch_size, collate_fn=collate_fn,
+                              sampler=train_sampler, num_workers=num_data_workers,
+                              pin_memory=pin_memory)
+    val_loader = DataLoader(dataset, batch_size=batch_size, collate_fn=collate_fn,
+                            sampler=val_sampler, num_workers=num_data_workers,
+                            pin_memory=pin_memory)
+    test_loader = DataLoader(dataset, batch_size=batch_size, collate_fn=collate_fn,
+                             sampler=test_sampler, num_workers=num_data_workers,
+                             pin_memory=pin_memory)
     
     return train_loader, val_loader, test_loader
 

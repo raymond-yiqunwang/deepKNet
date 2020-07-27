@@ -29,26 +29,21 @@ args = parser.parse_args()
 def compute_xrd(raw_data, wavelength):
     xrd_data_batch = []
     xrd_simulator = xrd.XRDSimulator(wavelength=wavelength)
+    max_intensity = -1
     for idx, irow in raw_data.iterrows():
         # obtain xrd features
         struct = Structure.from_str(irow['cif'], fmt="cif")
         _, recip_latt, features = xrd_simulator.get_pattern(structure=struct)
-
-        # check centrosymmetry
-        if args.debug:
-            check_feat = pd.DataFrame(features, columns=['h', 'k', 'l', 'I'])
-            for idx, feat in check_feat.iterrows():
-                inversion_point = check_feat.loc[(check_feat['h']==-1*feat['h']) &\
-                                                 (check_feat['k']==-1*feat['k']) &\
-                                                 (check_feat['l']==-1*feat['l']), 'I']
-                assert(np.abs(feat['I']-inversion_point.values[0])<1E-6)
+        # check max intensity
+        feat = np.array(features)
+        max_intensity = max(max(feat[:,-1]), max_intensity)
 
         # properties of interest
         material_id = irow['material_id']
         band_gap = irow['band_gap']
         energy_per_atom = irow['energy_per_atom']
         formation_energy_per_atom = irow['formation_energy_per_atom']
-        MIT = float(band_gap > 1E-3)
+        MIT = float(band_gap > 0)
 
         # property list
         ifeat = [material_id, features, recip_latt.tolist(), \
@@ -56,6 +51,7 @@ def compute_xrd(raw_data, wavelength):
         # append to dataset
         xrd_data_batch.append(ifeat)
     
+    print('max:', np.log(max_intensity))
     return pd.DataFrame(xrd_data_batch)
 
 
@@ -82,7 +78,7 @@ def main():
     
     if args.debug:
         # random subsample in debug mode
-        subsample_size = 500
+        subsample_size = 800
         MP_data = MP_data.sample(n=subsample_size, replace=False, random_state=1, axis=0)
 
     # specify output

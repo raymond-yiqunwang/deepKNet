@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from multiprocessing import Pool
 from collections import defaultdict
 from pymatgen.core.structure import Structure
+from pymatgen.core.periodic_table import Element
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--root', default='./', metavar='DATA_DIR')
@@ -64,14 +65,17 @@ def show_statistics(data, plot=False):
     # elements
     elements = data['elements']
     elem_dict = defaultdict(int)
+    max_Z = -1
     for compound in elements:
         for elem in ast.literal_eval(compound):
+            max_Z = max(Element(elem).Z, max_Z)
             elem_dict[elem] += 1
     min_key = min(elem_dict, key=elem_dict.get)
     max_key = max(elem_dict, key=elem_dict.get)
     print('>> Number of unique elements: {:d}, min: {}({:d}), max: {}({:d})' \
             .format(len(elem_dict), min_key, elem_dict[min_key], \
                                     max_key, elem_dict[max_key]))
+    print('>> Max Z: {}'.format(max_Z))
 
     # energy per atom
     energy_atom = data['energy_per_atom']

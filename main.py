@@ -24,7 +24,7 @@ parser.add_argument('--target', default='MIT', metavar='TARGET_PROPERTY')
 parser.add_argument('--dim', default=3, type=int, metavar='FEATURE DIMENSION',
                     help='select 2D multi-view CNN or 3D pointnet model')
 parser.add_argument('--algo', default='PointNet', type=str, metavar='NETWORK')
-parser.add_argument('--optim', default='SGD', type=str, metavar='OPTIM',
+parser.add_argument('--optim', default='Adam', type=str, metavar='OPTIM',
                     help='torch.optim (Adam or SGD), (default: SGD)')
 parser.add_argument('--epochs', default=20, type=int, metavar='N',
                     help='number of epochs to run (default: 100)')
@@ -32,7 +32,7 @@ parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch start number (useful on restarts)')
 parser.add_argument('--batch-size', default=32, type=int, metavar='N',
                     help='mini-batch size (default: 64)')
-parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
+parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                     metavar='LR', dest='lr',
                     help='initial learning rate (default: 0.01)')
 parser.add_argument('--lr-milestones', default=[30, 60], nargs='+', type=int,

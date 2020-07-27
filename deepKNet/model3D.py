@@ -50,7 +50,7 @@ class PointNetfeat(nn.Module):
     def __init__(self, k=4):
         super(PointNetfeat, self).__init__()
         self.k = k
-        self.stn = STNkd(k=self.k)
+#        self.stn = STNkd(k=self.k)
         self.conv1 = torch.nn.Conv1d(self.k, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
         self.conv3 = torch.nn.Conv1d(128, 1024, 1)
@@ -59,11 +59,12 @@ class PointNetfeat(nn.Module):
         self.bn3 = nn.BatchNorm1d(1024)
 
     def forward(self, x):
-        n_pts = x.size()[2]
+        """
         trans = self.stn(x)
         x = x.transpose(2, 1)
         x = torch.bmm(x, trans)
         x = x.transpose(2, 1)
+        """
         x = F.relu(self.bn1(self.conv1(x)))
 
         x = F.relu(self.bn2(self.conv2(x)))
