@@ -1,4 +1,5 @@
 *.log
+run_job.sh
 runs/
 checkpoints/
 data_gen/data_multiview/

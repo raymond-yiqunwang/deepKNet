@@ -84,13 +84,13 @@ def main():
 
     # specify output
     if not args.debug:
-        out_file = os.path.join(args.root, "raw_data/compute_xrd.csv")
+        out_file = os.path.join(args.root, "raw_data/compute_xrd_"+args.wavelength+".csv")
     else:
-        out_dir = os.path.join(args.root, "raw_data/debug_data")
+        out_dir = os.path.join(args.root, "raw_data/debug_data/")
         if not os.path.exists(out_dir):
             print("{} folder does not exist, making directory..".format(out_dir))
             os.mkdir(out_dir)
-        out_file = os.path.join(out_dir, "debug_compute_xrd.csv")
+        out_file = os.path.join(out_dir, "debug_compute_xrd_"+args.wavelength+".csv")
     
     # output safeguard
     if os.path.exists(out_file):
@@ -101,7 +101,6 @@ def main():
     df.to_csv(out_file, sep=';', header=None, index=False, mode='w')
     
     # parameters
-    wavelength = args.wavelength
     nworkers = max(multiprocessing.cpu_count()-2, 1)
     n_slices = MP_data.shape[0] // (20*nworkers) # number of batches to split into
 
@@ -110,7 +109,7 @@ def main():
     print("start computing xrd..")
     for idx, chunk in enumerate(MP_data_chunk):
         # generate xrd point cloud representations
-        xrd_data = parallel_computing(chunk, wavelength, nworkers)
+        xrd_data = parallel_computing(chunk, args.wavelength, nworkers)
         # write to file
         xrd_data.to_csv(out_file, sep=';', header=None, index=False, mode='a')
         print('finished processing chunk {}/{}'.format(idx+1, n_slices)) 

@@ -32,8 +32,8 @@ def generate_dataset(xrd_data, features_dir, target_dir, threshold, padding):
         recip_pos = np.dot(features[:,:-1], recip_latt)
         if args.wavelength == 'CuKa':
             max_r = 2 / 1.54184
-        elif args.wavelength == 'AgKa':
-            max_r = 2 / 0.560885
+        elif args.wavelength == 'MoKa':
+            max_r = 2 / 0.71073
         else:
             raise NotImplementedError
         recip_pos /= max_r
@@ -84,10 +84,11 @@ def main():
     # read xrd raw data
     if not args.debug:
         root_dir = os.path.join(args.root, 'data_pointnet/')
-        xrd_file = os.path.join(args.root, 'raw_data/compute_xrd.csv')
+        xrd_file = os.path.join(args.root, 'raw_data/compute_xrd_'+args.wavelength+'.csv')
     else:
         root_dir = os.path.join(args.root, 'raw_data/debug_data/data_pointnet/')
-        xrd_file = os.path.join(args.root, 'raw_data/debug_data/debug_compute_xrd.csv')
+        xrd_file = os.path.join(args.root, 'raw_data/debug_data/debug_compute_xrd_' \
+                                            +args.wavelength+'.csv')
     if not os.path.isfile(xrd_file):
         print("{} file does not exist, please generate it first..".format(xrd_file))
         sys.exit(1)
