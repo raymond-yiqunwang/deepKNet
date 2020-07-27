@@ -7,7 +7,6 @@ from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.dataloader import default_collate
 from torch.utils.data.sampler import SubsetRandomSampler
 
-
 def get_train_val_test_loader(dataset, collate_fn=default_collate,
                               batch_size=64, train_ratio=0.7,
                               val_ratio=0.15, test_ratio=0.15,
@@ -40,13 +39,15 @@ class deepKNetDataset(Dataset):
         self.target = target
         self.file_names = [fname.split('.')[0] for fname in \
                            os.listdir(os.path.join(self.root, 'target/'))]
-        random.seed(123)
+        random.seed(5)
         random.shuffle(self.file_names)
 
     def __getitem__(self, idx):
         # load image
         image = np.load(self.root+'/features/'+self.file_names[idx]+'.npy')
         image = torch.Tensor(image)
+        # apply random 3D rotation for data augmentation
+        # TODO
         # load target property
         properties = pd.read_csv(self.root+'/target/'+self.file_names[idx]+'.csv',
                                  sep=';', header=0, index_col=None)

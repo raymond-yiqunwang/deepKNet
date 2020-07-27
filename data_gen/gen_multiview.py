@@ -121,8 +121,7 @@ def main():
     global args
 
     # safeguard
-    _ = input("Attention, all existing training data will be deleted and regenerated.. \
-        \n>> Hit Enter to continue, Ctrl+c to terminate..")
+    print("Attention, all existing training data will be deleted and regenerated..")
     
     # read xrd raw data
     if not args.debug:

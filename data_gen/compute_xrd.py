@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
-import XRD_simulator.xrd_simulator as xrd
+import xrd_simulator.xrd_simulator as xrd
 import multiprocessing
 from multiprocessing import Pool
 from pymatgen.core.structure import Structure
@@ -13,6 +13,7 @@ from pymatgen.core.structure import Structure
 parser = argparse.ArgumentParser()
 parser.add_argument('--root', default='./', metavar='DATA_DIR')
 parser.add_argument('--debug', dest='debug', action='store_true')
+parser.add_argument('--wavelength', default='CuKa', metavar='X-ray wavelength')
 args = parser.parse_args()
 
 """ properties
@@ -46,12 +47,12 @@ def compute_xrd(raw_data, wavelength):
         MIT = float(band_gap > 0)
 
         # property list
-        ifeat = [material_id, features, recip_latt.tolist(), \
+        ifeat = [material_id, recip_latt.tolist(), features, \
                  band_gap, energy_per_atom, formation_energy_per_atom, MIT]
         # append to dataset
         xrd_data_batch.append(ifeat)
     
-    print('max:', np.log(max_intensity))
+    print('batch max intensity:', np.log(max_intensity))
     return pd.DataFrame(xrd_data_batch)
 
 
@@ -93,15 +94,14 @@ def main():
     
     # output safeguard
     if os.path.exists(out_file):
-        _ = input("Attention, the existing xrd data will be deleted and regenerated.. \
-            \n>> Hit Enter to continue, Ctrl+c to terminate..")
-    header = [['material_id', 'features', 'recip_latt', \
+        print("Attention, the existing xrd data will be deleted and regenerated..")
+    header = [['material_id', 'recip_latt', 'features', \
                'band_gap', 'energy_per_atom', 'formation_energy_per_atom', 'MIT']]
     df = pd.DataFrame(header)
     df.to_csv(out_file, sep=';', header=None, index=False, mode='w')
     
     # parameters
-    wavelength = 'CuKa' # X-ray wavelength
+    wavelength = args.wavelength
     nworkers = max(multiprocessing.cpu_count()-2, 1)
     n_slices = MP_data.shape[0] // (20*nworkers) # number of batches to split into
 

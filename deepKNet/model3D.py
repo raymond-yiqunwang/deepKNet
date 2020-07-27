@@ -74,15 +74,16 @@ class PointNetfeat(nn.Module):
         return x
 
 
-class PointNet(nn.Module):
-    def __init__(self, k=4):
-        super(PointNet, self).__init__()
+class PointNetCls(nn.Module):
+    def __init__(self, k=4, dp=0.3):
+        super(PointNetCls, self).__init__()
         self.k = k
+        self.dp = dp
         self.feat = PointNetfeat(k=self.k)
         self.fc1 = nn.Linear(1024, 512)
         self.fc2 = nn.Linear(512, 256)
         self.fc3 = nn.Linear(256, 2)
-        self.dropout = nn.Dropout(p=0.3)
+        self.dropout = nn.Dropout(p=self.dp)
         self.bn1 = nn.BatchNorm1d(512)
         self.bn2 = nn.BatchNorm1d(256)
         self.logsoftmax = nn.LogSoftmax(dim=1)

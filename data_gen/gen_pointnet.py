@@ -12,9 +12,12 @@ from multiprocessing import Pool
 parser = argparse.ArgumentParser()
 parser.add_argument('--root', default='./', metavar='DATA_DIR')
 parser.add_argument('--debug', dest='debug', action='store_true')
+parser.add_argument('--wavelength',  default='CuKa', metavar='X-RAY WAVELENGTH')
+parser.add_argument('--threshold', default=5000, type=int, metavar='MAX K-POINT')
+parser.add_argument('--padding', default='zero', metavar='PADDING METHOD')
 args = parser.parse_args()
 
-def generate_dataset(xrd_data, features_dir, target_dir, threshold=2500):
+def generate_dataset(xrd_data, features_dir, target_dir, threshold, padding):
     # store point cloud representation for each material
     for _, irow in xrd_data.iterrows():
         # unique material ID
@@ -27,7 +30,12 @@ def generate_dataset(xrd_data, features_dir, target_dir, threshold=2500):
 
         # reciprocal points in Cartesian coordinate
         recip_pos = np.dot(features[:,:-1], recip_latt)
-        max_r = 2. / 1.54184 # CuKa by default
+        if args.wavelength == 'CuKa':
+            max_r = 2 / 1.54184
+        elif args.wavelength == 'AgKa':
+            max_r = 2 / 0.560885
+        else:
+            raise NotImplementedError
         recip_pos /= max_r
         assert(np.amax(recip_pos) <= 1.0)
         assert(np.amin(recip_pos) >= -1.0)
@@ -40,9 +48,18 @@ def generate_dataset(xrd_data, features_dir, target_dir, threshold=2500):
 
         # generate pointnet and write to file
         pointnet = np.concatenate((recip_pos, intensity), axis=1)
-        while pointnet.shape[0] < threshold:
-            pointnet = np.repeat(pointnet, 2, axis=0)
-        pointnet = pointnet[:threshold, :]
+        if padding == 'zero':
+            if pointnet.shape[0] < threshold:
+                pointnet = np.pad(pointnet, ((0, threshold-pointnet.shape[0]), (0, 0)))
+            else:
+                pointnet = pointnet[:threshold, :]
+        elif padding == 'periodic':
+            while pointnet.shape[0] < threshold:
+                pointnet = np.repeat(pointnet, 2, axis=0)
+            pointnet = pointnet[:threshold, :]
+        else:
+            raise NotImplementedError
+
         np.save(features_dir+filename, pointnet.transpose())
 
         # target properties
@@ -62,8 +79,7 @@ def main():
     global args
 
     # safeguard
-    _ = input("Attention, all existing training data will be deleted and regenerated.. \
-        \n>> Hit Enter to continue, Ctrl+c to terminate..")
+    print("Attention, all existing training data will be deleted and regenerated..")
     
     # read xrd raw data
     if not args.debug:
@@ -89,6 +105,8 @@ def main():
     os.mkdir(features_dir)
     
     # parameters
+    threshold = args.threshold
+    padding = args.padding
     nworkers = max(multiprocessing.cpu_count()-2, 1)
     
     # process in chunks due to large size
@@ -98,7 +116,7 @@ def main():
         # parallel processing
         xrd_data_chunk = np.array_split(xrd_data, nworkers)
         pool = Pool(nworkers)
-        pargs = [(data, features_dir, target_dir) for data in xrd_data_chunk]
+        pargs = [(data, features_dir, target_dir, threshold, padding) for data in xrd_data_chunk]
         pool.starmap(generate_dataset, pargs)
         pool.close()
         pool.join()

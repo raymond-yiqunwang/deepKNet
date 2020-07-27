@@ -13,7 +13,7 @@ from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.tensorboard import SummaryWriter
 from deepKNet.data import deepKNetDataset, get_train_val_test_loader
 from deepKNet.model2D import LeNet5, ResNet, BasicBlock
-from deepKNet.model3D import PointNet
+from deepKNet.model3D import PointNetCls
 
 parser = argparse.ArgumentParser(description='deepKNet model')
 ## dataset and target property
@@ -23,20 +23,20 @@ parser.add_argument('--target', default='MIT', metavar='TARGET_PROPERTY')
 ## training-relevant params
 parser.add_argument('--dim', default=3, type=int, metavar='FEATURE DIMENSION',
                     help='select 2D multi-view CNN or 3D pointnet model')
-parser.add_argument('--algo', default='PointNet', type=str, metavar='NETWORK')
+parser.add_argument('--algo', default='PointNetCls', type=str, metavar='NETWORK')
 parser.add_argument('--optim', default='Adam', type=str, metavar='OPTIM',
-                    help='torch.optim (Adam or SGD), (default: SGD)')
-parser.add_argument('--epochs', default=20, type=int, metavar='N',
+                    help='torch.optim (Adam or SGD), (default: Adam)')
+parser.add_argument('--epochs', default=100, type=int, metavar='N',
                     help='number of epochs to run (default: 100)')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch start number (useful on restarts)')
 parser.add_argument('--batch-size', default=128, type=int, metavar='N',
-                    help='mini-batch size (default: 64)')
+                    help='mini-batch size (default: 128)')
 parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                     metavar='LR', dest='lr',
-                    help='initial learning rate (default: 0.01)')
+                    help='initial learning rate (default: 0.001)')
 parser.add_argument('--lr-milestones', default=[30, 60], nargs='+', type=int,
-                    help='learning rate decay milestones (default: [20, 40])')
+                    help='learning rate decay milestones (default: [30, 60])')
 parser.add_argument('--wd', '--weight-decay', default=0, type=float,
                     metavar='W', help='weigh decay (default: 0)',
                     dest='weight_decay')
@@ -62,6 +62,7 @@ parser.add_argument('--disable-cuda', action='store_true',
                     help='disable CUDA (default: False)')
 parser.add_argument('--gpu-id', default=0, type=int, metavar='GPUID',
                     help='GPU ID (default: 0)')
+parser.add_argument('--run-name', default='run1', metavar='RUNID')
 
 # parse args
 args = parser.parse_args()
@@ -90,8 +91,8 @@ def main():
         num_data_workers=args.num_data_workers)
 
     # build model
-    if args.algo == 'PointNet' and args.dim == 3:
-        model = PointNet()
+    if args.algo == 'PointNetCls' and args.dim == 3:
+        model = PointNetCls(k=4, dp=0.3)
     elif args.algo == 'LeNet5' and args.dim == 2:
         model = LeNet5()
     elif args.algo == 'ResNet' and args.dim == 2:
@@ -142,11 +143,12 @@ def main():
 
     # TensorBoard writer
     summary_root = './runs/'
-    summary_file = summary_root + args.target
+    summary_file = summary_root + args.run_name
     if not os.path.exists(summary_root):
         os.mkdir(summary_root)
     if os.path.exists(summary_file):
-        shutil.rmtree(summary_file)
+        print('run file already exists, use a different --run-name')
+        sys.exit(1)
     writer = SummaryWriter(summary_file)
 
     # learning-rate scheduler
@@ -303,7 +305,7 @@ def validate(val_loader, model, criterion, epoch, writer, test_mode=False):
 
             # print progress and  write to TensorBoard
             running_loss += loss.item()
-            if idx % args.print_freq == 0 and idx != 0:
+            if idx % args.print_freq == 0 and idx != 0 and not test_mode:
                 progress.display(idx)
                 writer.add_scalar('validation loss',
                                 running_loss / args.print_freq,
@@ -318,10 +320,10 @@ def save_checkpoint(state, is_best):
     check_root = './checkpoints/'
     if not os.path.exists(check_root):
         os.mkdir(check_root)
-    filename = check_root + args.target + '_checkpoint.pth.tar'
+    filename = check_root + args.run_name + '_checkpoint.pth.tar'
     torch.save(state, filename)
     if is_best:
-        shutil.copyfile(filename, check_root+args.target+'_model_best.pth.tar')
+        shutil.copyfile(filename, check_root+args.run_name+'_model_best.pth.tar')
 
 
 def load_best_model():
@@ -329,7 +331,7 @@ def load_best_model():
     if not os.path.exists(check_root):
         print('{} dir does not exist, exiting...', flush=True)
         sys.exit(1)
-    filename = check_root + args.target + '_model_best.pth.tar'
+    filename = check_root + args.run_name + '_model_best.pth.tar'
     if not os.path.isfile(filename):
         print('checkpoint {} not found, exiting...', flush=True)
         sys.exit(1)
@@ -339,6 +341,7 @@ def load_best_model():
 def class_eval(prediction, target):
     prediction = np.exp(prediction.detach().cpu().numpy())
     target = target.detach().cpu().numpy()
+    # TODO change threshold
     pred_label = np.argmax(prediction, axis=1)
     target_label = np.squeeze(target)
     if prediction.shape[1] == 2:
