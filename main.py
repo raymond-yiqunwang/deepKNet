@@ -28,25 +28,25 @@ parser.add_argument('--optim', default='Adam', type=str, metavar='OPTIM',
                     help='torch.optim (Adam or SGD), (default: Adam)')
 parser.add_argument('--epochs', default=100, type=int, metavar='N',
                     help='number of epochs to run (default: 100)')
-parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
+parser.add_argument('--start_epoch', default=0, type=int, metavar='N',
                     help='manual epoch start number (useful on restarts)')
-parser.add_argument('--batch-size', default=128, type=int, metavar='N',
+parser.add_argument('--batch_size', default=128, type=int, metavar='N',
                     help='mini-batch size (default: 128)')
-parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
+parser.add_argument('--lr', '--learning_rate', default=0.001, type=float,
                     metavar='LR', dest='lr',
                     help='initial learning rate (default: 0.001)')
-parser.add_argument('--lr-milestones', default=[30, 60], nargs='+', type=int,
+parser.add_argument('--lr_milestones', default=[30, 60], nargs='+', type=int,
                     help='learning rate decay milestones (default: [30, 60])')
-parser.add_argument('--wd', '--weight-decay', default=0, type=float,
+parser.add_argument('--wd', '--weight_decay', default=0, type=float,
                     metavar='W', help='weigh decay (default: 0)',
                     dest='weight_decay')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum for SGD optimizer')
-parser.add_argument('--train-ratio', default=0.7, type=float, metavar='n/N',
+parser.add_argument('--train_ratio', default=0.7, type=float, metavar='n/N',
                     help='fraction of data for training')
-parser.add_argument('--val-ratio', default=0.15, type=float, metavar='n/N',
+parser.add_argument('--val_ratio', default=0.15, type=float, metavar='n/N',
                     help='fraction of data for validation')
-parser.add_argument('--test-ratio', default=0.15, type=float, metavar='n/N',
+parser.add_argument('--test_ratio', default=0.15, type=float, metavar='n/N',
                     help='fraction of data for test')
 ## misc
 n_threads = torch.get_num_threads()
@@ -54,15 +54,15 @@ parser.add_argument('--num_threads', default=n_threads, type=int, metavar='N_thr
                     help='number of threads used for parallelizing CPU operations')
 parser.add_argument('--num_data_workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
-parser.add_argument('--print-freq', default=10, type=int, metavar='N',
+parser.add_argument('--print_freq', default=10, type=int, metavar='N',
                     help='print frequency (default: 10)')
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: None)')
-parser.add_argument('--disable-cuda', action='store_true',
+parser.add_argument('--disable_cuda', action='store_true',
                     help='disable CUDA (default: False)')
-parser.add_argument('--gpu-id', default=0, type=int, metavar='GPUID',
+parser.add_argument('--gpu_id', default=0, type=int, metavar='GPUID',
                     help='GPU ID (default: 0)')
-parser.add_argument('--run-name', default='run1', metavar='RUNID')
+parser.add_argument('--run_name', default='run1', metavar='RUNID')
 
 # parse args
 args = parser.parse_args()
