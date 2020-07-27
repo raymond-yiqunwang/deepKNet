@@ -14,7 +14,7 @@ parser.add_argument('--root', default='./', metavar='DATA_DIR')
 parser.add_argument('--debug', dest='debug', action='store_true')
 args = parser.parse_args()
 
-def generate_dataset(xrd_data, features_dir, target_dir, threshold=5000):
+def generate_dataset(xrd_data, features_dir, target_dir, threshold=2500):
     # store point cloud representation for each material
     for _, irow in xrd_data.iterrows():
         # unique material ID

@@ -30,7 +30,7 @@ parser.add_argument('--epochs', default=20, type=int, metavar='N',
                     help='number of epochs to run (default: 100)')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch start number (useful on restarts)')
-parser.add_argument('--batch-size', default=32, type=int, metavar='N',
+parser.add_argument('--batch-size', default=64, type=int, metavar='N',
                     help='mini-batch size (default: 64)')
 parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                     metavar='LR', dest='lr',
@@ -105,7 +105,7 @@ def main():
            .format(trainable_params), flush=True)
 
     if args.cuda:
-        print('running on GPU..', flush=True)
+        print('running on GPU:{}..'.format(args.gpu_id), flush=True)
         model = model.cuda(device=cuda_device)
     else:
         print('running on CPU..', flush=True)
