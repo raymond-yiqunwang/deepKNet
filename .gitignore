@@ -1,5 +1,6 @@
 *.log
 run_job.sh
+job_submit.sh
 runs/
 checkpoints/
 data_gen/data_multiview/

@@ -102,7 +102,7 @@ def main():
     
     # parameters
     nworkers = max(multiprocessing.cpu_count()-2, 1)
-    n_slices = MP_data.shape[0] // (20*nworkers) # number of batches to split into
+    n_slices = MP_data.shape[0] // (10*nworkers) # number of batches to split into
 
     # parallel processing
     MP_data_chunk = np.array_split(MP_data, n_slices)
