@@ -13,11 +13,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--root', default='./', metavar='DATA_DIR')
 parser.add_argument('--debug', dest='debug', action='store_true')
 parser.add_argument('--wavelength',  default='CuKa', metavar='X-RAY WAVELENGTH')
-parser.add_argument('--cutoff', default=6000, type=int, metavar='MAX K-POINT')
-parser.add_argument('--padding', default='periodic', metavar='PADDING METHOD')
 args = parser.parse_args()
 
-def generate_dataset(xrd_data, features_dir, target_dir, cutoff, padding):
+def generate_dataset(xrd_data, features_dir, target_dir):
     # store point cloud representation for each material
     for _, irow in xrd_data.iterrows():
         # unique material ID
@@ -93,8 +91,6 @@ def main():
     os.mkdir(features_dir)
     
     # parameters
-    cutoff = args.cutoff
-    padding = args.padding
     nworkers = max(multiprocessing.cpu_count(), 1)
     
     # process in chunks due to large size
@@ -104,7 +100,7 @@ def main():
         # parallel processing
         xrd_data_chunk = np.array_split(xrd_data, nworkers)
         pool = Pool(nworkers)
-        pargs = [(data, features_dir, target_dir, cutoff, padding) for data in xrd_data_chunk]
+        pargs = [(data, features_dir, target_dir) for data in xrd_data_chunk]
         pool.starmap(generate_dataset, pargs)
         pool.close()
         pool.join()
@@ -116,22 +112,25 @@ def check_npoint(wavelength='CuKa'):
     xrd_file = './raw_data/compute_xrd_'+wavelength+'.csv'
     data_all = pd.read_csv(xrd_file, sep=';', header=0, index_col=None, chunksize=1000)
     npoints = []
-    for _, xrd_data in enumerate(data_all):
-        for _, irow in xrd_data.iterrows():
-            npoints.append(len(ast.literal_eval(irow['features'])))
-        print('finished one chunk')
+    for idx, xrd_data in enumerate(data_all):
+        feat_len = xrd_data['features'].apply(ast.literal_eval).apply(len)
+        feat_len_list = feat_len.tolist()
+        print('Chunk min: {}, max: {}, mean: {}, median: {}, std: {}'.format(
+               np.min(feat_len_list), np.max(feat_len_list), np.mean(feat_len_list),
+               np.median(feat_len_list), np.std(feat_len_list)))
+        npoints += feat_len_list
 
-    print('min: {}, max: {}, mean: {}, median: {}, std: {}'.format(
+    print('Total min: {}, max: {}, mean: {}, median: {}, std: {}'.format(
            np.min(npoints), np.max(npoints), np.mean(npoints),
            np.median(npoints), np.std(npoints)))
 
 
 if __name__ == "__main__":
-    if False:
+    if True:
         main()
     else:
         # CuKa:
-        #   min: , max: , mean: , median: , std: 
+        #   min: 50, max: 53000, mean: 4000, median: 3000, std: 4000
         # MoKa:
         #   min: max: mean: median: std:
         check_npoint(wavelength='CuKa')

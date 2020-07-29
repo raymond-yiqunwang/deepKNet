@@ -16,62 +16,42 @@ from deepKNet.model2D import LeNet5, ResNet, BasicBlock
 from deepKNet.model3D import PointNetCls
 
 parser = argparse.ArgumentParser(description='deepKNet model')
-## dataset and target property
-parser.add_argument('--root', default='./data_gen/', metavar='DATA_DIR',
-                    help='path to data root directory')
-parser.add_argument('--target', default='MIT', metavar='TARGET_PROPERTY')
 parser.add_argument('--task', choices=['regression', 'classification'],
                     default='classification')
-parser.add_argument('--normalize', action='store_true')
-parser.add_argument('--cutoff', default=6000, type=int, metavar='NPOINT CUTOFF')
-parser.add_argument('--padding', default='zero', type=str, metavar='POINT PADDING')
-parser.add_argument('--data_aug', action='store_true')
-## training-relevant params
-parser.add_argument('--dim', default=3, type=int, metavar='FEATURE DIMENSION',
-                    help='select 2D multi-view CNN or 3D pointnet model')
 parser.add_argument('--algo', default='PointNetCls', type=str, metavar='NETWORK')
-parser.add_argument('--optim', default='Adam', type=str, metavar='OPTIM',
-                    help='torch.optim (Adam or SGD), (default: Adam)')
-parser.add_argument('--epochs', default=100, type=int, metavar='N',
-                    help='number of epochs to run (default: 100)')
-parser.add_argument('--start_epoch', default=0, type=int, metavar='N',
-                    help='manual epoch start number (useful on restarts)')
-parser.add_argument('--batch_size', default=128, type=int, metavar='N',
-                    help='mini-batch size (default: 128)')
-parser.add_argument('--lr', '--learning_rate', default=0.001, type=float,
-                    metavar='LR', dest='lr',
-                    help='initial learning rate (default: 0.001)')
-parser.add_argument('--lr_milestones', default=[30, 60], nargs='+', type=int,
-                    help='learning rate decay milestones (default: [30, 60])')
+parser.add_argument('--dim', default=3, type=int, metavar='FEATURE DIMENSION')
+parser.add_argument('--target', default='MIT', metavar='TARGET_PROPERTY')
+parser.add_argument('--root', default='./data_gen/', metavar='DATA_DIR')
+# hyper parameter tuning
+parser.add_argument('--padding', default='zero', type=str, metavar='POINT PADDING')
+parser.add_argument('--cutoff', default=6000, type=int, metavar='NPOINT CUTOFF')
+parser.add_argument('--data_aug', action='store_true')
+parser.add_argument('--stn', action='store_true')
+parser.add_argument('--disable_normalization', action='store_true')
+parser.add_argument('--epochs', default=60, type=int, metavar='N')
+parser.add_argument('--batch_size', default=64, type=int, metavar='N')
+parser.add_argument('--optim', default='Adam', type=str, metavar='OPTIM')
+parser.add_argument('--lr', default=0.001, type=float, metavar='LR')
+parser.add_argument('--lr_milestones', default=[30, 50], nargs='+', type=int)
+parser.add_argument('--dropout', default=0.3, type=float, metavar='DROPOUT')
+parser.add_argument('--gpu_id', default=0, type=int, metavar='GPUID')
+parser.add_argument('--run_name', default='run1', metavar='RUNID')
+# default params
+parser.add_argument('--start_epoch', default=0, type=int, metavar='N')
 parser.add_argument('--wd', '--weight_decay', default=0, type=float,
                     metavar='W', help='weigh decay (default: 0)',
                     dest='weight_decay')
-parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
-                    help='momentum for SGD optimizer')
-parser.add_argument('--dropout', default=0.3, type=float, metavar='DROPOUT')
-parser.add_argument('--stn', action='store_true',
-                    help='apply STNkd (default: False)')
-parser.add_argument('--train_ratio', default=0.7, type=float, metavar='n/N',
-                    help='fraction of data for training')
-parser.add_argument('--val_ratio', default=0.15, type=float, metavar='n/N',
-                    help='fraction of data for validation')
-parser.add_argument('--test_ratio', default=0.15, type=float, metavar='n/N',
-                    help='fraction of data for test')
-## misc
+parser.add_argument('--momentum', default=0.9, type=float, metavar='M')
+parser.add_argument('--train_ratio', default=0.7, type=float, metavar='n/N')
+parser.add_argument('--val_ratio', default=0.15, type=float, metavar='n/N')
+parser.add_argument('--test_ratio', default=0.15, type=float, metavar='n/N')
 n_threads = torch.get_num_threads()
-parser.add_argument('--num_threads', default=n_threads, type=int, metavar='N_thread',
-                    help='number of threads used for parallelizing CPU operations')
-parser.add_argument('--num_data_workers', default=4, type=int, metavar='N',
-                    help='number of data loading workers (default: 4)')
-parser.add_argument('--print_freq', default=10, type=int, metavar='N',
-                    help='print frequency (default: 10)')
-parser.add_argument('--resume', default='', type=str, metavar='PATH',
-                    help='path to latest checkpoint (default: None)')
-parser.add_argument('--disable_cuda', action='store_true',
-                    help='disable CUDA (default: False)')
-parser.add_argument('--gpu_id', default=0, type=int, metavar='GPUID',
-                    help='GPU ID (default: 0)')
-parser.add_argument('--run_name', default='run1', metavar='RUNID')
+parser.add_argument('--num_threads', default=n_threads, type=int, metavar='N_thread')
+parser.add_argument('--num_data_workers', default=4, type=int, metavar='N')
+parser.add_argument('--print_freq', default=10, type=int, metavar='N')
+parser.add_argument('--test_freq', default=10, type=int, metavar='N')
+parser.add_argument('--resume', default='', type=str, metavar='PATH')
+parser.add_argument('--disable_cuda', action='store_true')
 
 # parse args
 args = parser.parse_args()
@@ -96,7 +76,8 @@ def main():
     data_root = os.path.join(args.root, 'data_pointnet') if args.dim == 3 \
                 else os.path.join(args.root, 'data_multiview')
     dataset = deepKNetDataset(root=data_root, target=args.target, 
-                              cutoff=args.cutoff, padding=args.padding)
+                              cutoff=args.cutoff, padding=args.padding,
+                              data_aug=args.data_aug)
     train_loader, val_loader, test_loader = get_train_val_test_loader(
         dataset=dataset, batch_size=args.batch_size, 
         train_ratio=args.train_ratio, val_ratio=args.val_ratio, 
@@ -106,7 +87,7 @@ def main():
     # obtain target value normalizer
     normalizer = Normalizer(torch.zeros(2))
     normalizer.load_state_dict({'mean': 0., 'std': 1.})
-    if args.task == 'regression' and args.normalize:
+    if args.task == 'regression' and not args.disable_normalization:
         sample_target = [dataset[i][-1] for i in 
                          sample(range(len(dataset)), 1000)]
         normalizer = Normalizer(sample_target)
@@ -205,6 +186,15 @@ def main():
             'best_performance': best_performance,
             'optimizer': optimizer.state_dict(),
         }, is_best)
+
+        if (epoch-args.start_epoch) % args.test_freq == 0 \
+            and (epoch-args.start_epoch) != 0:
+            # test best model
+            print('---------Evaluate Model on Test Set---------------', flush=True)
+            best_model = load_best_model()
+            print('best validation performance: {}'.format(best_model['best_performance']))
+            model.load_state_dict(best_model['state_dict'])
+            validate(test_loader, model, criterion, epoch, normalizer, writer, test_mode=True)
 
     # test best model
     print('---------Evaluate Model on Test Set---------------', flush=True)

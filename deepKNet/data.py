@@ -46,11 +46,10 @@ class deepKNetDataset(Dataset):
         random.shuffle(self.file_names)
 
     def __getitem__(self, idx):
-        # load image data
-        image = np.load(self.root+'/features/'+self.file_names[idx]+'.npy')
+        # load point cloud data
+        point_cloud = np.load(self.root+'/features/'+self.file_names[idx]+'.npy')
 
-        # generate pointcloud
-        point_cloud = np.concatenate((recip_pos, intensity), axis=1)
+        # padding and cutoff
         if self.padding == 'zero':
             if point_cloud.shape[0] < self.cutoff:
                 point_cloud = np.pad(point_cloud, ((0, self.cutoff-point_cloud.shape[0]), (0, 0)))
@@ -64,8 +63,22 @@ class deepKNetDataset(Dataset):
             raise NotImplementedError
         
         # apply random 3D rotation for data augmentation
-        # TODO
-        # if self.data_aug:
+        if self.data_aug:
+            np.random.seed(8)
+            alpha, beta, gamma = np.pi * np.random.random(3)
+            rot_matrix = [
+                np.cos(alpha)*np.cos(beta),
+                np.cos(alpha)*np.sin(beta)*np.sin(gamma) - np.sin(alpha)*np.cos(gamma),
+                np.cos(alpha)*np.sin(beta)*np.cos(gamma) + np.sin(alpha)*np.sin(gamma),
+                np.sin(alpha)*np.cos(beta),
+                np.sin(alpha)*np.sin(beta)*np.sin(gamma) + np.cos(alpha)*np.cos(gamma),
+                np.sin(alpha)*np.sin(beta)*np.cos(gamma) - np.cos(alpha)*np.sin(gamma),
+                -1*np.sin(beta),
+                np.cos(beta)*np.sin(gamma),
+                np.cos(beta)*np.cos(gamma)
+            ]
+            rot_matrix = np.array(rot_matrix).reshape(3,3)
+            point_cloud[:,:-1] = np.dot(point_cloud[:,:-1], rot_matrix.T)
         
         point_cloud = torch.Tensor(point_cloud.transpose())
 

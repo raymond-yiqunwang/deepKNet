@@ -30,14 +30,10 @@ args = parser.parse_args()
 def compute_xrd(raw_data, wavelength):
     xrd_data_batch = []
     xrd_simulator = xrd.XRDSimulator(wavelength=wavelength)
-    max_intensity = -1
     for idx, irow in raw_data.iterrows():
         # obtain xrd features
         struct = Structure.from_str(irow['cif'], fmt="cif")
         _, recip_latt, features = xrd_simulator.get_pattern(structure=struct)
-        # check max intensity
-        feat = np.array(features)
-        max_intensity = max(max(feat[:,-1]), max_intensity)
 
         # properties of interest
         material_id = irow['material_id']
@@ -47,12 +43,11 @@ def compute_xrd(raw_data, wavelength):
         MIT = float(band_gap > 0)
 
         # property list
-        ifeat = [material_id, recip_latt.tolist(), features, \
+        ifeat = [material_id, recip_latt.tolist(), features,
                  band_gap, energy_per_atom, formation_energy_per_atom, MIT]
         # append to dataset
         xrd_data_batch.append(ifeat)
     
-    print('batch max intensity:', np.log(max_intensity))
     return pd.DataFrame(xrd_data_batch)
 
 
@@ -95,7 +90,7 @@ def main():
     # output safeguard
     if os.path.exists(out_file):
         print("Attention, the existing xrd data will be deleted and regenerated..")
-    header = [['material_id', 'recip_latt', 'features', \
+    header = [['material_id', 'recip_latt', 'features',
                'band_gap', 'energy_per_atom', 'formation_energy_per_atom', 'MIT']]
     df = pd.DataFrame(header)
     df.to_csv(out_file, sep=';', header=None, index=False, mode='w')
