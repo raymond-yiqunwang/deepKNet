@@ -1,5 +1,4 @@
 *.log
-submit_job.sh
 job_submit.sh
 runs/
 checkpoints/
