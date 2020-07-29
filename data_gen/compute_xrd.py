@@ -40,7 +40,7 @@ def compute_xrd(raw_data, wavelength):
         band_gap = irow['band_gap']
         energy_per_atom = irow['energy_per_atom']
         formation_energy_per_atom = irow['formation_energy_per_atom']
-        MIT = float(band_gap > 0)
+        MIT = float(band_gap < 1E-6)
 
         # property list
         ifeat = [material_id, recip_latt.tolist(), features,
@@ -74,7 +74,7 @@ def main():
     
     if args.debug:
         # random subsample in debug mode
-        subsample_size = 800
+        subsample_size = 1000
         MP_data = MP_data.sample(n=subsample_size, replace=False, random_state=1, axis=0)
 
     # specify output
@@ -98,8 +98,8 @@ def main():
     # parameters
     nworkers = max(multiprocessing.cpu_count()-2, 1)
     n_slices = MP_data.shape[0] // (20*nworkers) # number of batches to split into
-    if args.wavelength == 'MoKa':
-        n_slices *= 20
+    if args.wavelength == 'mywave':
+        n_slices *= 10
 
     # parallel processing
     MP_data_chunk = np.array_split(MP_data, n_slices)

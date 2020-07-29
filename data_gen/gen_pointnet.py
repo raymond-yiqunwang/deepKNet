@@ -30,8 +30,8 @@ def generate_dataset(xrd_data, features_dir, target_dir):
         recip_pos = np.dot(features[:,:-1], recip_latt)
         if args.wavelength == 'CuKa':
             max_r = 2 / 1.54184
-        elif args.wavelength == 'MoKa':
-            max_r = 2 / 0.71073
+        elif args.wavelength == 'mywave':
+            max_r = 2 / 1.0
         else:
             raise NotImplementedError
         recip_pos /= max_r
@@ -110,7 +110,8 @@ def main():
 
 def check_npoint(wavelength='CuKa'):
     xrd_file = './raw_data/compute_xrd_'+wavelength+'.csv'
-    data_all = pd.read_csv(xrd_file, sep=';', header=0, index_col=None, chunksize=1000)
+    #xrd_file = './raw_data/debug_data/debug_compute_xrd_'+wavelength+'.csv'
+    data_all = pd.read_csv(xrd_file, sep=';', header=0, index_col=None, chunksize=100)
     npoints = []
     for idx, xrd_data in enumerate(data_all):
         feat_len = xrd_data['features'].apply(ast.literal_eval).apply(len)
@@ -131,8 +132,8 @@ if __name__ == "__main__":
     else:
         # CuKa:
         #   min: 50, max: 53000, mean: 4000, median: 3000, std: 4000
-        # MoKa:
+        # mywave:
         #   min: max: mean: median: std:
-        check_npoint(wavelength='CuKa')
+        check_npoint(wavelength='mywave')
 
 

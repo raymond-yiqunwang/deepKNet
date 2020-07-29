@@ -187,19 +187,21 @@ def main():
             'optimizer': optimizer.state_dict(),
         }, is_best)
 
+        """
         if (epoch-args.start_epoch) % args.test_freq == 0 \
             and (epoch-args.start_epoch) != 0:
             # test best model
             print('---------Evaluate Model on Test Set---------------', flush=True)
             best_model = load_best_model()
-            print('best validation performance: {}'.format(best_model['best_performance']))
+            print('best validation performance: {:.3f}'.format(best_model['best_performance']))
             model.load_state_dict(best_model['state_dict'])
             validate(test_loader, model, criterion, epoch, normalizer, writer, test_mode=True)
+        """
 
     # test best model
     print('---------Evaluate Model on Test Set---------------', flush=True)
     best_model = load_best_model()
-    print('best validation performance: {}'.format(best_model['best_performance']))
+    print('best validation performance: {:.3f}'.format(best_model['best_performance']))
     model.load_state_dict(best_model['state_dict'])
     validate(test_loader, model, criterion, epoch, normalizer, writer, test_mode=True)
 
@@ -285,7 +287,7 @@ def train(train_loader, model, criterion, optimizer, epoch, normalizer, writer):
             running_loss = 0.0
 
 
-def validate(val_loader, model, criterion, epoch, writer, test_mode=False):
+def validate(val_loader, model, criterion, epoch, normalizer, writer, test_mode=False):
     batch_time = AverageMeter('Time', ':4.2f')
     losses = AverageMeter('Loss', ':6.3f')
     if args.task == 'classification':
