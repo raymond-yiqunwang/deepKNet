@@ -22,6 +22,8 @@ parser.add_argument('--algo', default='PointNetCls', type=str, metavar='NETWORK'
 parser.add_argument('--dim', default=3, type=int, metavar='FEATURE DIMENSION')
 parser.add_argument('--target', default='MIT', metavar='TARGET_PROPERTY')
 parser.add_argument('--root', default='./data_gen/', metavar='DATA_DIR')
+parser.add_argument('--run_name', default='run1', metavar='RUNID')
+parser.add_argument('--gpu_id', default=0, type=int, metavar='GPUID')
 # hyper parameter tuning
 parser.add_argument('--padding', default='zero', type=str, metavar='POINT PADDING')
 parser.add_argument('--cutoff', default=6000, type=int, metavar='NPOINT CUTOFF')
@@ -34,8 +36,6 @@ parser.add_argument('--optim', default='Adam', type=str, metavar='OPTIM')
 parser.add_argument('--lr', default=0.001, type=float, metavar='LR')
 parser.add_argument('--lr_milestones', default=[30, 50], nargs='+', type=int)
 parser.add_argument('--dropout', default=0.3, type=float, metavar='DROPOUT')
-parser.add_argument('--gpu_id', default=0, type=int, metavar='GPUID')
-parser.add_argument('--run_name', default='run1', metavar='RUNID')
 # default params
 parser.add_argument('--start_epoch', default=0, type=int, metavar='N')
 parser.add_argument('--wd', '--weight_decay', default=0, type=float,
