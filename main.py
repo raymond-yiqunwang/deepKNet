@@ -27,9 +27,9 @@ parser.add_argument('--gpu_id', default=0, type=int, metavar='GPUID')
 # hyper parameter tuning
 parser.add_argument('--cutoff', default=6000, type=int, metavar='NPOINT CUTOFF')
 parser.add_argument('--padding', default='zero', type=str, metavar='POINT PADDING')
-parser.add_argument('--data_aug', default=False, type=bool)
-parser.add_argument('--stn', default=False, type=bool)
-parser.add_argument('--disable_normalization', default=False, type=bool)
+parser.add_argument('--data_aug', default='False', type=str)
+parser.add_argument('--stn', default='False', type=str)
+parser.add_argument('--disable_normalization', default='False', type=str)
 parser.add_argument('--epochs', default=60, type=int, metavar='N')
 parser.add_argument('--batch_size', default=64, type=int, metavar='N')
 parser.add_argument('--optim', default='Adam', type=str, metavar='OPTIM')
@@ -77,7 +77,7 @@ def main():
                 else os.path.join(args.root, 'data_multiview')
     dataset = deepKNetDataset(root=data_root, target=args.target, 
                               cutoff=args.cutoff, padding=args.padding,
-                              data_aug=args.data_aug)
+                              data_aug=args.data_aug=='True')
     train_loader, val_loader, test_loader = get_train_val_test_loader(
         dataset=dataset, batch_size=args.batch_size, 
         train_ratio=args.train_ratio, val_ratio=args.val_ratio, 
@@ -87,7 +87,7 @@ def main():
     # obtain target value normalizer
     normalizer = Normalizer(torch.zeros(2))
     normalizer.load_state_dict({'mean': 0., 'std': 1.})
-    if args.task == 'regression' and not args.disable_normalization:
+    if args.task == 'regression' and args.disable_normalization == 'False':
         sample_target = [dataset[i][-1] for i in 
                          sample(range(len(dataset)), 1000)]
         normalizer = Normalizer(sample_target)
@@ -96,7 +96,7 @@ def main():
     if args.algo == 'PointNetCls' and args.dim == 3:
         model = PointNetCls(k=4, dp=args.dropout,
                             classification=args.task=='classification',
-                            stn=args.stn)
+                            stn=args.stn=='True')
     elif args.algo == 'LeNet5' and args.dim == 2:
         model = LeNet5()
     elif args.algo == 'ResNet' and args.dim == 2:
