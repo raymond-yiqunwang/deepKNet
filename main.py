@@ -23,6 +23,9 @@ parser.add_argument('--target', default='MIT', metavar='TARGET_PROPERTY')
 parser.add_argument('--task', choices=['regression', 'classification'],
                     default='classification')
 parser.add_argument('--normalize', action='store_true')
+parser.add_argument('--cutoff', default=6000, type=int, metavar='NPOINT CUTOFF')
+parser.add_argument('--padding', default='zero', type=str, metavar='POINT PADDING')
+parser.add_argument('--data_aug', action='store_true')
 ## training-relevant params
 parser.add_argument('--dim', default=3, type=int, metavar='FEATURE DIMENSION',
                     help='select 2D multi-view CNN or 3D pointnet model')
@@ -92,7 +95,8 @@ def main():
     # load data
     data_root = os.path.join(args.root, 'data_pointnet') if args.dim == 3 \
                 else os.path.join(args.root, 'data_multiview')
-    dataset = deepKNetDataset(root=data_root, target=args.target)
+    dataset = deepKNetDataset(root=data_root, target=args.target, 
+                              cutoff=args.cutoff, padding=args.padding)
     train_loader, val_loader, test_loader = get_train_val_test_loader(
         dataset=dataset, batch_size=args.batch_size, 
         train_ratio=args.train_ratio, val_ratio=args.val_ratio, 
@@ -103,13 +107,15 @@ def main():
     normalizer = Normalizer(torch.zeros(2))
     normalizer.load_state_dict({'mean': 0., 'std': 1.})
     if args.task == 'regression' and args.normalize:
-        sample_target = [dataset[i][-1] for i in \
+        sample_target = [dataset[i][-1] for i in 
                          sample(range(len(dataset)), 1000)]
         normalizer = Normalizer(sample_target)
 
     # build model
     if args.algo == 'PointNetCls' and args.dim == 3:
-        model = PointNetCls(k=4, dp=args.dropout, stn=args.stn)
+        model = PointNetCls(k=4, dp=args.dropout,
+                            classification=args.task=='classification',
+                            stn=args.stn)
     elif args.algo == 'LeNet5' and args.dim == 2:
         model = LeNet5()
     elif args.algo == 'ResNet' and args.dim == 2:
@@ -227,7 +233,7 @@ def train(train_loader, model, criterion, optimizer, epoch, normalizer, writer):
         maes = AverageMeter()
         progress = ProgressMeter(
             len(train_loader),
-            [batch_time, data_time, losses, maes]
+            [batch_time, data_time, losses, maes],
             prefix="Epoch: [{}]".format(epoch)
         )
 

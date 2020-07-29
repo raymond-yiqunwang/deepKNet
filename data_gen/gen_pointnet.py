@@ -13,8 +13,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--root', default='./', metavar='DATA_DIR')
 parser.add_argument('--debug', dest='debug', action='store_true')
 parser.add_argument('--wavelength',  default='CuKa', metavar='X-RAY WAVELENGTH')
-parser.add_argument('--cutoff', default=5000, type=int, metavar='MAX K-POINT')
-parser.add_argument('--padding', default='zero', metavar='PADDING METHOD')
+parser.add_argument('--cutoff', default=6000, type=int, metavar='MAX K-POINT')
+parser.add_argument('--padding', default='periodic', metavar='PADDING METHOD')
 args = parser.parse_args()
 
 def generate_dataset(xrd_data, features_dir, target_dir, cutoff, padding):
@@ -45,21 +45,9 @@ def generate_dataset(xrd_data, features_dir, target_dir, cutoff, padding):
         intensity = intensity.reshape(-1, 1)
         assert(np.amin(intensity) >= 0.)
 
-        # generate pointnet and write to file
-        pointnet = np.concatenate((recip_pos, intensity), axis=1)
-        if padding == 'zero':
-            if pointnet.shape[0] < cutoff 
-                pointnet = np.pad(pointnet, ((0, cutoff-pointnet.shape[0]), (0, 0)))
-            else:
-                pointnet = pointnet[:cutoff, :]
-        elif padding == 'periodic':
-            while pointnet.shape[0] < cutoff:
-                pointnet = np.repeat(pointnet, 2, axis=0)
-            pointnet = pointnet[:cutoff, :]
-        else:
-            raise NotImplementedError
-
-        np.save(features_dir+filename, pointnet.transpose())
+        # generate point cloud and write to file
+        point_cloud = np.concatenate((recip_pos, intensity), axis=1)
+        np.save(features_dir+filename, point_cloud)
 
         # target properties
         band_gap = irow['band_gap'] 
@@ -139,11 +127,11 @@ def check_npoint(wavelength='CuKa'):
 
 
 if __name__ == "__main__":
-    if True:
+    if False:
         main()
     else:
         # CuKa:
-        #   min: 56, max: 44298, mean: 4375, median: 2910, std: 4477
+        #   min: , max: , mean: , median: , std: 
         # MoKa:
         #   min: max: mean: median: std:
         check_npoint(wavelength='CuKa')

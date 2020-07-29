@@ -76,11 +76,12 @@ class PointNetfeat(nn.Module):
 
 
 class PointNetCls(nn.Module):
-    def __init__(self, k=4, dp=0.3, stn=False):
+    def __init__(self, k=4, dp=0.3, classification=True, stn=False):
         super(PointNetCls, self).__init__()
         self.k = k
         self.dp = dp
         self.stn = stn
+        self.classification = classification
         self.feat = PointNetfeat(k=self.k, stn=self.stn)
         self.fc1 = nn.Linear(1024, 512)
         self.fc2 = nn.Linear(512, 256)

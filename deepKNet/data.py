@@ -34,25 +34,46 @@ def get_train_val_test_loader(dataset, collate_fn=default_collate,
 
 
 class deepKNetDataset(Dataset):
-    def __init__(self, root, target):
+    def __init__(self, root, target, cutoff=6000, padding='zero', data_aug=False):
         self.root = root
         self.target = target
         self.file_names = [fname.split('.')[0] for fname in \
                            os.listdir(os.path.join(self.root, 'target/'))]
+        self.cutoff = cutoff
+        self.padding = padding
+        self.data_aug = data_aug
         random.seed(5)
         random.shuffle(self.file_names)
 
     def __getitem__(self, idx):
-        # load image
+        # load image data
         image = np.load(self.root+'/features/'+self.file_names[idx]+'.npy')
-        image = torch.Tensor(image)
+
+        # generate pointcloud
+        point_cloud = np.concatenate((recip_pos, intensity), axis=1)
+        if self.padding == 'zero':
+            if point_cloud.shape[0] < self.cutoff:
+                point_cloud = np.pad(point_cloud, ((0, self.cutoff-point_cloud.shape[0]), (0, 0)))
+            else:
+                point_cloud = point_cloud[:self.cutoff, :]
+        elif self.padding == 'periodic':
+            while point_cloud.shape[0] < self.cutoff:
+                point_cloud = np.repeat(point_cloud, 2, axis=0)
+            point_cloud = point_cloud[:self.cutoff, :]
+        else:
+            raise NotImplementedError
+        
         # apply random 3D rotation for data augmentation
         # TODO
+        # if self.data_aug:
+        
+        point_cloud = torch.Tensor(point_cloud.transpose())
+
         # load target property
         properties = pd.read_csv(self.root+'/target/'+self.file_names[idx]+'.csv',
                                  sep=';', header=0, index_col=None)
         prop = torch.Tensor(properties[self.target].values)
-        return image, prop
+        return point_cloud, prop
 
     def __len__(self):
         return len(self.file_names)

@@ -76,6 +76,8 @@ def show_statistics(data, plot=False):
             .format(len(elem_dict), min_key, elem_dict[min_key], \
                                     max_key, elem_dict[max_key]))
     print('>> Max Z: {}'.format(max_Z))
+#    for key, val in elem_dict.items():
+#        print(key, val)
 
     # energy per atom
     energy_atom = data['energy_per_atom']
@@ -137,7 +139,7 @@ def customize_data(raw_data):
         data_custom = data_custom[data_custom['warnings'] == '[]']
 
     # only take crystals in ICSD
-    if True:
+    if False:
         data_custom = data_custom[data_custom['icsd_ids'] != '[]']
 
     # get rid of extreme volumes
