@@ -96,12 +96,14 @@ def main():
     df.to_csv(out_file, sep=';', header=None, index=False, mode='w')
     
     # parameters
-    nworkers = max(multiprocessing.cpu_count(), 1)
+    nworkers = max(multiprocessing.cpu_count()-2, 1)
     n_slices = MP_data.shape[0] // (20*nworkers) # number of batches to split into
+    if args.wavelength == 'MoKa':
+        n_slices *= 20
 
     # parallel processing
     MP_data_chunk = np.array_split(MP_data, n_slices)
-    print("start computing xrd..")
+    print("start computing xrd on {} workers and {} slices".format(nworkers, n_slices))
     for idx, chunk in enumerate(MP_data_chunk):
         # generate xrd point cloud representations
         xrd_data = parallel_computing(chunk, args.wavelength, nworkers)
