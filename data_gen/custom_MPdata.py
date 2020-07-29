@@ -104,7 +104,7 @@ def show_statistics(data, plot=False):
                 .format(e_above_hull.mean(), e_above_hull.median(),\
                      e_above_hull.std(), e_above_hull.min(), e_above_hull.max()))
 
-    # band gap TODO determine threshold
+    # band gap 
     gap_threshold = 0.
     metals = data[data['band_gap'] <= gap_threshold]['band_gap']
     insulators = data[data['band_gap'] > gap_threshold]['band_gap']

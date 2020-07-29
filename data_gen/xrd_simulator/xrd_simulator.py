@@ -206,7 +206,8 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
         peaks = {}
         two_thetas = []
 
-        features = []
+        total_electrons = sum(zs)
+        features = [[0, 0, 0, total_electrons**2]]
         for hkl, g_hkl, _, _ in sorted(recip_pts,
                                     key=lambda i: (i[1], -i[0][0], -i[0][1], -i[0][2])):
             # skip origin and points on the limiting sphere to avoid precision problems
@@ -255,7 +256,8 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
 
             # Intensity for hkl is modulus square of structure factor.
             i_hkl = (f_hkl * f_hkl.conjugate()).real
-
+            assert(i_hkl < total_electrons**2)
+            
             # add to features 
             features.append([hkl[0], hkl[1], hkl[2], i_hkl])
             if hkl[0] > 0:
@@ -309,8 +311,8 @@ if __name__ == "__main__":
     struct = Structure.from_str(mp_data[0]['cif'], fmt='cif')
     
     # compute XRD diffraction pattern and compare outputs
-    pattern, _, _ = XRDSimulator('AgKa').get_pattern(struct, two_theta_range=None) # this implementation
-    pattern_pymatgen = XRDCalculator('AgKa').get_pattern(struct, two_theta_range=None) # pymatgen original implementation
-    print('Error rate: {}'.format(max(abs(np.array(pattern.x) - np.array(pattern_pymatgen.x)))))
+    pattern, _, _ = XRDSimulator('CuKa').get_pattern(struct, two_theta_range=None) # this implementation
+#    pattern_pymatgen = XRDCalculator('AgKa').get_pattern(struct, two_theta_range=None) # pymatgen original implementation
+#    print('Error rate: {}'.format(max(abs(np.array(pattern.x) - np.array(pattern_pymatgen.x)))))
 
 

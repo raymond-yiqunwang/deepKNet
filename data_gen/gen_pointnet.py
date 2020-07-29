@@ -13,11 +13,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--root', default='./', metavar='DATA_DIR')
 parser.add_argument('--debug', dest='debug', action='store_true')
 parser.add_argument('--wavelength',  default='CuKa', metavar='X-RAY WAVELENGTH')
-parser.add_argument('--threshold', default=5000, type=int, metavar='MAX K-POINT')
+parser.add_argument('--cutoff', default=5000, type=int, metavar='MAX K-POINT')
 parser.add_argument('--padding', default='zero', metavar='PADDING METHOD')
 args = parser.parse_args()
 
-def generate_dataset(xrd_data, features_dir, target_dir, threshold, padding):
+def generate_dataset(xrd_data, features_dir, target_dir, cutoff, padding):
     # store point cloud representation for each material
     for _, irow in xrd_data.iterrows():
         # unique material ID
@@ -40,23 +40,22 @@ def generate_dataset(xrd_data, features_dir, target_dir, threshold, padding):
         assert(np.amax(recip_pos) <= 1.0)
         assert(np.amin(recip_pos) >= -1.0)
 
-        # diffraction intensity
-        intensity = np.log(features[:,-1]+1) / 15
+        # normalize diffraction intensity
+        intensity = np.log(features[:,-1]+1) / 16
         intensity = intensity.reshape(-1, 1)
-#        assert(np.amax(intensity) <= 1.0)
         assert(np.amin(intensity) >= 0.)
 
         # generate pointnet and write to file
         pointnet = np.concatenate((recip_pos, intensity), axis=1)
         if padding == 'zero':
-            if pointnet.shape[0] < threshold:
-                pointnet = np.pad(pointnet, ((0, threshold-pointnet.shape[0]), (0, 0)))
+            if pointnet.shape[0] < cutoff 
+                pointnet = np.pad(pointnet, ((0, cutoff-pointnet.shape[0]), (0, 0)))
             else:
-                pointnet = pointnet[:threshold, :]
+                pointnet = pointnet[:cutoff, :]
         elif padding == 'periodic':
-            while pointnet.shape[0] < threshold:
+            while pointnet.shape[0] < cutoff:
                 pointnet = np.repeat(pointnet, 2, axis=0)
-            pointnet = pointnet[:threshold, :]
+            pointnet = pointnet[:cutoff, :]
         else:
             raise NotImplementedError
 
@@ -106,18 +105,18 @@ def main():
     os.mkdir(features_dir)
     
     # parameters
-    threshold = args.threshold
+    cutoff = args.cutoff
     padding = args.padding
-    nworkers = max(multiprocessing.cpu_count()-2, 1)
+    nworkers = max(multiprocessing.cpu_count(), 1)
     
     # process in chunks due to large size
     data_all = pd.read_csv(xrd_file, sep=';', header=0, index_col=None, chunksize=nworkers*50)
     cnt = 0
-    for idx, xrd_data in enumerate(data_all):
+    for _, xrd_data in enumerate(data_all):
         # parallel processing
         xrd_data_chunk = np.array_split(xrd_data, nworkers)
         pool = Pool(nworkers)
-        pargs = [(data, features_dir, target_dir, threshold, padding) for data in xrd_data_chunk]
+        pargs = [(data, features_dir, target_dir, cutoff, padding) for data in xrd_data_chunk]
         pool.starmap(generate_dataset, pargs)
         pool.close()
         pool.join()
@@ -125,8 +124,28 @@ def main():
         print('finished processing {} materials'.format(cnt))
 
 
+def check_npoint(wavelength='CuKa'):
+    xrd_file = './raw_data/compute_xrd_'+wavelength+'.csv'
+    data_all = pd.read_csv(xrd_file, sep=';', header=0, index_col=None, chunksize=1000)
+    npoints = []
+    for _, xrd_data in enumerate(data_all):
+        for _, irow in xrd_data.iterrows():
+            npoints.append(len(ast.literal_eval(irow['features'])))
+        print('finished one chunk')
+
+    print('min: {}, max: {}, mean: {}, median: {}, std: {}'.format(
+           np.min(npoints), np.max(npoints), np.mean(npoints),
+           np.median(npoints), np.std(npoints)))
+
+
 if __name__ == "__main__":
-    # TODO check n_point
-    main()
+    if True:
+        main()
+    else:
+        # CuKa:
+        #   min: 56, max: 44298, mean: 4375, median: 2910, std: 4477
+        # MoKa:
+        #   min: max: mean: median: std:
+        check_npoint(wavelength='CuKa')
 
 

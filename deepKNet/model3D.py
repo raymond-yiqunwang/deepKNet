@@ -84,17 +84,25 @@ class PointNetCls(nn.Module):
         self.feat = PointNetfeat(k=self.k, stn=self.stn)
         self.fc1 = nn.Linear(1024, 512)
         self.fc2 = nn.Linear(512, 256)
-        self.fc3 = nn.Linear(256, 2)
-        self.dropout = nn.Dropout(p=self.dp)
+        if self.classification:
+            self.logsoftmax = nn.LogSoftmax(dim=1)
+            self.dropout = nn.Dropout(p=self.dp)
+            self.fc_out = nn.Linear(256, 2)
+        else:
+            self.fc_out = nn.Linear(256, 1)
         self.bn1 = nn.BatchNorm1d(512)
         self.bn2 = nn.BatchNorm1d(256)
-        self.logsoftmax = nn.LogSoftmax(dim=1)
 
     def forward(self, x):
         x = self.feat(x)
-        x = F.relu(self.bn1(self.fc1(x)))
-        x = F.relu(self.bn2(self.dropout(self.fc2(x))))
-        out = self.logsoftmax(self.fc3(x))
+        x = self.fc1(x)
+        if self.classification:
+            x = self.dropout(x)
+        x = F.relu(self.bn1(x))
+        x = F.relu(self.bn2(self.fc2(x)))
+        out = self.fc_out(x)
+        if self.classification:
+            out = self.logsoftmax(out)
         return out
 
 
