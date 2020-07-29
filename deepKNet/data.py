@@ -48,6 +48,19 @@ class deepKNetDataset(Dataset):
     def __getitem__(self, idx):
         # load point cloud data
         point_cloud = np.load(self.root+'/features/'+self.file_names[idx]+'.npy')
+        
+        # padding and cutoff
+        if self.padding == 'zero':
+            if point_cloud.shape[0] < self.cutoff:
+                point_cloud = np.pad(point_cloud, ((0, self.cutoff-point_cloud.shape[0]), (0, 0)))
+            else:
+                point_cloud = point_cloud[:self.cutoff, :]
+        elif self.padding == 'periodic':
+            while point_cloud.shape[0] < self.cutoff:
+                point_cloud = np.repeat(point_cloud, 2, axis=0)
+            point_cloud = point_cloud[:self.cutoff, :]
+        else:
+            raise NotImplementedError
 
         # apply random 3D rotation for data augmentation
         if self.data_aug:
@@ -66,19 +79,6 @@ class deepKNetDataset(Dataset):
             ]
             rot_matrix = np.array(rot_matrix).reshape(3,3)
             point_cloud[:,:-1] = np.dot(point_cloud[:,:-1], rot_matrix.T)
-        
-        # padding and cutoff
-        if self.padding == 'zero':
-            if point_cloud.shape[0] < self.cutoff:
-                point_cloud = np.pad(point_cloud, ((0, self.cutoff-point_cloud.shape[0]), (0, 0)))
-            else:
-                point_cloud = point_cloud[:self.cutoff, :]
-        elif self.padding == 'periodic':
-            while point_cloud.shape[0] < self.cutoff:
-                point_cloud = np.repeat(point_cloud, 2, axis=0)
-            point_cloud = point_cloud[:self.cutoff, :]
-        else:
-            raise NotImplementedError
         
         point_cloud = torch.Tensor(point_cloud.transpose())
 
