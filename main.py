@@ -154,7 +154,7 @@ def main():
     if not os.path.exists(summary_root):
         os.mkdir(summary_root)
     if os.path.exists(summary_file):
-        print('run file already exists, use a different --run-name')
+        print('run file already exists, use a different --run_name')
         sys.exit(1)
     writer = SummaryWriter(summary_file)
 
@@ -187,23 +187,13 @@ def main():
             'optimizer': optimizer.state_dict(),
         }, is_best)
 
-        """
-        if (epoch-args.start_epoch) % args.test_freq == 0 \
-            and (epoch-args.start_epoch) != 0:
+        if (epoch-args.start_epoch+1) % args.test_freq == 0:
             # test best model
             print('---------Evaluate Model on Test Set---------------', flush=True)
             best_model = load_best_model()
             print('best validation performance: {:.3f}'.format(best_model['best_performance']))
             model.load_state_dict(best_model['state_dict'])
             validate(test_loader, model, criterion, epoch, normalizer, writer, test_mode=True)
-        """
-
-    # test best model
-    print('---------Evaluate Model on Test Set---------------', flush=True)
-    best_model = load_best_model()
-    print('best validation performance: {:.3f}'.format(best_model['best_performance']))
-    model.load_state_dict(best_model['state_dict'])
-    validate(test_loader, model, criterion, epoch, normalizer, writer, test_mode=True)
 
 
 def train(train_loader, model, criterion, optimizer, epoch, normalizer, writer):
@@ -239,6 +229,10 @@ def train(train_loader, model, criterion, optimizer, epoch, normalizer, writer):
         data_time.update(time.time() - end)
 
         image, target = data
+        
+        # optionally skip the last batch
+        if target.size(0) < 8: continue
+
         # normalize target
         if args.task == 'classification':
             target_normed = target.view(-1).long()
@@ -279,7 +273,7 @@ def train(train_loader, model, criterion, optimizer, epoch, normalizer, writer):
 
         # print progress and write to TensorBoard
         running_loss += loss.item()
-        if idx % args.print_freq == 0 and idx != 0:
+        if (idx+1) % args.print_freq == 0:
             progress.display(idx)
             writer.add_scalar('training loss',
                             running_loss / args.print_freq,
@@ -320,6 +314,10 @@ def validate(val_loader, model, criterion, epoch, normalizer, writer, test_mode=
         running_loss = 0.0
         for idx, data in enumerate(val_loader):
             image, target = data
+            
+            # optionally skip the last batch
+            if target.size(0) < 8: continue
+            
             if args.task == 'classification':
                 target_normed = target.view(-1).long()
             else:
@@ -365,7 +363,7 @@ def validate(val_loader, model, criterion, epoch, normalizer, writer, test_mode=
 
             # print progress and  write to TensorBoard
             running_loss += loss.item()
-            if idx % args.print_freq == 0 and idx != 0 and not test_mode:
+            if (idx+1) % args.print_freq == 0 and not test_mode:
                 progress.display(idx)
                 writer.add_scalar('validation loss',
                                 running_loss / args.print_freq,
