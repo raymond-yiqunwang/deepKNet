@@ -276,7 +276,7 @@ def train(train_loader, model, criterion, optimizer, epoch, normalizer, writer):
         # print progress and write to TensorBoard
         running_loss += loss.item()
         if (idx+1) % args.print_freq == 0:
-            progress.display(idx)
+            progress.display(idx+1)
             writer.add_scalar('training loss',
                             running_loss / args.print_freq,
                             epoch * len(train_loader) + idx)
@@ -366,7 +366,7 @@ def validate(val_loader, model, criterion, epoch, normalizer, writer, test_mode=
             # print progress and  write to TensorBoard
             running_loss += loss.item()
             if (idx+1) % args.print_freq == 0 and not test_mode:
-                progress.display(idx)
+                progress.display(idx+1)
                 writer.add_scalar('validation loss',
                                 running_loss / args.print_freq,
                                 epoch * len(val_loader) + idx)
