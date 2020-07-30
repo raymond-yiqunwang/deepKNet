@@ -25,16 +25,16 @@ parser.add_argument('--root', default='./data_gen/', metavar='DATA_DIR')
 parser.add_argument('--run_name', default='run1', metavar='RUNID')
 parser.add_argument('--gpu_id', default=0, type=int, metavar='GPUID')
 # hyper parameter tuning
-parser.add_argument('--cutoff', default=6000, type=int, metavar='NPOINT CUTOFF')
-parser.add_argument('--padding', default='zero', type=str, metavar='POINT PADDING')
+parser.add_argument('--cutoff', default=5000, type=int, metavar='NPOINT CUTOFF')
+parser.add_argument('--padding', default='periodic', type=str, metavar='POINT PADDING')
 parser.add_argument('--data_aug', default='False', type=str)
 parser.add_argument('--stn', default='False', type=str)
 parser.add_argument('--disable_normalization', default='False', type=str)
 parser.add_argument('--epochs', default=60, type=int, metavar='N')
 parser.add_argument('--batch_size', default=64, type=int, metavar='N')
-parser.add_argument('--optim', default='Adam', type=str, metavar='OPTIM')
-parser.add_argument('--lr', default=0.001, type=float, metavar='LR')
-parser.add_argument('--lr_milestones', default=[30, 50], nargs='+', type=int)
+parser.add_argument('--optim', default='SGD', type=str, metavar='OPTIM')
+parser.add_argument('--lr', default=0.01, type=float, metavar='LR')
+parser.add_argument('--lr_milestones', default=[20, 40], nargs='+', type=int)
 parser.add_argument('--dropout', default=0.3, type=float, metavar='DROPOUT')
 # default params
 parser.add_argument('--start_epoch', default=0, type=int, metavar='N')
@@ -42,9 +42,9 @@ parser.add_argument('--wd', '--weight_decay', default=0, type=float,
                     metavar='W', help='weigh decay (default: 0)',
                     dest='weight_decay')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M')
-parser.add_argument('--train_ratio', default=0.7, type=float, metavar='n/N')
-parser.add_argument('--val_ratio', default=0.15, type=float, metavar='n/N')
-parser.add_argument('--test_ratio', default=0.15, type=float, metavar='n/N')
+parser.add_argument('--train_ratio', default=0.8, type=float, metavar='n/N')
+parser.add_argument('--val_ratio', default=0.2, type=float, metavar='n/N')
+parser.add_argument('--test_ratio', default=0.0, type=float, metavar='n/N')
 n_threads = torch.get_num_threads()
 parser.add_argument('--num_threads', default=n_threads, type=int, metavar='N_thread')
 parser.add_argument('--num_data_workers', default=4, type=int, metavar='N')
@@ -187,6 +187,7 @@ def main():
             'optimizer': optimizer.state_dict(),
         }, is_best)
 
+        """
         if (epoch-args.start_epoch+1) % args.test_freq == 0:
             # test best model
             print('---------Evaluate Model on Test Set---------------', flush=True)
@@ -194,6 +195,7 @@ def main():
             print('best validation performance: {:.3f}'.format(best_model['best_performance']))
             model.load_state_dict(best_model['state_dict'])
             validate(test_loader, model, criterion, epoch, normalizer, writer, test_mode=True)
+        """
 
 
 def train(train_loader, model, criterion, optimizer, epoch, normalizer, writer):

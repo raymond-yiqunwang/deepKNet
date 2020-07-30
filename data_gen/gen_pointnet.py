@@ -39,8 +39,9 @@ def generate_dataset(xrd_data, features_dir, target_dir):
         assert(np.amin(recip_pos) >= -1.0)
 
         # normalize diffraction intensity
-        intensity = np.log(features[:,-1]+1) / 16
+        intensity = np.log(1+features[:,-1]) / 3
         intensity = intensity.reshape(-1, 1)
+        assert(np.amax(intensity) <= 1.5)
         assert(np.amin(intensity) >= 0.)
 
         # generate point cloud and write to file
@@ -134,6 +135,6 @@ if __name__ == "__main__":
         #   min: 50, max: 53000, mean: 4000, median: 3000, std: 4000
         # mywave:
         #   min: max: mean: median: std:
-        check_npoint(wavelength='mywave')
+        check_npoint(wavelength='CuKa')
 
 

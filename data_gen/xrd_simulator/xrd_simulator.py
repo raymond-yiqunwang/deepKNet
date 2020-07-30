@@ -158,6 +158,7 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
             structure = finder.get_refined_structure()
 
         latt = structure.lattice
+        volume = structure.volume
         is_hex = latt.is_hexagonal()
 
         # Obtained from Bragg condition. Note that reciprocal lattice
@@ -208,7 +209,7 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
         two_thetas = []
 
         total_electrons = sum(zs)
-        features = [[0, 0, 0, total_electrons**2]]
+        features = [[0, 0, 0, float(total_electrons/volume)**2]]
         for hkl, g_hkl, _, _ in sorted(recip_pts,
                                     key=lambda i: (i[1], -i[0][0], -i[0][1], -i[0][2])):
             # skip origin and points on the limiting sphere to avoid precision problems
@@ -258,11 +259,12 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
             # Intensity for hkl is modulus square of structure factor.
             i_hkl = (f_hkl * f_hkl.conjugate()).real
             assert(i_hkl < total_electrons**2)
+            i_hkl_out = i_hkl / volume**2
             
             # add to features 
-            features.append([hkl[0], hkl[1], hkl[2], i_hkl])
+            features.append([hkl[0], hkl[1], hkl[2], i_hkl_out])
             if hkl[0] > 0:
-                features.append([int(-1*hkl[0]), int(-1*hkl[1]), int(-1*hkl[2]), i_hkl])
+                features.append([int(-1*hkl[0]), int(-1*hkl[1]), int(-1*hkl[2]), i_hkl_out])
 
             ### for diffractin pattern plotting only
             two_theta = math.degrees(2 * theta)
