@@ -73,7 +73,7 @@ def main():
     global args, best_performance, cuda_device
 
     # load data
-    dataset = deepKNetDataset(root=data_root, target=args.target, 
+    dataset = deepKNetDataset(root=args.root, target=args.target, 
                               train_ratio=args.train_ratio,
                               cutoff=args.cutoff, padding=args.padding,
                               data_aug=args.data_aug=='True')
