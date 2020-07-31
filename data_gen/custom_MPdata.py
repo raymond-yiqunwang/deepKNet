@@ -139,11 +139,11 @@ def customize_data(raw_data):
         data_custom = data_custom[data_custom['warnings'] == '[]']
 
     # only take crystals in ICSD
-    if True:
+    if False:
         data_custom = data_custom[data_custom['icsd_ids'] != '[]']
 
     # get rid of extreme volumes
-    if True:
+    if False:
 #        data_custom = data_custom[data_custom['volume'] > 1000]
         data_custom = data_custom[data_custom['volume'] < 1000]
 

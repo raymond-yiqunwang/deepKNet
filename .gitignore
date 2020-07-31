@@ -2,8 +2,8 @@
 job_submit.sh
 runs/
 checkpoints/
-data_gen/data_multiview/
-data_gen/data_pointnet/
+data_gen/data_multiview*/
+data_gen/data_pointnet*/
 data_gen/raw_data/
 data_gen/data_pointnet.tar.gz
 */__pycache__/

@@ -13,20 +13,20 @@ from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.tensorboard import SummaryWriter
 from deepKNet.data import deepKNetDataset, get_train_val_test_loader
 from deepKNet.model2D import LeNet5, ResNet, BasicBlock
-from deepKNet.model3D import PointNetCls
+from deepKNet.model3D import PointNet
 
 parser = argparse.ArgumentParser(description='deepKNet model')
 parser.add_argument('--task', choices=['regression', 'classification'],
                     default='classification')
-parser.add_argument('--algo', default='PointNetCls', type=str, metavar='NETWORK')
+parser.add_argument('--algo', default='PointNet', type=str, metavar='NETWORK')
 parser.add_argument('--dim', default=3, type=int, metavar='FEATURE DIMENSION')
 parser.add_argument('--target', default='MIT', metavar='TARGET_PROPERTY')
-parser.add_argument('--root', default='./data_gen/', metavar='DATA_DIR')
+parser.add_argument('--root', default='./data_gen/data_pointnet_52k/', metavar='DATA_DIR')
 parser.add_argument('--run_name', default='run1', metavar='RUNID')
 parser.add_argument('--gpu_id', default=0, type=int, metavar='GPUID')
 # hyper parameter tuning
-parser.add_argument('--cutoff', default=2000, type=int, metavar='NPOINT CUTOFF')
-parser.add_argument('--padding', default='periodic', type=str, metavar='POINT PADDING')
+parser.add_argument('--cutoff', default=3000, type=int, metavar='NPOINT CUTOFF')
+parser.add_argument('--padding', default='zero', type=str, metavar='POINT PADDING')
 parser.add_argument('--data_aug', default='False', type=str)
 parser.add_argument('--stn', default='False', type=str)
 parser.add_argument('--disable_normalization', default='False', type=str)
@@ -43,13 +43,13 @@ parser.add_argument('--wd', '--weight_decay', default=0, type=float,
                     dest='weight_decay')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M')
 parser.add_argument('--train_ratio', default=0.8, type=float, metavar='n/N')
-parser.add_argument('--val_ratio', default=0.2, type=float, metavar='n/N')
-parser.add_argument('--test_ratio', default=0.0, type=float, metavar='n/N')
+parser.add_argument('--val_ratio', default=0.1, type=float, metavar='n/N')
+parser.add_argument('--test_ratio', default=0.1, type=float, metavar='n/N')
 n_threads = torch.get_num_threads()
 parser.add_argument('--num_threads', default=n_threads, type=int, metavar='N_thread')
 parser.add_argument('--num_data_workers', default=4, type=int, metavar='N')
 parser.add_argument('--print_freq', default=10, type=int, metavar='N')
-parser.add_argument('--test_freq', default=10, type=int, metavar='N')
+parser.add_argument('--test_freq', default=5, type=int, metavar='N')
 parser.add_argument('--resume', default='', type=str, metavar='PATH')
 parser.add_argument('--disable_cuda', action='store_true')
 
@@ -73,8 +73,6 @@ def main():
     global args, best_performance, cuda_device
 
     # load data
-    data_root = os.path.join(args.root, 'data_pointnet') if args.dim == 3 \
-                else os.path.join(args.root, 'data_multiview')
     dataset = deepKNetDataset(root=data_root, target=args.target, 
                               train_ratio=args.train_ratio,
                               cutoff=args.cutoff, padding=args.padding,
@@ -94,10 +92,10 @@ def main():
         normalizer = Normalizer(sample_target)
 
     # build model
-    if args.algo == 'PointNetCls' and args.dim == 3:
-        model = PointNetCls(k=4, dp=args.dropout,
-                            classification=args.task=='classification',
-                            stn=args.stn=='True')
+    if args.algo == 'PointNet' and args.dim == 3:
+        model = PointNet(k=4, dp=args.dropout,
+                         stn=args.stn=='True',
+                         classification=args.task=='classification')
     elif args.algo == 'LeNet5' and args.dim == 2:
         model = LeNet5()
     elif args.algo == 'ResNet' and args.dim == 2:
@@ -188,7 +186,6 @@ def main():
             'optimizer': optimizer.state_dict(),
         }, is_best)
 
-        """
         if (epoch-args.start_epoch+1) % args.test_freq == 0:
             # test best model
             print('---------Evaluate Model on Test Set---------------', flush=True)
@@ -196,7 +193,6 @@ def main():
             print('best validation performance: {:.3f}'.format(best_model['best_performance']))
             model.load_state_dict(best_model['state_dict'])
             validate(test_loader, model, criterion, epoch, normalizer, writer, test_mode=True)
-        """
 
 
 def train(train_loader, model, criterion, optimizer, epoch, normalizer, writer):

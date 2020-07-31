@@ -3,11 +3,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class STNkd(nn.Module):
-    def __init__(self, k=4, dp=0.3):
-        super(STNkd, self).__init__()
+class STN3d(nn.Module):
+    def __init__(self, k=3):
+        super(STN3d, self).__init__()
         self.k = k
-        self.dp = dp
         
         self.conv1 = torch.nn.Conv1d(k, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
@@ -17,8 +16,6 @@ class STNkd(nn.Module):
         self.fc3 = nn.Linear(128, k*k)
         self.relu = nn.ReLU()
         
-#        self.dropout = nn.Dropout(p=self.dp)
-
         self.bn1 = nn.BatchNorm1d(64)
         self.bn2 = nn.BatchNorm1d(128)
         self.bn3 = nn.BatchNorm1d(1024)
@@ -33,7 +30,6 @@ class STNkd(nn.Module):
         x = torch.max(x, 2, keepdim=True)[0]
         x = x.view(-1, 1024)
 
-#        x = self.dropout(x)
         x = F.relu(self.bn4(self.fc1(x)))
         x = F.relu(self.bn5(self.fc2(x)))
         x = self.fc3(x)
@@ -45,18 +41,20 @@ class STNkd(nn.Module):
         if x.is_cuda:
             cuda_device = 'cuda:{}'.format(x.get_device())
             iden = iden.cuda(device=cuda_device)
-        x = x + iden
+        x += iden
         x = x.view(-1, self.k, self.k)
         return x
 
 
-class PointNetfeat(nn.Module):
-    def __init__(self, k=4, dp=0.3, stn=False):
-        super(PointNetfeat, self).__init__()
+class PointNet(nn.Module):
+    def __init__(self, k=4, dp=0.3, stn=False, classification=True):
+        super(PointNet, self).__init__()
         self.k = k
+        self.dp = dp
         self.stn = stn
+        self.classification = classification
         if self.stn:
-            self.stnkd = STNkd(k=self.k, dp=dp)
+            self.stn3d = STN3d()
         self.conv1 = torch.nn.Conv1d(self.k, 128, 1)
         self.conv2 = torch.nn.Conv1d(128, 256, 1)
         self.conv3 = torch.nn.Conv1d(256, 1024, 1)
@@ -64,48 +62,42 @@ class PointNetfeat(nn.Module):
         self.bn2 = nn.BatchNorm1d(256)
         self.bn3 = nn.BatchNorm1d(1024)
 
+        self.fc1 = nn.Linear(1024, 512)
+        self.fc2 = nn.Linear(512, 256)
+        self.fc3 = nn.Linear(256, 128)
+        if self.classification:
+            self.logsoftmax = nn.LogSoftmax(dim=1)
+            self.dropout = nn.Dropout(self.dp)
+            self.fc_out = nn.Linear(128, 2)
+        else:
+            self.fc_out = nn.Linear(128, 1)
+        self.bn4 = nn.BatchNorm1d(512)
+        self.bn5 = nn.BatchNorm1d(256)
+        self.bn6 = nn.BatchNorm1d(128)
+
     def forward(self, x):
         if self.stn:
-            trans = self.stnkd(x)
-            x = x.transpose(2, 1)
-            x = torch.bmm(x, trans)
-            x = x.transpose(2, 1)
-        x = F.relu(self.bn1(self.conv1(x)))
+            x1 = x[:,:3,:]
+            x2 = x[:,-1:,:]
+            trans = self.stn3d(x1)
+            x1 = x1.transpose(2, 1)
+            x1 = torch.bmm(x1, trans)
+            x1 = x1.transpose(2, 1)
+            x = torch.cat((x1, x2), dim=1)
 
+        x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = self.bn3(self.conv3(x))
         x = torch.max(x, 2, keepdim=True)[0]
         x = x.view(-1, 1024)
-        return x
-
-
-class PointNetCls(nn.Module):
-    def __init__(self, k=4, dp=0.3, classification=True, stn=False):
-        super(PointNetCls, self).__init__()
-        self.k = k
-        self.dp = dp
-        self.stn = stn
-        self.classification = classification
-        self.feat = PointNetfeat(k=self.k, dp=self.dp, stn=self.stn)
-        self.fc1 = nn.Linear(1024, 512)
-        self.fc2 = nn.Linear(512, 128)
+        
         if self.classification:
-            self.logsoftmax = nn.LogSoftmax(dim=1)
-            self.dropout = nn.Dropout(p=self.dp)
-            self.fc_out = nn.Linear(128, 2)
-        else:
-            self.fc_out = nn.Linear(128, 1)
-        self.bn1 = nn.BatchNorm1d(512)
-        self.bn2 = nn.BatchNorm1d(128)
-
-    def forward(self, x):
-        x = self.feat(x)
-#        if self.classification:
-#            x = self.dropout(x)
-        x = F.relu(self.bn1(self.fc1(x)))
-#        if self.classification:
-#            x = self.dropout(x)
-        x = F.relu(self.bn2(self.fc2(x)))
+            x = self.dropout(x)
+        x = F.relu(self.bn4(self.fc1(x)))
+        if self.classification:
+            x = self.dropout(x)
+        x = F.relu(self.bn5(self.fc2(x)))
+        x = F.relu(self.bn6(self.fc3(x)))
         out = self.fc_out(x)
         if self.classification:
             out = self.logsoftmax(out)
@@ -160,13 +152,4 @@ class BertNet(nn.Module):
         return self.fc(x)
 """
 
-if __name__ == '__main__':
-    sim_data = torch.Tensor(torch.rand(32, 4, 2500))
-    k = 4
-    trans = STNkd(k=k)
-    out = trans(sim_data)
-    print(out.shape)
 
-    cls = PointNet(k=k)
-    out = cls(sim_data)
-    print(out.shape)

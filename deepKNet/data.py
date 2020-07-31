@@ -34,7 +34,7 @@ def get_train_val_test_loader(dataset, train_ratio, val_ratio, test_ratio,
 
 class deepKNetDataset(Dataset):
     def __init__(self, root, target, train_ratio,
-                 cutoff=2000, padding='zero', data_aug=False):
+                 cutoff=3000, padding='zero', data_aug=False):
         self.root = root
         self.target = target
         self.cutoff = cutoff
