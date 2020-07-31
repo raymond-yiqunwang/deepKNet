@@ -4,23 +4,26 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class STNkd(nn.Module):
-    def __init__(self, k=4):
+    def __init__(self, k=4, dp=0.3):
         super(STNkd, self).__init__()
         self.k = k
+        self.dp = dp
         
         self.conv1 = torch.nn.Conv1d(k, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
         self.conv3 = torch.nn.Conv1d(128, 1024, 1)
         self.fc1 = nn.Linear(1024, 512)
-        self.fc2 = nn.Linear(512, 256)
-        self.fc3 = nn.Linear(256, k*k)
+        self.fc2 = nn.Linear(512, 128)
+        self.fc3 = nn.Linear(128, k*k)
         self.relu = nn.ReLU()
+        
+#        self.dropout = nn.Dropout(p=self.dp)
 
         self.bn1 = nn.BatchNorm1d(64)
         self.bn2 = nn.BatchNorm1d(128)
         self.bn3 = nn.BatchNorm1d(1024)
         self.bn4 = nn.BatchNorm1d(512)
-        self.bn5 = nn.BatchNorm1d(256)
+        self.bn5 = nn.BatchNorm1d(128)
 
     def forward(self, x):
         batchsize = x.shape[0]
@@ -30,6 +33,7 @@ class STNkd(nn.Module):
         x = torch.max(x, 2, keepdim=True)[0]
         x = x.view(-1, 1024)
 
+#        x = self.dropout(x)
         x = F.relu(self.bn4(self.fc1(x)))
         x = F.relu(self.bn5(self.fc2(x)))
         x = self.fc3(x)
@@ -47,17 +51,17 @@ class STNkd(nn.Module):
 
 
 class PointNetfeat(nn.Module):
-    def __init__(self, k=4, stn=False):
+    def __init__(self, k=4, dp=0.3, stn=False):
         super(PointNetfeat, self).__init__()
         self.k = k
         self.stn = stn
         if self.stn:
-            self.stnkd = STNkd(k=self.k)
-        self.conv1 = torch.nn.Conv1d(self.k, 64, 1)
-        self.conv2 = torch.nn.Conv1d(64, 128, 1)
-        self.conv3 = torch.nn.Conv1d(128, 1024, 1)
-        self.bn1 = nn.BatchNorm1d(64)
-        self.bn2 = nn.BatchNorm1d(128)
+            self.stnkd = STNkd(k=self.k, dp=dp)
+        self.conv1 = torch.nn.Conv1d(self.k, 128, 1)
+        self.conv2 = torch.nn.Conv1d(128, 256, 1)
+        self.conv3 = torch.nn.Conv1d(256, 1024, 1)
+        self.bn1 = nn.BatchNorm1d(128)
+        self.bn2 = nn.BatchNorm1d(256)
         self.bn3 = nn.BatchNorm1d(1024)
 
     def forward(self, x):
@@ -82,24 +86,25 @@ class PointNetCls(nn.Module):
         self.dp = dp
         self.stn = stn
         self.classification = classification
-        self.feat = PointNetfeat(k=self.k, stn=self.stn)
+        self.feat = PointNetfeat(k=self.k, dp=self.dp, stn=self.stn)
         self.fc1 = nn.Linear(1024, 512)
-        self.fc2 = nn.Linear(512, 256)
+        self.fc2 = nn.Linear(512, 128)
         if self.classification:
             self.logsoftmax = nn.LogSoftmax(dim=1)
             self.dropout = nn.Dropout(p=self.dp)
-            self.fc_out = nn.Linear(256, 2)
+            self.fc_out = nn.Linear(128, 2)
         else:
-            self.fc_out = nn.Linear(256, 1)
+            self.fc_out = nn.Linear(128, 1)
         self.bn1 = nn.BatchNorm1d(512)
-        self.bn2 = nn.BatchNorm1d(256)
+        self.bn2 = nn.BatchNorm1d(128)
 
     def forward(self, x):
         x = self.feat(x)
-        x = self.fc1(x)
-        if self.classification:
-            x = self.dropout(x)
-        x = F.relu(self.bn1(x))
+#        if self.classification:
+#            x = self.dropout(x)
+        x = F.relu(self.bn1(self.fc1(x)))
+#        if self.classification:
+#            x = self.dropout(x)
         x = F.relu(self.bn2(self.fc2(x)))
         out = self.fc_out(x)
         if self.classification:

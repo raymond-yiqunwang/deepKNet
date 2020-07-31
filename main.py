@@ -25,7 +25,7 @@ parser.add_argument('--root', default='./data_gen/', metavar='DATA_DIR')
 parser.add_argument('--run_name', default='run1', metavar='RUNID')
 parser.add_argument('--gpu_id', default=0, type=int, metavar='GPUID')
 # hyper parameter tuning
-parser.add_argument('--cutoff', default=5000, type=int, metavar='NPOINT CUTOFF')
+parser.add_argument('--cutoff', default=2000, type=int, metavar='NPOINT CUTOFF')
 parser.add_argument('--padding', default='periodic', type=str, metavar='POINT PADDING')
 parser.add_argument('--data_aug', default='False', type=str)
 parser.add_argument('--stn', default='False', type=str)
@@ -76,20 +76,21 @@ def main():
     data_root = os.path.join(args.root, 'data_pointnet') if args.dim == 3 \
                 else os.path.join(args.root, 'data_multiview')
     dataset = deepKNetDataset(root=data_root, target=args.target, 
+                              train_ratio=args.train_ratio,
                               cutoff=args.cutoff, padding=args.padding,
                               data_aug=args.data_aug=='True')
     train_loader, val_loader, test_loader = get_train_val_test_loader(
-        dataset=dataset, batch_size=args.batch_size, 
-        train_ratio=args.train_ratio, val_ratio=args.val_ratio, 
-        test_ratio=args.test_ratio, pin_memory=args.cuda, 
+        dataset=dataset, train_ratio=args.train_ratio,
+        val_ratio=args.val_ratio, test_ratio=args.test_ratio,
+        batch_size=args.batch_size, pin_memory=args.cuda, 
         num_data_workers=args.num_data_workers)
 
     # obtain target value normalizer
     normalizer = Normalizer(torch.zeros(2))
     normalizer.load_state_dict({'mean': 0., 'std': 1.})
     if args.task == 'regression' and args.disable_normalization == 'False':
-        sample_target = [dataset[i][-1] for i in 
-                         sample(range(len(dataset)), 1000)]
+        sample_target = torch.Tensor([dataset[i][-1] for i in 
+                                      sample(range(len(dataset)), 1000)])
         normalizer = Normalizer(sample_target)
 
     # build model
@@ -214,7 +215,7 @@ def train(train_loader, model, criterion, optimizer, epoch, normalizer, writer):
             prefix="Epoch: [{}]".format(epoch)
         )
     else:
-        maes = AverageMeter()
+        maes = AverageMeter('MAE', ':6.3f')
         progress = ProgressMeter(
             len(train_loader),
             [batch_time, data_time, losses, maes],
@@ -298,7 +299,7 @@ def validate(val_loader, model, criterion, epoch, normalizer, writer, test_mode=
             prefix='Validate: ' if not test_mode else 'Test: '
         )
     else:
-        maes = AverageMeter()
+        maes = AverageMeter('MAE', ':6.3f')
         progress = ProgressMeter(
             len(val_loader),
             [batch_time, losses, maes],

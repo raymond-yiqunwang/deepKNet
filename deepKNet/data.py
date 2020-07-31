@@ -7,10 +7,9 @@ from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.dataloader import default_collate
 from torch.utils.data.sampler import SubsetRandomSampler
 
-def get_train_val_test_loader(dataset, collate_fn=default_collate,
-                              batch_size=64, train_ratio=0.7,
-                              val_ratio=0.15, test_ratio=0.15,
-                              num_data_workers=1, pin_memory=False):
+def get_train_val_test_loader(dataset, train_ratio, val_ratio, test_ratio,
+                              batch_size=64, num_data_workers=1, 
+                              collate_fn=default_collate, pin_memory=False):
     # train-val split
     total_size = len(dataset)
     indices = list(range(total_size))
@@ -34,16 +33,19 @@ def get_train_val_test_loader(dataset, collate_fn=default_collate,
 
 
 class deepKNetDataset(Dataset):
-    def __init__(self, root, target, cutoff=6000, padding='zero', data_aug=False):
+    def __init__(self, root, target, train_ratio,
+                 cutoff=2000, padding='zero', data_aug=False):
         self.root = root
         self.target = target
-        self.file_names = [fname.split('.')[0] for fname in \
-                           os.listdir(os.path.join(self.root, 'target/'))]
         self.cutoff = cutoff
         self.padding = padding
         self.data_aug = data_aug
+        self.file_names = [fname.split('.')[0] for fname in \
+                           os.listdir(os.path.join(self.root, 'target/'))]
         random.seed(5)
         random.shuffle(self.file_names)
+        total_size = len(self.file_names)
+        self.train_split = int(np.floor(total_size * train_ratio))
 
     def __getitem__(self, idx):
         # load point cloud data
@@ -63,7 +65,7 @@ class deepKNetDataset(Dataset):
             raise NotImplementedError
 
         # apply random 3D rotation for data augmentation
-        if self.data_aug:
+        if self.data_aug and idx < self.train_split:
             np.random.seed(8)
             alpha, beta, gamma = np.pi * np.random.random(3)
             rot_matrix = [
