@@ -31,6 +31,7 @@ parser.add_argument('--data_aug', default='False', type=str)
 parser.add_argument('--stn', default='False', type=str)
 parser.add_argument('--attn', default='False', type=str)
 parser.add_argument('--nbert', default=3, type=int)
+parser.add_argument('--embed_dim', default=512, type=int)
 parser.add_argument('--disable_normalization', default='False', type=str)
 parser.add_argument('--epochs', default=60, type=int, metavar='N')
 parser.add_argument('--batch_size', default=64, type=int, metavar='N')
@@ -98,6 +99,8 @@ def main():
         model = PointNet(k=4, dp=args.dropout,
                          stn=args.stn=='True',
                          attn=args.attn=='True',
+                         nbert=args.nbert,
+                         embed_dim=args.embed_dim,
                          classification=args.task=='classification')
     elif args.algo == 'LeNet5' and args.dim == 2:
         model = LeNet5()

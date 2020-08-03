@@ -43,29 +43,29 @@ class STN3d(nn.Module):
 
 
 class PointNet(nn.Module):
-    def __init__(self, k, dp, stn, attn, nbert, classification):
+    def __init__(self, k, dp, stn, attn, nbert, embed_dim, classification):
         super(PointNet, self).__init__()
         self.k = k
         self.dp = dp
         self.stn = stn
         self.attn = attn
         self.nbert = nbert
+        self.embed_dim = embed_dim
         self.classification = classification
 
         if self.stn:
             assert(False)
             self.stn3d = STN3d()
+
         self.conv1 = torch.nn.Conv1d(self.k, 256, 1)
-        self.conv2 = torch.nn.Conv1d(256, 512, 1)
-#        self.conv3 = torch.nn.Conv1d(512, 1024, 1)
+        self.conv2 = torch.nn.Conv1d(256, self.embed_dim, 1)
         self.bn1 = nn.BatchNorm1d(256)
-        self.bn2 = nn.BatchNorm1d(512)
-#        self.bn3 = nn.BatchNorm1d(1024)
+        self.bn2 = nn.BatchNorm1d(self.embed_dim)
 
         if self.attn:
-            self.bert = nn.ModuleList([BertLayer() for _ in range(self.nbert)])
+            self.bert = nn.ModuleList([BertLayer(self.embed_dim) for _ in range(self.nbert)])
 
-        self.fc1 = nn.Linear(512, 256)
+        self.fc1 = nn.Linear(self.embed_dim, 256)
         self.fc2 = nn.Linear(256, 128)
         if self.classification:
             self.logsoftmax = nn.LogSoftmax(dim=1)
@@ -89,7 +89,6 @@ class PointNet(nn.Module):
 
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
-#        x = self.bn3(self.conv3(x))
 
         if self.attn:
             x = x.permute(2, 0, 1)
@@ -98,7 +97,7 @@ class PointNet(nn.Module):
             x = x.permute(1, 2, 0)
 
         x = torch.max(x, 2, keepdim=True)[0]
-        x = x.view(-1, 512)
+        x = x.view(-1, self.embed_dim)
         
         x = F.relu(self.bn4(self.fc1(x)))
         if self.classification:
@@ -111,15 +110,16 @@ class PointNet(nn.Module):
 
 
 class BertLayer(nn.Module):
-    def __init__(self):
+    def __init__(self, embed_dim):
         super().__init__()
+        self.embed_dim = embed_dim
 
-        self.attn = nn.MultiheadAttention(512, 2)
-        self.norm1 = nn.LayerNorm(512)
+        self.attn = nn.MultiheadAttention(self.embed_dim, 2)
+        self.norm1 = nn.LayerNorm(self.embed_dim)
 
-        self.fc1 = nn.Linear(512, 256)
-        self.fc2 = nn.Linear(256, 512)
-        self.norm2 = nn.LayerNorm(512)
+        self.fc1 = nn.Linear(self.embed_dim, int(self.embed_dim/2))
+        self.fc2 = nn.Linear(int(self.embed_dim/2), self.embed_dim)
+        self.norm2 = nn.LayerNorm(self.embed_dim)
 
     def forward(self, x):
         y, _ = self.attn(x, x, x)
