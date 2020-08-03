@@ -8,8 +8,8 @@ from torch.utils.data.dataloader import default_collate
 from torch.utils.data.sampler import SubsetRandomSampler
 
 def get_train_val_test_loader(dataset, train_ratio, val_ratio, test_ratio,
-                              batch_size=64, num_data_workers=1, 
-                              collate_fn=default_collate, pin_memory=False):
+                              batch_size, num_data_workers, pin_memory,
+                              collate_fn=default_collate):
     # train-val split
     total_size = len(dataset)
     indices = list(range(total_size))
@@ -34,7 +34,7 @@ def get_train_val_test_loader(dataset, train_ratio, val_ratio, test_ratio,
 
 class deepKNetDataset(Dataset):
     def __init__(self, root, target, train_ratio,
-                 cutoff=3000, padding='zero', data_aug=False):
+                 cutoff, padding, data_aug):
         self.root = root
         self.target = target
         self.cutoff = cutoff
