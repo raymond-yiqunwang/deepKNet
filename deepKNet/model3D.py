@@ -43,12 +43,13 @@ class STN3d(nn.Module):
 
 
 class PointNet(nn.Module):
-    def __init__(self, k, dp, stn, attn, classification):
+    def __init__(self, k, dp, stn, attn, nbert, classification):
         super(PointNet, self).__init__()
         self.k = k
         self.dp = dp
         self.stn = stn
         self.attn = attn
+        self.nbert = nbert
         self.classification = classification
 
         if self.stn:
@@ -56,26 +57,24 @@ class PointNet(nn.Module):
             self.stn3d = STN3d()
         self.conv1 = torch.nn.Conv1d(self.k, 256, 1)
         self.conv2 = torch.nn.Conv1d(256, 512, 1)
-        self.conv3 = torch.nn.Conv1d(512, 1024, 1)
+#        self.conv3 = torch.nn.Conv1d(512, 1024, 1)
         self.bn1 = nn.BatchNorm1d(256)
         self.bn2 = nn.BatchNorm1d(512)
-        self.bn3 = nn.BatchNorm1d(1024)
+#        self.bn3 = nn.BatchNorm1d(1024)
 
         if self.attn:
-            assert(False)
-            self.nbert = 5
             self.bert = nn.ModuleList([BertLayer() for _ in range(self.nbert)])
 
-        self.fc1 = nn.Linear(1024, 512)
-        self.fc2 = nn.Linear(512, 256)
+        self.fc1 = nn.Linear(512, 256)
+        self.fc2 = nn.Linear(256, 128)
         if self.classification:
             self.logsoftmax = nn.LogSoftmax(dim=1)
             self.dropout = nn.Dropout(self.dp)
-            self.fc_out = nn.Linear(256, 2)
+            self.fc_out = nn.Linear(128, 2)
         else:
-            self.fc_out = nn.Linear(256, 1)
-        self.bn4 = nn.BatchNorm1d(512)
-        self.bn5 = nn.BatchNorm1d(256)
+            self.fc_out = nn.Linear(128, 1)
+        self.bn4 = nn.BatchNorm1d(256)
+        self.bn5 = nn.BatchNorm1d(128)
 
     def forward(self, x):
         if self.stn:
@@ -90,17 +89,16 @@ class PointNet(nn.Module):
 
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
-        x = self.bn3(self.conv3(x))
+#        x = self.bn3(self.conv3(x))
 
         if self.attn:
-            assert(False)
             x = x.permute(2, 0, 1)
             for bert in self.bert:
                 x = bert(x)
             x = x.permute(1, 2, 0)
 
         x = torch.max(x, 2, keepdim=True)[0]
-        x = x.view(-1, 1024)
+        x = x.view(-1, 512)
         
         x = F.relu(self.bn4(self.fc1(x)))
         if self.classification:
@@ -116,12 +114,12 @@ class BertLayer(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.attn = nn.MultiheadAttention(1024, 4)
-        self.norm1 = nn.LayerNorm(1024)
+        self.attn = nn.MultiheadAttention(512, 2)
+        self.norm1 = nn.LayerNorm(512)
 
-        self.fc1 = nn.Linear(1024, 512)
-        self.fc2 = nn.Linear(512)
-        self.norm2 = nn.LayerNorm(1024)
+        self.fc1 = nn.Linear(512, 256)
+        self.fc2 = nn.Linear(256, 512)
+        self.norm2 = nn.LayerNorm(512)
 
     def forward(self, x):
         y, _ = self.attn(x, x, x)

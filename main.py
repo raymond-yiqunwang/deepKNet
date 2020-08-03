@@ -30,13 +30,14 @@ parser.add_argument('--padding', default='zero', type=str, metavar='POINT PADDIN
 parser.add_argument('--data_aug', default='False', type=str)
 parser.add_argument('--stn', default='False', type=str)
 parser.add_argument('--attn', default='False', type=str)
+parser.add_argument('--nbert', default=3, type=int)
 parser.add_argument('--disable_normalization', default='False', type=str)
 parser.add_argument('--epochs', default=60, type=int, metavar='N')
-parser.add_argument('--batch_size', default=128, type=int, metavar='N')
+parser.add_argument('--batch_size', default=64, type=int, metavar='N')
 parser.add_argument('--optim', default='SGD', type=str, metavar='OPTIM')
 parser.add_argument('--lr', default=0.01, type=float, metavar='LR')
 parser.add_argument('--lr_milestones', default=[20, 40], nargs='+', type=int)
-parser.add_argument('--dropout', default=0.2, type=float, metavar='DROPOUT')
+parser.add_argument('--dropout', default=0.1, type=float, metavar='DROPOUT')
 # default params
 parser.add_argument('--start_epoch', default=0, type=int, metavar='N')
 parser.add_argument('--wd', '--weight_decay', default=0, type=float,
@@ -50,7 +51,7 @@ n_threads = torch.get_num_threads()
 parser.add_argument('--num_threads', default=n_threads, type=int, metavar='N_thread')
 parser.add_argument('--num_data_workers', default=4, type=int, metavar='N')
 parser.add_argument('--print_freq', default=10, type=int, metavar='N')
-parser.add_argument('--test_freq', default=5, type=int, metavar='N')
+parser.add_argument('--test_freq', default=10, type=int, metavar='N')
 parser.add_argument('--resume', default='', type=str, metavar='PATH')
 parser.add_argument('--disable_cuda', action='store_true')
 
@@ -432,7 +433,6 @@ def compute_mae(prediction, target):
 def class_eval(prediction, target):
     prediction = np.exp(prediction.detach().cpu().numpy())
     target = target.detach().cpu().numpy()
-    # TODO change threshold
     pred_label = np.argmax(prediction, axis=1)
     target_label = np.squeeze(target)
     if prediction.shape[1] == 2:
