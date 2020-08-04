@@ -43,7 +43,7 @@ class STN3d(nn.Module):
 
 
 class PointNet(nn.Module):
-    def __init__(self, k, dp, stn, attn, nbert, embed_dim, classification):
+    def __init__(self, k, dp, stn, attn, nbert, embed_dim, classification, pool):
         super(PointNet, self).__init__()
         self.k = k
         self.dp = dp
@@ -52,6 +52,7 @@ class PointNet(nn.Module):
         self.nbert = nbert
         self.embed_dim = embed_dim
         self.classification = classification
+        self.pool = pool
 
         if self.stn:
             assert(False)
@@ -96,7 +97,12 @@ class PointNet(nn.Module):
                 x = bert(x)
             x = x.permute(1, 2, 0)
 
-        x = torch.max(x, 2, keepdim=True)[0]
+        if self.pool == 'max':
+            x = torch.max(x, 2, keepdim=True)[0]
+        elif self.pool == 'CLS':
+            x = x[:, :, 0]
+        else:
+            raise NotImplementedError
         x = x.view(-1, self.embed_dim)
         
         x = F.relu(self.bn4(self.fc1(x)))

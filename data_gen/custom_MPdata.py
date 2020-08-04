@@ -85,9 +85,9 @@ def show_statistics(data, plot=False):
                 'std = {:.2f}, min = {:.2f}, max = {:.2f}' \
                 .format(energy_atom.mean(), energy_atom.median(), energy_atom.std(), \
                         energy_atom.min(), energy_atom.max()))
-    if plot:
-        energy_atom.plot.hist(bins=20)
-        plt.show()
+#    if plot:
+#        energy_atom.plot.hist(bins=20)
+#        plt.show()
 
     # formation energy per atom
     formation_atom = data['formation_energy_per_atom']
@@ -95,9 +95,9 @@ def show_statistics(data, plot=False):
                 'std = {:.2f}, min = {:.2f}, max = {:.2f}' \
                 .format(formation_atom.mean(), formation_atom.median(),\
                         formation_atom.std(), formation_atom.min(), formation_atom.max()))
-    if plot:
-        formation_atom.plot.hist(bins=20)
-        plt.show()
+#    if plot:
+#        formation_atom.plot.hist(bins=20)
+#        plt.show()
 
     # energy above hull
     e_above_hull = data['e_above_hull']
@@ -111,10 +111,12 @@ def show_statistics(data, plot=False):
     metals = data[data['band_gap'] <= gap_threshold]['band_gap']
     insulators = data[data['band_gap'] > gap_threshold]['band_gap']
     if plot:
-        data['band_gap'].plot.hist(bins=20)
-        plt.show()
-        insulators.plot.hist(bins=20)
-        plt.show()
+        # normalize
+#        data['band_gap'].plot.hist(bins=20)
+        plt.hist(data['band_gap'], density=1, bins=20)
+        plt.savefig('gap.png')
+#        insulators.plot.hist(bins=20)
+#        plt.show()
     print('>> Number of metals: {:d}, number of insulators: {:d}' \
                 .format(metals.size, insulators.size))
     print('     band gap of all dataset: mean = {:.2f}, median = {:.2f}, '
@@ -139,7 +141,7 @@ def customize_data(raw_data):
         data_custom = data_custom[data_custom['warnings'] == '[]']
 
     # only take crystals in ICSD
-    if False:
+    if True:
         data_custom = data_custom[data_custom['icsd_ids'] != '[]']
 
     # get rid of extreme volumes
@@ -185,7 +187,7 @@ def main():
 
     # show statistics of customized data
     print('\nShowing customized data:')
-    show_statistics(data=data_custom, plot=False)
+    show_statistics(data=data_custom, plot=True)
 
     # write customized data
     out_file = os.path.join(args.root, "raw_data/custom_MPdata.csv")

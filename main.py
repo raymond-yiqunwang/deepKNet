@@ -32,6 +32,7 @@ parser.add_argument('--stn', default='False', type=str)
 parser.add_argument('--attn', default='False', type=str)
 parser.add_argument('--nbert', default=3, type=int)
 parser.add_argument('--embed_dim', default=512, type=int)
+parser.add_argument('--pool', default='max', type=str)
 parser.add_argument('--disable_normalization', default='False', type=str)
 parser.add_argument('--epochs', default=60, type=int, metavar='N')
 parser.add_argument('--batch_size', default=64, type=int, metavar='N')
@@ -101,7 +102,8 @@ def main():
                          attn=args.attn=='True',
                          nbert=args.nbert,
                          embed_dim=args.embed_dim,
-                         classification=args.task=='classification')
+                         classification=args.task=='classification',
+                         pool=args.pool)
     elif args.algo == 'LeNet5' and args.dim == 2:
         model = LeNet5()
     elif args.algo == 'ResNet' and args.dim == 2:
