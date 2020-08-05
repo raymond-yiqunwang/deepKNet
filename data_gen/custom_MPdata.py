@@ -87,7 +87,7 @@ def show_statistics(data, plot=False):
                         energy_atom.min(), energy_atom.max()))
 #    if plot:
 #        energy_atom.plot.hist(bins=20)
-#        plt.show()
+#        plt.savefig('energy.png', dpi=200)
 
     # formation energy per atom
     formation_atom = data['formation_energy_per_atom']
@@ -97,7 +97,7 @@ def show_statistics(data, plot=False):
                         formation_atom.std(), formation_atom.min(), formation_atom.max()))
 #    if plot:
 #        formation_atom.plot.hist(bins=20)
-#        plt.show()
+#        plt.savefig('formation.png', dpi=200)
 
     # energy above hull
     e_above_hull = data['e_above_hull']
@@ -111,12 +111,13 @@ def show_statistics(data, plot=False):
     metals = data[data['band_gap'] <= gap_threshold]['band_gap']
     insulators = data[data['band_gap'] > gap_threshold]['band_gap']
     if plot:
-        # normalize
+#        # normalize
 #        data['band_gap'].plot.hist(bins=20)
-        plt.hist(data['band_gap'], density=1, bins=20)
-        plt.savefig('gap.png')
-#        insulators.plot.hist(bins=20)
-#        plt.show()
+#        plt.hist(data['band_gap'], density=1, bins=20)
+#        plt.savefig('gap.png', dpi=200)
+        insulators.plot.hist(bins=20)
+        plt.savefig('insulator.png', dpi=200)
+    
     print('>> Number of metals: {:d}, number of insulators: {:d}' \
                 .format(metals.size, insulators.size))
     print('     band gap of all dataset: mean = {:.2f}, median = {:.2f}, '

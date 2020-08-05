@@ -28,7 +28,7 @@ parser.add_argument('--gpu_id', default=0, type=int, metavar='GPUID')
 parser.add_argument('--cutoff', default=1000, type=int, metavar='NPOINT CUTOFF')
 parser.add_argument('--padding', default='zero', type=str, metavar='POINT PADDING')
 parser.add_argument('--data_aug', default='False', type=str)
-parser.add_argument('--stn', default='False', type=str)
+parser.add_argument('--rot_all', default='False', type=str)
 parser.add_argument('--attn', default='False', type=str)
 parser.add_argument('--nbert', default=3, type=int)
 parser.add_argument('--embed_dim', default=512, type=int)
@@ -80,7 +80,8 @@ def main():
     dataset = deepKNetDataset(root=args.root, target=args.target, 
                               train_ratio=args.train_ratio,
                               cutoff=args.cutoff, padding=args.padding,
-                              data_aug=args.data_aug=='True')
+                              data_aug=args.data_aug=='True',
+                              rot_all=args.rot_all=='True')
     train_loader, val_loader, test_loader = get_train_val_test_loader(
         dataset=dataset, train_ratio=args.train_ratio,
         val_ratio=args.val_ratio, test_ratio=args.test_ratio,
@@ -100,7 +101,6 @@ def main():
     # build model
     if args.algo == 'PointNet' and args.dim == 3:
         model = PointNet(k=4, dp=args.dropout,
-                         stn=args.stn=='True',
                          attn=args.attn=='True',
                          nbert=args.nbert,
                          embed_dim=args.embed_dim,
