@@ -94,6 +94,8 @@ def main():
         sample_target = torch.Tensor([dataset[i][-1] for i in 
                                       sample(range(len(dataset)), 1000)])
         normalizer = Normalizer(sample_target)
+        print('sample mean: {}, sample std: {}'.format(normalizer.state_dict()['mean'],
+                                                       normalizer.state_dict()['std']))
 
     # build model
     if args.algo == 'PointNet' and args.dim == 3:
