@@ -145,7 +145,7 @@ def main():
             print("=> loading checkpoint '{}'".format(args.resume), flush=True)
             checkpoint = torch.load(args.resume)
             args.start_epoch = checkpoint['epoch'] + 1
-            best_auc = checkpoint['best_auc']
+            best_performance = checkpoint['best_performance']
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
             print("=> loaded checkpoint '{}' (epoch {})"
@@ -238,7 +238,7 @@ def train(train_loader, model, criterion, optimizer, epoch, normalizer, writer):
         image, target = data
         
         # optionally skip the last batch
-        if target.size(0) < 8: continue
+        if target.size(0) < 16: continue
 
         # normalize target
         if args.task == 'classification':
