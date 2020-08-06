@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import MultiStepLR
-from torch.utils.tensorboard import SummaryWriter
+from tensorboardX import SummaryWriter
 from deepKNet.data import get_train_val_test_loader
 from deepKNet.model2D import LeNet5, ResNet, BasicBlock
 from deepKNet.model3D import PointNet
@@ -21,7 +21,7 @@ parser.add_argument('--task', choices=['regression', 'classification'],
 parser.add_argument('--algo', default='PointNet', type=str, metavar='NETWORK')
 parser.add_argument('--dim', default=3, type=int, metavar='FEATURE DIMENSION')
 parser.add_argument('--target', default='MIT', metavar='TARGET_PROPERTY')
-parser.add_argument('--root', default='./data_gen/data_pointnet_28k/', metavar='DATA_DIR')
+parser.add_argument('--root', default='./data_gen/data_pointnet/', metavar='DATA_DIR')
 parser.add_argument('--run_name', default='run1', metavar='RUNID')
 parser.add_argument('--gpu_id', default=0, type=int, metavar='GPUID')
 # hyper parameter tuning

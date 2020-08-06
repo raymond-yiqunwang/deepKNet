@@ -51,7 +51,9 @@ class deepKNetDataset(Dataset):
         # padding and cutoff
         if self.padding == 'zero':
             if point_cloud.shape[0] < self.cutoff:
-                point_cloud = np.pad(point_cloud, ((0, self.cutoff-point_cloud.shape[0]), (0, 0)))
+                point_cloud = np.pad(point_cloud, 
+                                     ((0, self.cutoff-point_cloud.shape[0]), (0, 0)),
+                                     mode='constant')
             else:
                 point_cloud = point_cloud[:self.cutoff, :]
         elif self.padding == 'periodic':
