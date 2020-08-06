@@ -18,40 +18,21 @@ from deepKNet.model3D import PointNet
 parser = argparse.ArgumentParser(description='deepKNet model')
 parser.add_argument('--task', choices=['regression', 'classification'],
                     default='classification')
-parser.add_argument('--algo', default='PointNet', type=str, metavar='NETWORK')
-parser.add_argument('--dim', default=3, type=int, metavar='FEATURE DIMENSION')
 parser.add_argument('--target', default='MIT', metavar='TARGET_PROPERTY')
-parser.add_argument('--root', default='./data_gen/data_pointnet_28k/', metavar='DATA_DIR')
-parser.add_argument('--run_name', default='run1', metavar='RUNID')
+parser.add_argument('--root', default='./data_gen/data_pointnet/', metavar='DATA_DIR')
 parser.add_argument('--gpu_id', default=0, type=int, metavar='GPUID')
 # hyper parameter tuning
 parser.add_argument('--cutoff', default=1000, type=int, metavar='NPOINT CUTOFF')
 parser.add_argument('--padding', default='zero', type=str, metavar='POINT PADDING')
 parser.add_argument('--data_aug', default='False', type=str)
 parser.add_argument('--rot_all', default='False', type=str)
-parser.add_argument('--attn', default='False', type=str)
-parser.add_argument('--nbert', default=3, type=int)
-parser.add_argument('--embed_dim', default=512, type=int)
-parser.add_argument('--pool', default='max', type=str)
 parser.add_argument('--disable_normalization', default='False', type=str)
-parser.add_argument('--epochs', default=60, type=int, metavar='N')
 parser.add_argument('--batch_size', default=64, type=int, metavar='N')
-parser.add_argument('--optim', default='SGD', type=str, metavar='OPTIM')
-parser.add_argument('--lr', default=0.01, type=float, metavar='LR')
-parser.add_argument('--lr_milestones', default=[20, 40], nargs='+', type=int)
-parser.add_argument('--dropout', default=0.1, type=float, metavar='DROPOUT')
 # default params
-parser.add_argument('--start_epoch', default=0, type=int, metavar='N')
-parser.add_argument('--wd', '--weight_decay', default=0, type=float,
-                    metavar='W', help='weigh decay (default: 0)',
-                    dest='weight_decay')
-parser.add_argument('--momentum', default=0.9, type=float, metavar='M')
 n_threads = torch.get_num_threads()
 parser.add_argument('--num_threads', default=n_threads, type=int, metavar='N_thread')
 parser.add_argument('--num_data_workers', default=4, type=int, metavar='N')
 parser.add_argument('--print_freq', default=10, type=int, metavar='N')
-parser.add_argument('--test_freq', default=10, type=int, metavar='N')
-parser.add_argument('--resume', default='', type=str, metavar='PATH')
 parser.add_argument('--disable_cuda', action='store_true')
 
 # parse args

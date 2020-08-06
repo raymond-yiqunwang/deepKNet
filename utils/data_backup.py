@@ -4,37 +4,37 @@ import torch
 import numpy as np
 import pandas as pd
 from torch.utils.data import Dataset, DataLoader
+from torch.utils.data.dataloader import default_collate
+from torch.utils.data.sampler import SubsetRandomSampler
 
-def get_train_val_test_loader(root, target, cutoff, padding, data_aug, rot_all,
-                              batch_size, num_data_workers, pin_memory):
-
-    train_dataset = deepKNetDataset(root=root+'/train/', target=target,
-                                    cutoff=cutoff, padding=padding,
-                                    data_aug=data_aug=='True',
-                                    rot_all=rot_all=='True')
-    val_dataset = deepKNetDataset(root=root+'/valid/', target=target,
-                                  cutoff=cutoff, padding=padding,
-                                  data_aug=data_aug=='True',
-                                  rot_all=rot_all=='True')
-    test_dataset = deepKNetDataset(root=root+'/test/', target=target,
-                                   cutoff=cutoff, padding=padding,
-                                   data_aug=data_aug=='True',
-                                   rot_all=rot_all=='True')
+def get_train_val_test_loader(dataset, train_ratio, val_ratio, test_ratio,
+                              batch_size, num_data_workers, pin_memory,
+                              collate_fn=default_collate):
+    # train-val split
+    total_size = len(dataset)
+    indices = list(range(total_size))
+    train_split = int(np.floor(total_size * train_ratio))
+    train_sampler = SubsetRandomSampler(indices[:train_split])
+    val_split = train_split + int(np.floor(total_size * val_ratio))
+    val_sampler = SubsetRandomSampler(indices[train_split:val_split])
+    test_sampler = SubsetRandomSampler(indices[val_split:])
     # init DataLoader
-    train_loader = DataLoader(train_dataset, batch_size=batch_size,
-                              shuffle=True,
-                              num_workers=num_data_workers, pin_memory=pin_memory)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size,
-                            shuffle=True,
-                            num_workers=num_data_workers, pin_memory=pin_memory)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size,
-                             shuffle=True,
-                             num_workers=num_data_workers, pin_memory=pin_memory)
+    train_loader = DataLoader(dataset, batch_size=batch_size, collate_fn=collate_fn,
+                              sampler=train_sampler, num_workers=num_data_workers,
+                              pin_memory=pin_memory)
+    val_loader = DataLoader(dataset, batch_size=batch_size, collate_fn=collate_fn,
+                            sampler=val_sampler, num_workers=num_data_workers,
+                            pin_memory=pin_memory)
+    test_loader = DataLoader(dataset, batch_size=batch_size, collate_fn=collate_fn,
+                             sampler=test_sampler, num_workers=num_data_workers,
+                             pin_memory=pin_memory)
+    
     return train_loader, val_loader, test_loader
 
 
 class deepKNetDataset(Dataset):
-    def __init__(self, root, target, cutoff, padding, data_aug, rot_all):
+    def __init__(self, root, target, train_ratio,
+                 cutoff, padding, data_aug, rot_all):
         self.root = root
         self.target = target
         self.cutoff = cutoff
@@ -42,12 +42,15 @@ class deepKNetDataset(Dataset):
         self.data_aug = data_aug
         self.rot_all = rot_all
         self.file_names = [fname.split('.')[0] for fname in \
-                           os.listdir(self.root)
-                           if fname.split('.')[-1] == 'csv']
+                           os.listdir(os.path.join(self.root, 'target/'))]
+        random.seed(5)
+        random.shuffle(self.file_names)
+        total_size = len(self.file_names)
+        self.train_split = int(np.floor(total_size * train_ratio))
 
     def __getitem__(self, idx):
         # load point cloud data
-        point_cloud = np.load(self.root+self.file_names[idx]+'.npy')
+        point_cloud = np.load(self.root+'/features/'+self.file_names[idx]+'.npy')
         
         # padding and cutoff
         if self.padding == 'zero':
@@ -83,7 +86,7 @@ class deepKNetDataset(Dataset):
         point_cloud = torch.Tensor(point_cloud.transpose())
 
         # load target property
-        properties = pd.read_csv(self.root+self.file_names[idx]+'.csv',
+        properties = pd.read_csv(self.root+'/target/'+self.file_names[idx]+'.csv',
                                  sep=';', header=0, index_col=None)
         prop = torch.Tensor(properties[self.target].values)
         return point_cloud, prop

@@ -40,7 +40,7 @@ def compute_xrd(raw_data, wavelength):
         band_gap = irow['band_gap']
         energy_per_atom = irow['energy_per_atom']
         formation_energy_per_atom = irow['formation_energy_per_atom']
-        MIT = float(band_gap < 1E-6)
+        MIT = float(band_gap > 1E-6)
 
         # property list
         ifeat = [material_id, recip_latt.tolist(), features,

@@ -76,8 +76,6 @@ def show_statistics(data, plot=False):
             .format(len(elem_dict), min_key, elem_dict[min_key], \
                                     max_key, elem_dict[max_key]))
     print('>> Max Z: {}'.format(max_Z))
-#    for key, val in elem_dict.items():
-#        print(key, val)
 
     # energy per atom
     energy_atom = data['energy_per_atom']
@@ -85,9 +83,6 @@ def show_statistics(data, plot=False):
                 'std = {:.2f}, min = {:.2f}, max = {:.2f}' \
                 .format(energy_atom.mean(), energy_atom.median(), energy_atom.std(), \
                         energy_atom.min(), energy_atom.max()))
-#    if plot:
-#        energy_atom.plot.hist(bins=20)
-#        plt.savefig('energy.png', dpi=200)
 
     # formation energy per atom
     formation_atom = data['formation_energy_per_atom']
@@ -95,9 +90,6 @@ def show_statistics(data, plot=False):
                 'std = {:.2f}, min = {:.2f}, max = {:.2f}' \
                 .format(formation_atom.mean(), formation_atom.median(),\
                         formation_atom.std(), formation_atom.min(), formation_atom.max()))
-#    if plot:
-#        formation_atom.plot.hist(bins=20)
-#        plt.savefig('formation.png', dpi=200)
 
     # energy above hull
     e_above_hull = data['e_above_hull']
@@ -110,14 +102,6 @@ def show_statistics(data, plot=False):
     gap_threshold = 1E-6
     metals = data[data['band_gap'] <= gap_threshold]['band_gap']
     insulators = data[data['band_gap'] > gap_threshold]['band_gap']
-    if plot:
-#        # normalize
-#        data['band_gap'].plot.hist(bins=20)
-#        plt.hist(data['band_gap'], density=1, bins=20)
-#        plt.savefig('gap.png', dpi=200)
-        insulators.plot.hist(bins=20)
-        plt.savefig('insulator.png', dpi=200)
-    
     print('>> Number of metals: {:d}, number of insulators: {:d}' \
                 .format(metals.size, insulators.size))
     print('     band gap of all dataset: mean = {:.2f}, median = {:.2f}, '
@@ -136,24 +120,7 @@ def show_statistics(data, plot=False):
 
 def customize_data(raw_data):
     data_custom = raw_data.copy()
-
-    # only take no-warning entries
-    if True:
-        data_custom = data_custom[data_custom['warnings'] == '[]']
-
-    # only take crystals in ICSD
-    if False:
-        data_custom = data_custom[data_custom['icsd_ids'] != '[]']
-
-    # only take stable compounds
-    if True:
-        data_custom = data_custom[data_custom['e_above_hull'] < 0.25]
-
-    # get rid of extreme volumes
-    if False:
-#        data_custom = data_custom[data_custom['volume'] > 1000]
-        data_custom = data_custom[data_custom['volume'] < 1000]
-
+    
     # get rid of rare elements
     if True:
         # identify rare elements
@@ -171,6 +138,24 @@ def customize_data(raw_data):
             if rare_elements & set(ast.literal_eval(value)):
                 drop_instance.append(idx)
         data_custom = data_custom.drop(drop_instance)
+
+
+    # only take no-warning entries
+    if True:
+        data_custom = data_custom[data_custom['warnings'] == '[]']
+
+    # only take crystals in ICSD
+    if True:
+        data_custom = data_custom[data_custom['icsd_ids'] != '[]']
+
+    # only take stable compounds
+    if False:
+        data_custom = data_custom[data_custom['e_above_hull'] < 0.25]
+
+    # get rid of extreme volumes
+    if False:
+        data_custom = data_custom[data_custom['volume'] > 100]
+        data_custom = data_custom[data_custom['volume'] < 4000]
 
     return data_custom
 
@@ -192,7 +177,7 @@ def main():
 
     # show statistics of customized data
     print('\nShowing customized data:')
-    show_statistics(data=data_custom, plot=True)
+    show_statistics(data=data_custom, plot=False)
 
     # write customized data
     out_file = os.path.join(args.root, "raw_data/custom_MPdata.csv")
