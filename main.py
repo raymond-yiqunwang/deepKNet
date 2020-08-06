@@ -11,7 +11,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.tensorboard import SummaryWriter
-from deepKNet.data import deepKNetDataset, get_train_val_test_loader
+from deepKNet.data import get_train_val_test_loader
 from deepKNet.model2D import LeNet5, ResNet, BasicBlock
 from deepKNet.model3D import PointNet
 

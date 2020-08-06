@@ -10,16 +10,16 @@ def get_train_val_test_loader(root, target, cutoff, padding, data_aug, rot_all,
 
     train_dataset = deepKNetDataset(root=root+'/train/', target=target,
                                     cutoff=cutoff, padding=padding,
-                                    data_aug=data_aug=='True',
-                                    rot_all=rot_all=='True')
+                                    data_aug=(data_aug=='True' or
+                                              rot_all=='True'))
     val_dataset = deepKNetDataset(root=root+'/valid/', target=target,
                                   cutoff=cutoff, padding=padding,
-                                  data_aug=data_aug=='True',
-                                  rot_all=rot_all=='True')
+                                  data_aug=(data_aug=='True' and
+                                            rot_all=='True'))
     test_dataset = deepKNetDataset(root=root+'/test/', target=target,
                                    cutoff=cutoff, padding=padding,
-                                   data_aug=data_aug=='True',
-                                   rot_all=rot_all=='True')
+                                   data_aug=(data_aug=='True' and
+                                             rot_all=='True'))
     # init DataLoader
     train_loader = DataLoader(train_dataset, batch_size=batch_size,
                               shuffle=True,
@@ -34,13 +34,12 @@ def get_train_val_test_loader(root, target, cutoff, padding, data_aug, rot_all,
 
 
 class deepKNetDataset(Dataset):
-    def __init__(self, root, target, cutoff, padding, data_aug, rot_all):
+    def __init__(self, root, target, cutoff, padding, data_aug):
         self.root = root
         self.target = target
         self.cutoff = cutoff
         self.padding = padding
         self.data_aug = data_aug
-        self.rot_all = rot_all
         self.file_names = [fname.split('.')[0] for fname in \
                            os.listdir(self.root)
                            if fname.split('.')[-1] == 'csv']
@@ -63,7 +62,7 @@ class deepKNetDataset(Dataset):
             raise NotImplementedError
 
         # apply random 3D rotation for data augmentation
-        if self.data_aug and (idx < self.train_split or self.rot_all):
+        if self.data_aug:
             np.random.seed(8)
             alpha, beta, gamma = np.pi * np.random.random(3)
             rot_matrix = [
