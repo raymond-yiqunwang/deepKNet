@@ -438,7 +438,10 @@ def class_eval(prediction, target):
     if prediction.shape[1] == 2:
         precision, recall, fscore, _ = metrics.precision_recall_fscore_support(
             target_label, pred_label, average='binary', warn_for=tuple())
-        auc_score = metrics.roc_auc_score(target_label, prediction[:, 1])
+        try:
+            auc_score = metrics.roc_auc_score(target_label, prediction[:, 1])
+        except:
+            auc_score = np.float64(0.0)
         accuracy = metrics.accuracy_score(target_label, pred_label)
     else:
         raise NotImplementedError

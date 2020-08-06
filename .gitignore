@@ -1,6 +1,6 @@
 *.log
 job_submit.sh
-results/
+pre-trained/
 runs/
 checkpoints/
 data_gen/data_multiview*/
