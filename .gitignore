@@ -1,5 +1,6 @@
 *.log
 job_submit.sh
+results/
 runs/
 checkpoints/
 data_gen/data_multiview*/

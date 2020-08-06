@@ -142,8 +142,12 @@ def customize_data(raw_data):
         data_custom = data_custom[data_custom['warnings'] == '[]']
 
     # only take crystals in ICSD
-    if True:
+    if False:
         data_custom = data_custom[data_custom['icsd_ids'] != '[]']
+
+    # only take stable compounds
+    if True:
+        data_custom = data_custom[data_custom['e_above_hull'] < 0.25]
 
     # get rid of extreme volumes
     if False:
@@ -158,7 +162,7 @@ def customize_data(raw_data):
             for elem in ast.literal_eval(entry):
                 elem_dict[elem] += 1
         rare_dict = {key: val for key, val in elem_dict.items() if val < 60}
-        print('>> Rare elements: ')
+        print('\n>> Rare elements: ')
         print(rare_dict)
         rare_elements = set(rare_dict.keys())
         # drop entries containing rare elements

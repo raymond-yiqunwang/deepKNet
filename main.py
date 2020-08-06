@@ -145,7 +145,7 @@ def main():
     if args.resume:
         if os.path.isfile(args.resume):
             print("=> loading checkpoint '{}'".format(args.resume), flush=True)
-            checkpoint = torch.load(args.resume)
+            checkpoint = torch.load(args.resume, map_location=torch.device('cpu'))
             args.start_epoch = checkpoint['epoch'] + 1
             best_performance = checkpoint['best_performance']
             model.load_state_dict(checkpoint['state_dict'])
