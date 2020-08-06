@@ -1,262 +1,186 @@
 import os
 import sys
 import ast
-import math
-import json
 import argparse
 import numpy as np
 import pandas as pd
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
-from pymatgen import MPRester
+import multiprocessing
+import matplotlib.pyplot as plt
+from multiprocessing import Pool
+from collections import defaultdict
 from pymatgen.core.structure import Structure
+from pymatgen.core.periodic_table import Element
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--debug', dest='debug', action='store_true')
+parser.add_argument('--root', default='./', metavar='DATA_DIR')
 args = parser.parse_args()
 
-# input -- material_id
-# output -- recip_latt, dict{(hkl): (intensity_hkl, atomic_form_factor)}
-def debug_xrd(material_id):
-    my_API_key = "gxTAyXSm2GvCdWer"
-    m = MPRester(api_key=my_API_key)
-    mp_data = m.query(criteria={
-        "material_id" : {'$eq' : material_id },
-    }, properties=['cif'])
+""" properties
+        "material_id", "icsd_ids",
+        "unit_cell_formula", "pretty_formula",
+        "spacegroup", "cif",
+        "volume", "nsites", "elements", "nelements",
+        "energy", "energy_per_atom", "formation_energy_per_atom", "e_above_hull",
+        "band_gap", "density", "total_magnetization", "elasticity",
+        "is_hubbard", "hubbards",
+        "warnings", "tags",
+"""
+
+def show_statistics(data, plot=False):
+    # size of database
+    print('>> Total number of materials: {:d}, number of properties: {:d}'\
+            .format(data.shape[0], data.shape[1]))
+
+    # compounds in ICSD
+    ICSD_ids = set()
+    for ids in data['icsd_ids']:
+        ICSD_ids.update(ast.literal_eval(ids))
+    non_ICSD = data[data['icsd_ids'] == '[]'].shape[0]
+    print('>> Number of ICSD IDs: {:d}, number of compounds not in ICSD: {:d}'\
+            .format(len(ICSD_ids), non_ICSD))
+
+    # space group
+    sg_set = set()
+    for sg in data['spacegroup']:
+        sg_dict = ast.literal_eval(sg)
+        sg_set.add(sg_dict['number'])
+    print('>> Number of unique space groups: {:d}'.format(len(sg_set)))
+
+    # volume
+    vol = data['volume']
+    print('>> Cell volume (A^3): mean = {:.2f}, median = {:.2f}, '
+                'std = {:.2f}, min = {:.2f}, max = {:.2f}' \
+                .format(vol.mean(), vol.median(), vol.std(), 
+                        vol.min(), vol.max()))
     
-    struct = Structure.from_str(mp_data[0]['cif'], fmt="cif")
-    latt = struct.lattice
-    wavelength = 1.54184 # CuKa wavelength
-    max_r = 2 / wavelength
-    recip_latt = latt.reciprocal_lattice_crystallographic
-    recip_pts = recip_latt.get_points_in_sphere(
-        [[0, 0, 0]], [0, 0, 0], max_r)
+    # number of sites
+    nsites = data['nsites']
+    print('>> Number of sites: mean = {:.1f}, median = {:.1f}, '
+                'std = {:.1f}, min = {:d}, max = {:d}' \
+                .format(nsites.mean(), nsites.median(), nsites.std(), \
+                        nsites.min(), nsites.max()))
+
+    # elements
+    elements = data['elements']
+    elem_dict = defaultdict(int)
+    max_Z = -1
+    for compound in elements:
+        for elem in ast.literal_eval(compound):
+            max_Z = max(Element(elem).Z, max_Z)
+            elem_dict[elem] += 1
+    min_key = min(elem_dict, key=elem_dict.get)
+    max_key = max(elem_dict, key=elem_dict.get)
+    print('>> Number of unique elements: {:d}, min: {}({:d}), max: {}({:d})' \
+            .format(len(elem_dict), min_key, elem_dict[min_key], \
+                                    max_key, elem_dict[max_key]))
+    print('>> Max Z: {}'.format(max_Z))
+
+    # energy per atom
+    energy_atom = data['energy_per_atom']
+    print('>> Energy per atom (eV): mean = {:.2f}, median = {:.2f}, '
+                'std = {:.2f}, min = {:.2f}, max = {:.2f}' \
+                .format(energy_atom.mean(), energy_atom.median(), energy_atom.std(), \
+                        energy_atom.min(), energy_atom.max()))
+
+    # formation energy per atom
+    formation_atom = data['formation_energy_per_atom']
+    print('>> Formation energy per atom (eV): mean = {:.2f}, median = {:.2f}, '
+                'std = {:.2f}, min = {:.2f}, max = {:.2f}' \
+                .format(formation_atom.mean(), formation_atom.median(),\
+                        formation_atom.std(), formation_atom.min(), formation_atom.max()))
+
+    # energy above hull
+    e_above_hull = data['e_above_hull']
+    print('>> Energy above hull (eV): mean = {:.2f}, median = {:.2f}, '
+                'std = {:.2f}, min = {:.2f}, max = {:.2f}' \
+                .format(e_above_hull.mean(), e_above_hull.median(),\
+                     e_above_hull.std(), e_above_hull.min(), e_above_hull.max()))
+
+    # band gap 
+    gap_threshold = 1E-6
+    metals = data[data['band_gap'] <= gap_threshold]['band_gap']
+    insulators = data[data['band_gap'] > gap_threshold]['band_gap']
+    print('>> Number of metals: {:d}, number of insulators: {:d}' \
+                .format(metals.size, insulators.size))
+    print('     band gap of all dataset: mean = {:.2f}, median = {:.2f}, '
+                 'std = {:.2f}, min = {:.5f}, max = {:.2f}' \
+                 .format(data['band_gap'].mean(), data['band_gap'].median(),\
+                         data['band_gap'].std(), data['band_gap'].min(), data['band_gap'].max()))
+    print('     band gap of insulators: mean = {:.2f}, median = {:.2f}, '
+                 'std = {:.2f}, min = {:.5f}, max = {:.2f}' \
+                 .format(insulators.mean(), insulators.median(),\
+                         insulators.std(), insulators.min(), insulators.max()))
+
+    # warnings
+    no_warnings = data[data['warnings'] == '[]']
+    print('>> Number of entries with no warnings: {:d}'.format(no_warnings.shape[0]))
+
+
+def customize_data(raw_data):
+    data_custom = raw_data.copy()
     
-    # the lattice and recip_lattice basis should be orthogonal
-    orthog = np.dot(latt.matrix, np.transpose(recip_latt.matrix))
-    orthog -= np.eye(3)
-    assert(max(np.abs(orthog.flatten())) < 1e-12)
-
-    with open("./XRD_simulator/atomic_scattering_params.json") as f:
-        ATOMIC_SCATTERING_PARAMS = json.load(f)
-    zs = []
-    coeffs = []
-    fcoords = []
-    for site in struct:
-        sp = site.specie
-        zs.append(sp.Z)
-        c = ATOMIC_SCATTERING_PARAMS[sp.symbol]
-        coeffs.append(c)
-        fcoords.append(site.frac_coords)
-    zs = np.array(zs)
-    coeffs = np.array(coeffs)
-    fcoords = np.array(fcoords)
-    ddict = dict()
-    for hkl, g_hkl, _, _ in recip_pts:
-        if g_hkl < 1e-12: continue
-        d_hkl = 1 / g_hkl
-        s = g_hkl / 2
-        theta = math.asin(wavelength * s)
-        s2 = s ** 2
-        g_dot_r = np.dot(fcoords, np.transpose([hkl])).T[0]
-        fs = []
-        for site in struct:
-            el = site.specie
-            coeff = ATOMIC_SCATTERING_PARAMS[el.symbol]
-            f = el.Z - 41.78214 * s2 * np.sum(
-                [d[0] * np.exp(-d[1] * s2) for d in coeff])
-            fs.append(f)
-        fs = np.array(fs)
-        atomic_f_hkl = fs * np.exp(2j * math.pi * g_dot_r)
-        f_hkl = np.sum(atomic_f_hkl)
-        intensity_hkl = (f_hkl * f_hkl.conjugate()).real
-        aff = [0]*94
-        for idx, Z in enumerate(zs):
-            atom_f = atomic_f_hkl[idx]
-            atomic_intensity = (atom_f * atom_f.conjugate()).real
-            aff[Z-1] += atomic_intensity
-        ddict[tuple(hkl)] = (intensity_hkl, aff)
-
-    return recip_latt.matrix, ddict
+    # get rid of rare elements
+    if True:
+        # identify rare elements
+        elem_dict = defaultdict(int)
+        for entry in data_custom['elements']:
+            for elem in ast.literal_eval(entry):
+                elem_dict[elem] += 1
+        rare_dict = {key: val for key, val in elem_dict.items() if val < 60}
+        print('\n>> Rare elements: ')
+        print(rare_dict)
+        rare_elements = set(rare_dict.keys())
+        # drop entries containing rare elements
+        drop_instance = []
+        for idx, value in data_custom['elements'].iteritems():
+            if rare_elements & set(ast.literal_eval(value)):
+                drop_instance.append(idx)
+        data_custom = data_custom.drop(drop_instance)
 
 
-# input -- material_id
-# output -- band_gap, energy_per_atom, formation_energy_per_atom
-def debug_feat(material_id):
-    my_API_key = "gxTAyXSm2GvCdWer"
-    m = MPRester(api_key=my_API_key)
-    mp_data = m.query(criteria={
-        "material_id" : {'$eq' : material_id },
-    }, properties=["band_gap", "formation_energy_per_atom", "energy_per_atom"])
-    
-    return mp_data[0]["band_gap"], \
-           mp_data[0]["energy_per_atom"], \
-           mp_data[0]["formation_energy_per_atom"]
+    # only take no-warning entries
+    if True:
+        data_custom = data_custom[data_custom['warnings'] == '[]']
 
+    # only take crystals in ICSD
+    if True:
+        data_custom = data_custom[data_custom['icsd_ids'] != '[]']
 
-def debug_compute_xrd(chunksize, xrd_filename):
-    if not os.path.isfile(xrd_filename):
-        print("{} file does not exist, please generate it first..".format(xrd_filename))
-        sys.exit(1)
-    data_all = pd.read_csv(xrd_filename, sep=';', header=0, index_col=None, chunksize=chunksize)
-    
-    # loop over chunks
-    for xrd_data in data_all:
-        # randomly select 1 material data
-        sample = xrd_data.iloc[np.random.randint(xrd_data.shape[0])]
-        # properties
-        material_id = sample['material_id']
-        band_gap = sample['band_gap']
-        energy_per_atom = sample['energy_per_atom']
-        formation_energy_per_atom = sample['formation_energy_per_atom']
-        recip_latt = ast.literal_eval(sample['recip_latt'])
-        # calculated point-specific features as dictionary
-        hkl = ast.literal_eval(sample['hkl'])
-        intensity_hkl = ast.literal_eval(sample['intensity_hkl'])
-        atomic_form_factor = ast.literal_eval(sample['atomic_form_factor'])
-        ddict = dict()
-        for idx, ihkl in enumerate(hkl):
-            ddict[tuple(ihkl)] = (intensity_hkl[idx], atomic_form_factor[idx])
+    # only take stable compounds
+    if False:
+        data_custom = data_custom[data_custom['e_above_hull'] < 0.25]
 
-        # threshold for numerical comparison
-        threshold = 1e-12
+    # get rid of extreme volumes
+    if False:
+        data_custom = data_custom[data_custom['volume'] > 100]
+        data_custom = data_custom[data_custom['volume'] < 4000]
 
-        # debug property 
-        gap_debug, energy_debug, fenergy_debug = debug_feat(material_id)
-        assert(abs(gap_debug-band_gap) < threshold)
-        assert(abs(energy_debug-energy_per_atom) < threshold)
-        assert(abs(fenergy_debug-formation_energy_per_atom) < threshold)
-
-        # debug primitive features
-        debug_recip_latt, debug_dict = debug_xrd(material_id)
-        diff = np.hstack(recip_latt) - np.hstack(debug_recip_latt)
-        assert(max(np.abs(diff)) < threshold)
-        for key, val in ddict.items():
-            intensity, aff = val
-            debug_intensity = debug_dict[key][0]
-            debug_aff = debug_dict[key][1]
-            assert(abs(intensity-debug_intensity) < threshold)
-            for idx, ival in enumerate(aff):
-                assert(abs(ival-debug_aff[idx]) < threshold)
-        print('>> passing one chunk of xrd data..')
-
-    print("All test cases passed for compute_xrd.csv\n")
-
-
-def read_training(material_id, train_data_root):
-    features = pd.read_csv(train_data_root+'features/'+material_id+'.csv', \
-                           sep=';', header=None, index_col=None)
-    target = pd.read_csv(train_data_root+'target/'+material_id+'.csv', \
-                          sep=';', header=0, index_col=None)
-    return features, target
-           
-
-def cart2sphere(xyz):
-    x, y, z = xyz[0], xyz[1], xyz[2]
-    r = np.linalg.norm(xyz)
-    theta = math.acos(z/r)
-    phi = math.atan2(y, x)
-    ### minor
-    r2 = np.sqrt(x**2 + y**2 + z**2)
-    theta2 = np.arccos([z/r])[0]
-    phi2 = np.arctan2(y, x)
-    assert(abs(r-r2) < 1e-12)
-    assert(abs(theta-theta2) < 1e-12)
-    assert(abs(phi-phi2) < 1e-12)
-    ###
-    r = r / (2/1.54184)
-    theta /= math.pi
-    phi = 0.5*(phi/math.pi)+0.5
-    return [r, theta, phi]
-
-
-def debug_training_features(chunksize, xrd_filename, train_data_root, npoints):
-    if not os.path.isfile(xrd_filename):
-        print("{} file does not exist, please generate it first..".format(xrd_filename))
-        sys.exit(1)
-    data_all = pd.read_csv(xrd_filename, sep=';', header=0, index_col=None, chunksize=chunksize)
-
-    # loop over chunks
-    for xrd_data in data_all:
-        # randomly select 1 material data
-        sample = xrd_data.iloc[np.random.randint(xrd_data.shape[0])]
-        # properties
-        material_id = sample['material_id']
-        band_gap = sample['band_gap']
-        energy_per_atom = sample['energy_per_atom']
-        formation_energy_per_atom = sample['formation_energy_per_atom']
-        recip_latt = ast.literal_eval(sample['recip_latt'])
-        # calculated point-specific features as dictionary
-        hkl = ast.literal_eval(sample['hkl'])
-        while len(hkl) < npoints:
-            hkl.extend(hkl)
-        hkl = hkl[:npoints]
-        intensity_hkl = ast.literal_eval(sample['intensity_hkl'])
-        while len(intensity_hkl) < npoints:
-            intensity_hkl.extend(intensity_hkl)
-        intensity_hkl = intensity_hkl[:npoints]
-        """
-        atomic_form_factor = ast.literal_eval(sample['atomic_form_factor'])
-        while len(atomic_form_factor) < npoints:
-            atomic_form_factor.extend(atomic_form_factor)
-        atomic_form_factor = atomic_form_factor[:npoints]
-        """
-        # process primitive features
-        recip_xyz = [np.dot(np.transpose(recip_latt), hkl[idx]) for idx in range(len(hkl))]
-        recip_spherical = [cart2sphere(recip_xyz[idx]) for idx in range(len(recip_xyz))]
-        intensity = np.array(intensity_hkl) / max(intensity_hkl)
-        """
-        for idx in range(len(atomic_form_factor)):
-            imax = max(1, max(atomic_form_factor[idx]))
-            atomic_form_factor[idx] = (np.array(atomic_form_factor[idx])/imax).tolist()
-        """
-
-        # read training features
-        features, target = read_training(material_id, train_data_root)
-        
-        # threshold for numerical comparison
-        threshold = 1e-12
-        
-        # debug targets
-        assert(abs(target['band_gap'][0]-band_gap) < threshold)
-        assert(abs(target['energy_per_atom'][0]-energy_per_atom) < threshold)
-        assert(abs(target['formation_energy_per_atom'][0]-formation_energy_per_atom) < threshold)
-
-        # debug features
-        for i in range(len(hkl)):
-            # check intensity
-            assert(abs(intensity[i]-features.iloc[3, i]) < threshold)
-            for j in range(len(recip_spherical[i])):
-                # check spherical coord
-                assert(abs(recip_spherical[i][j]-features.iloc[j, i]) < threshold)
-            """
-            for k in range(len(atomic_form_factor[i])):
-                # check aff
-                assert(abs(atomic_form_factor[i][k]-features.iloc[4+k, i]) < threshold)
-            """
-        print('>> passing one chunk in the training set..')
-
-    print("All test cases passed for training data, good to go start training!")
+    return data_custom
 
 
 def main():
-    global args
+    filename = os.path.join(args.root, "raw_data/fetch_MPdata.csv")
+    if not os.path.isfile(filename):
+        print("{} file does not exist, please generate it first..".format(filename))
+        sys.exit(1)
+    # get raw data from Materials Project
+    raw_data = pd.read_csv(filename, sep=';', header=0, index_col=None)
 
-    if not args.debug:
-        chunksize = 100
-        xrd_filename = "./data_raw/compute_xrd.csv"
-        train_data_root = "../data/"
-    else:
-        chunksize = 20
-        train_data_root = "./data_raw/debug_data/"
-        xrd_filename = train_data_root + "debug_compute_xrd.csv"
+    print('raw:', raw_data.shape)
+    print(raw_data['pretty_formula'].value_counts())
 
-    # debug xrd data
-    debug_compute_xrd(chunksize, xrd_filename)
-    
-    # debug training data
-    npoints = 2048
-    debug_training_features(chunksize, xrd_filename, train_data_root, npoints)
+    data_custom = customize_data(raw_data)
+
+    print('custom:', data_custom.shape)
+    print(data_custom['pretty_formula'].value_counts())
+
+    """
+    # show statistics of raw data
+    print('\nShowing raw data:')
+    show_statistics(data=raw_data, plot=False)
+    """
 
 
 if __name__ == "__main__":

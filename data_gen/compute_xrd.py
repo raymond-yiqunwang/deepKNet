@@ -40,11 +40,11 @@ def compute_xrd(raw_data, wavelength):
         band_gap = irow['band_gap']
         energy_per_atom = irow['energy_per_atom']
         formation_energy_per_atom = irow['formation_energy_per_atom']
-        MIT = float(band_gap > 1E-6)
+        e_above_hull = irow['e_above_hull']
 
         # property list
         ifeat = [material_id, recip_latt.tolist(), features,
-                 band_gap, energy_per_atom, formation_energy_per_atom, MIT]
+                 band_gap, energy_per_atom, formation_energy_per_atom, e_above_hull]
         # append to dataset
         xrd_data_batch.append(ifeat)
     
@@ -79,19 +79,19 @@ def main():
 
     # specify output
     if not args.debug:
-        out_file = os.path.join(args.root, "raw_data/compute_xrd_"+args.wavelength+".csv")
+        out_file = os.path.join(args.root, "raw_data/compute_xrd.csv")
     else:
         out_dir = os.path.join(args.root, "raw_data/debug_data/")
         if not os.path.exists(out_dir):
             print("{} folder does not exist, making directory..".format(out_dir))
             os.mkdir(out_dir)
-        out_file = os.path.join(out_dir, "debug_compute_xrd_"+args.wavelength+".csv")
+        out_file = os.path.join(out_dir, "debug_compute_xrd.csv")
     
     # output safeguard
     if os.path.exists(out_file):
         print("Attention, the existing xrd data will be deleted and regenerated..")
     header = [['material_id', 'recip_latt', 'features',
-               'band_gap', 'energy_per_atom', 'formation_energy_per_atom', 'MIT']]
+               'band_gap', 'energy_per_atom', 'formation_energy_per_atom', 'e_above_hull']]
     df = pd.DataFrame(header)
     df.to_csv(out_file, sep=';', header=None, index=False, mode='w')
     

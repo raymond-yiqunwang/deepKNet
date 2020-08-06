@@ -21,7 +21,7 @@ parser.add_argument('--task', choices=['regression', 'classification'],
 parser.add_argument('--algo', default='PointNet', type=str, metavar='NETWORK')
 parser.add_argument('--dim', default=3, type=int, metavar='FEATURE DIMENSION')
 parser.add_argument('--target', default='MIT', metavar='TARGET_PROPERTY')
-parser.add_argument('--root', default='./data_gen/data_pointnet/', metavar='DATA_DIR')
+parser.add_argument('--root', default='./data_gen/data_gap/', metavar='DATA_DIR')
 parser.add_argument('--run_name', default='run1', metavar='RUNID')
 parser.add_argument('--gpu_id', default=0, type=int, metavar='GPUID')
 # hyper parameter tuning

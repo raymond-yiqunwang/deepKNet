@@ -53,10 +53,13 @@ def generate_dataset(xrd_data, features_dir, target_dir):
         band_gap = irow['band_gap'] 
         energy_per_atom = irow['energy_per_atom'] 
         formation_energy_per_atom = irow['formation_energy_per_atom']
-        MIT = irow['MIT']
+        e_above_hull = irow['e_above_hull']
+        MIT = float(band_gap > 1E-6)
+        stability = float(e_above_hull <= 0.07)
         # write target
-        properties = [[band_gap, energy_per_atom, formation_energy_per_atom, MIT]]
-        header_target = ['band_gap', 'energy_per_atom', 'formation_energy_per_atom', 'MIT']
+        properties = [[band_gap, energy_per_atom, formation_energy_per_atom, MIT, stability]]
+        header_target = ['band_gap', 'energy_per_atom', 'formation_energy_per_atom',
+                         'MIT', 'stability']
         properties = pd.DataFrame(properties)
         properties.to_csv(target_dir+filename+'.csv', sep=';', \
                           header=header_target, index=False, mode='w')
@@ -71,11 +74,10 @@ def main():
     # read xrd raw data
     if not args.debug:
         root_dir = os.path.join(args.root, 'data_pointnet/')
-        xrd_file = os.path.join(args.root, 'raw_data/compute_xrd_'+args.wavelength+'.csv')
+        xrd_file = os.path.join(args.root, 'raw_data/compute_xrd.csv')
     else:
         root_dir = os.path.join(args.root, 'raw_data/debug_data/data_pointnet/')
-        xrd_file = os.path.join(args.root, 'raw_data/debug_data/debug_compute_xrd_' \
-                                            +args.wavelength+'.csv')
+        xrd_file = os.path.join(args.root, 'raw_data/debug_data/debug_compute_xrd.csv')
     if not os.path.isfile(xrd_file):
         print("{} file does not exist, please generate it first..".format(xrd_file))
         sys.exit(1)
@@ -153,8 +155,51 @@ def train_val_test_split(train_ratio=0.7, val_ratio=0.15, test_ratio=0.15):
     shutil.rmtree(features_dir, ignore_errors=False)
     
 
+def data_split():
+    global args
+    print('train val test split..')
+    if not args.debug:
+        root_dir = os.path.join(args.root, 'data_pointnet/')
+    else:
+        root_dir = os.path.join(args.root, 'raw_data/debug_data/data_pointnet/')
+    features_dir = os.path.join(root_dir, 'features/')
+    target_dir = os.path.join(root_dir, 'target/')
+    file_names = pd.read_csv('./data_split1.csv', header=0, index_col=None)
+
+    # train
+    train_files = file_names['train']
+    train_dir = os.path.join(root_dir, 'train/')
+    os.mkdir(train_dir)
+    for ifile in train_files:
+        shutil.copyfile(os.path.join(features_dir, ifile+'.npy'),
+                        os.path.join(train_dir, ifile+'.npy'))
+        shutil.copyfile(os.path.join(target_dir, ifile+'.csv'),
+                        os.path.join(train_dir, ifile+'.csv'))        
+    # valid
+    val_files = file_names['valid'].dropna()
+    val_dir = os.path.join(root_dir, 'valid/')
+    os.mkdir(val_dir)
+    for jfile in val_files:
+        shutil.copyfile(os.path.join(features_dir, jfile+'.npy'),
+                        os.path.join(val_dir, jfile+'.npy'))
+        shutil.copyfile(os.path.join(target_dir, jfile+'.csv'),
+                        os.path.join(val_dir, jfile+'.csv'))
+    # test
+    test_files = file_names['test'].dropna()
+    test_dir = os.path.join(root_dir, 'test/')
+    os.mkdir(test_dir)
+    for kfile in test_files:
+        shutil.copyfile(os.path.join(features_dir, kfile+'.npy'),
+                        os.path.join(test_dir, kfile+'.npy'))
+        shutil.copyfile(os.path.join(target_dir, kfile+'.csv'),
+                        os.path.join(test_dir, kfile+'.csv'))
+
+    shutil.rmtree(target_dir, ignore_errors=False)
+    shutil.rmtree(features_dir, ignore_errors=False)
+    
+
 def check_npoint(wavelength='CuKa'):
-    xrd_file = './raw_data/compute_xrd_'+wavelength+'.csv'
+    xrd_file = './raw_data/compute_xrd.csv'
     data_all = pd.read_csv(xrd_file, sep=';', header=0, index_col=None, chunksize=100)
     npoints = []
     for idx, xrd_data in enumerate(data_all):
@@ -172,8 +217,9 @@ def check_npoint(wavelength='CuKa'):
 
 if __name__ == "__main__":
     if True:
-        main()
-        train_val_test_split(train_ratio=0.7, val_ratio=0.15, test_ratio=0.15)
+#        main()
+        data_split()
+#        train_val_test_split(train_ratio=0.7, val_ratio=0.15, test_ratio=0.15)
 
     if False:
         # CuKa:
