@@ -55,7 +55,7 @@ def generate_dataset(xrd_data, features_dir, target_dir):
         formation_energy_per_atom = irow['formation_energy_per_atom']
         e_above_hull = irow['e_above_hull']
         MIT = float(band_gap > 1E-6)
-        stability = float(e_above_hull <= 0.07)
+        stability = float(e_above_hull < 0.02)
         # write target
         properties = [[band_gap, energy_per_atom, formation_energy_per_atom, MIT, stability]]
         header_target = ['band_gap', 'energy_per_atom', 'formation_energy_per_atom',
@@ -217,7 +217,7 @@ def check_npoint(wavelength='CuKa'):
 
 if __name__ == "__main__":
     if True:
-#        main()
+        main()
         data_split()
 #        train_val_test_split(train_ratio=0.7, val_ratio=0.15, test_ratio=0.15)
 
