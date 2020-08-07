@@ -12,22 +12,28 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import MultiStepLR
 from tensorboardX import SummaryWriter
 from deepKNet.data import get_train_val_test_loader
+from deepKNet.model2D import LeNet5, ResNet, BasicBlock
 from deepKNet.model3D import PointNet
 
 parser = argparse.ArgumentParser(description='deepKNet model')
-parser.add_argument('--root', default='./data_gen/data_pointnet/', metavar='DATA_DIR')
+parser.add_argument('--task', choices=['regression', 'classification'],
+                    default='classification')
+parser.add_argument('--algo', default='PointNet', type=str, metavar='NETWORK')
+parser.add_argument('--dim', default=3, type=int, metavar='FEATURE DIMENSION')
 parser.add_argument('--target', default='MIT', metavar='TARGET_PROPERTY')
+parser.add_argument('--root', default='./data_gen/data_gap/', metavar='DATA_DIR')
 parser.add_argument('--run_name', default='run1', metavar='RUNID')
 parser.add_argument('--gpu_id', default=0, type=int, metavar='GPUID')
 # hyper parameter tuning
-parser.add_argument('--cutoff', default=500, type=int, metavar='NPOINT CUTOFF')
+parser.add_argument('--cutoff', default=1000, type=int, metavar='NPOINT CUTOFF')
 parser.add_argument('--padding', default='zero', type=str, metavar='POINT PADDING')
-parser.add_argument('--data_aug', default='True', type=str)
-parser.add_argument('--rot_all', default='True', type=str)
-parser.add_argument('--conv_dims', default=[4, 256, 512], type=int, nargs='+')
-parser.add_argument('--fc_dims', default=[512, 256, 128], type=int, nargs='+')
-parser.add_argument('--nbert', default=4, type=int)
-parser.add_argument('--pool', default='CLS', type=str)
+parser.add_argument('--data_aug', default='False', type=str)
+parser.add_argument('--rot_all', default='False', type=str)
+parser.add_argument('--attn', default='False', type=str)
+parser.add_argument('--nbert', default=3, type=int)
+parser.add_argument('--embed_dim', default=512, type=int)
+parser.add_argument('--pool', default='max', type=str)
+parser.add_argument('--disable_normalization', default='False', type=str)
 parser.add_argument('--epochs', default=60, type=int, metavar='N')
 parser.add_argument('--batch_size', default=64, type=int, metavar='N')
 parser.add_argument('--optim', default='SGD', type=str, metavar='OPTIM')
@@ -36,15 +42,17 @@ parser.add_argument('--lr_milestones', default=[20, 40], nargs='+', type=int)
 parser.add_argument('--dropout', default=0.1, type=float, metavar='DROPOUT')
 # default params
 parser.add_argument('--start_epoch', default=0, type=int, metavar='N')
-parser.add_argument('--weight_decay', default=0, type=float, metavar='W')
+parser.add_argument('--wd', '--weight_decay', default=0, type=float,
+                    metavar='W', help='weigh decay (default: 0)',
+                    dest='weight_decay')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M')
 n_threads = torch.get_num_threads()
 parser.add_argument('--num_threads', default=n_threads, type=int, metavar='N_thread')
 parser.add_argument('--num_data_workers', default=4, type=int, metavar='N')
 parser.add_argument('--print_freq', default=10, type=int, metavar='N')
 parser.add_argument('--test_freq', default=10, type=int, metavar='N')
-parser.add_argument('--disable_cuda', action='store_true')
 parser.add_argument('--resume', default='', type=str, metavar='PATH')
+parser.add_argument('--disable_cuda', action='store_true')
 
 # parse args
 args = parser.parse_args()
@@ -57,7 +65,10 @@ print('User defined variables:', flush=True)
 for key, val in vars(args).items():
     print('  => {:17s}: {}'.format(key, val), flush=True)
 
-best_performance = 0.
+if args.task == 'classification':
+    best_performance = 0.
+else:
+    best_performance = 1E10
 
 def main():
     global args, best_performance, cuda_device
@@ -70,13 +81,30 @@ def main():
         batch_size=args.batch_size, pin_memory=args.cuda, 
         num_data_workers=args.num_data_workers)
 
+    # obtain target value normalizer
+    normalizer = Normalizer(torch.zeros(2))
+    normalizer.load_state_dict({'mean': 0., 'std': 1.})
+    if args.task == 'regression' and args.disable_normalization == 'False':
+        sample_target = torch.Tensor([dataset[i][-1] for i in 
+                                      sample(range(len(dataset)), 1000)])
+        normalizer = Normalizer(sample_target)
+        print('sample mean: {}, sample std: {}'.format(normalizer.state_dict()['mean'],
+                                                       normalizer.state_dict()['std']))
+
     # build model
-    model = PointNet(k=4, 
-                     conv_dims=args.conv_dims,
-                     fc_dims=args.fc_dims,
-                     nbert=args.nbert,
-                     pool=args.pool,
-                     dp=args.dropout)
+    if args.algo == 'PointNet' and args.dim == 3:
+        model = PointNet(k=4, dp=args.dropout,
+                         attn=args.attn=='True',
+                         nbert=args.nbert,
+                         embed_dim=args.embed_dim,
+                         classification=args.task=='classification',
+                         pool=args.pool)
+    elif args.algo == 'LeNet5' and args.dim == 2:
+        model = LeNet5()
+    elif args.algo == 'ResNet' and args.dim == 2:
+        model = ResNet(BasicBlock, [3, 4, 6, 3])
+    else:
+        raise NameError('Specified algorithm not implemented yet..')
     # number of trainable model parameters
     trainable_params = sum(p.numel() for p in model.parameters() 
                            if p.requires_grad)
@@ -90,7 +118,10 @@ def main():
         print('running on CPU..', flush=True)
 
     # define loss function 
-    criterion = nn.NLLLoss()
+    if args.task == 'classification':
+        criterion = nn.NLLLoss()
+    else:
+        criterion = nn.MSELoss()
 
     # optimization algo
     if args.optim == 'Adam':
@@ -135,16 +166,20 @@ def main():
     
     for epoch in range(args.start_epoch, args.start_epoch+args.epochs):
         # train for one epoch
-        train(train_loader, model, criterion, optimizer, epoch, writer)
+        train(train_loader, model, criterion, optimizer, epoch, normalizer, writer)
 
         # evaluate on validation set
-        performance = validate(val_loader, model, criterion, epoch, writer)
+        performance = validate(val_loader, model, criterion, epoch, normalizer, writer)
 
         scheduler.step()
 
         # remember best auc and save checkpoint
-        is_best = performance > best_performance
-        best_performance = max(performance, best_performance)
+        if args.task == 'classification':
+            is_best = performance > best_performance
+            best_performance = max(performance, best_performance)
+        else:
+            is_best = performance < best_performance
+            best_performance = min(performance, best_performance)
 
         # save checkpoint
         save_checkpoint({
@@ -154,29 +189,37 @@ def main():
             'optimizer': optimizer.state_dict(),
         }, is_best)
 
-        if ((epoch-args.start_epoch+1)%args.test_freq == 0) or (epoch == args.epochs-1):
+        if (epoch-args.start_epoch+1) % args.test_freq == 0:
             # test best model
             print('---------Evaluate Model on Test Set---------------', flush=True)
             best_model = load_best_model()
             print('best validation performance: {:.3f}'.format(best_model['best_performance']))
             model.load_state_dict(best_model['state_dict'])
-            validate(test_loader, model, criterion, epoch, writer, test_mode=True)
+            validate(test_loader, model, criterion, epoch, normalizer, writer, test_mode=True)
 
 
-def train(train_loader, model, criterion, optimizer, epoch, writer):
+def train(train_loader, model, criterion, optimizer, epoch, normalizer, writer):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':4.2f')
     losses = AverageMeter('Loss', ':6.3f')
-    accuracies = AverageMeter('Accu', ':6.3f')
-    precisions = AverageMeter('Prec', ':6.3f')
-    recalls = AverageMeter('Rec', ':6.3f')
-    fscores = AverageMeter('Fsc', ':6.3f')
-    auc_scores = AverageMeter('AUC', ':6.3f')
-    progress = ProgressMeter(
-        len(train_loader),
-        [batch_time, data_time, losses, accuracies, precisions, recalls, fscores, auc_scores],
-        prefix="Epoch: [{}]".format(epoch)
-    )
+    if args.task == 'classification':
+        accuracies = AverageMeter('Accu', ':6.3f')
+        precisions = AverageMeter('Prec', ':6.3f')
+        recalls = AverageMeter('Rec', ':6.3f')
+        fscores = AverageMeter('Fsc', ':6.3f')
+        auc_scores = AverageMeter('AUC', ':6.3f')
+        progress = ProgressMeter(
+            len(train_loader),
+            [batch_time, data_time, losses, accuracies, precisions, recalls, fscores, auc_scores],
+            prefix="Epoch: [{}]".format(epoch)
+        )
+    else:
+        maes = AverageMeter('MAE', ':6.3f')
+        progress = ProgressMeter(
+            len(train_loader),
+            [batch_time, data_time, losses, maes],
+            prefix="Epoch: [{}]".format(epoch)
+        )
 
     # switch to training mode
     model.train()
@@ -192,25 +235,34 @@ def train(train_loader, model, criterion, optimizer, epoch, writer):
         # optionally skip the last batch
         if target.size(0) < 16: continue
 
-        target = target.view(-1).long()
+        # normalize target
+        if args.task == 'classification':
+            target_normed = target.view(-1).long()
+        else:
+            target_normed = normalizer.norm(target)
 
         if args.cuda:
             image = image.cuda(device=cuda_device)
-            target = target.cuda(device=cuda_device)
+            target_normed = target_normed.cuda(device=cuda_device)
 
         # compute output
         output = model(image)
-        loss = criterion(output, target)
+        loss = criterion(output, target_normed)
 
         # measure accuracy and record loss
-        accuracy, precision, recall, fscore, auc_score =\
-            class_eval(output, target)
-        losses.update(loss.item(), target.size(0))
-        accuracies.update(accuracy.item(), target.size(0))
-        precisions.update(precision.item(), target.size(0))
-        recalls.update(recall.item(), target.size(0))
-        fscores.update(fscore.item(), target.size(0))
-        auc_scores.update(auc_score.item(), target.size(0))
+        if args.task == 'classification':
+            accuracy, precision, recall, fscore, auc_score =\
+                class_eval(output, target)
+            losses.update(loss.item(), target.size(0))
+            accuracies.update(accuracy.item(), target.size(0))
+            precisions.update(precision.item(), target.size(0))
+            recalls.update(recall.item(), target.size(0))
+            fscores.update(fscore.item(), target.size(0))
+            auc_scores.update(auc_score.item(), target.size(0))
+        else:
+            mae = compute_mae(normalizer.denorm(output), target)
+            losses.update(loss.item(), target.size(0))
+            maes.update(mae.item(), target.size(0))
 
         # compute gradient and optimize
         optimizer.zero_grad()
@@ -231,19 +283,27 @@ def train(train_loader, model, criterion, optimizer, epoch, writer):
             running_loss = 0.0
 
 
-def validate(val_loader, model, criterion, epoch, writer, test_mode=False):
+def validate(val_loader, model, criterion, epoch, normalizer, writer, test_mode=False):
     batch_time = AverageMeter('Time', ':4.2f')
     losses = AverageMeter('Loss', ':6.3f')
-    accuracies = AverageMeter('Accu', ':6.3f')
-    precisions = AverageMeter('Prec', ':6.3f')
-    recalls = AverageMeter('Rec', ':6.3f')
-    fscores = AverageMeter('Fsc', ':6.3f')
-    auc_scores = AverageMeter('AUC', ':6.3f')
-    progress = ProgressMeter(
-        len(val_loader),
-        [batch_time, losses, accuracies, precisions, recalls, fscores, auc_scores],
-        prefix='Validate: ' if not test_mode else 'Test: '
-    )
+    if args.task == 'classification':
+        accuracies = AverageMeter('Accu', ':6.3f')
+        precisions = AverageMeter('Prec', ':6.3f')
+        recalls = AverageMeter('Rec', ':6.3f')
+        fscores = AverageMeter('Fsc', ':6.3f')
+        auc_scores = AverageMeter('AUC', ':6.3f')
+        progress = ProgressMeter(
+            len(val_loader),
+            [batch_time, losses, accuracies, precisions, recalls, fscores, auc_scores],
+            prefix='Validate: ' if not test_mode else 'Test: '
+        )
+    else:
+        maes = AverageMeter('MAE', ':6.3f')
+        progress = ProgressMeter(
+            len(val_loader),
+            [batch_time, losses, maes],
+            prefix='Validate: ' if not test_mode else 'Test: '
+        )
     if test_mode:
         test_targets = []
         test_preds = []
@@ -260,30 +320,44 @@ def validate(val_loader, model, criterion, epoch, writer, test_mode=False):
             # optionally skip the last batch
             if target.size(0) < 8: continue
             
-            target = target.view(-1).long()
+            if args.task == 'classification':
+                target_normed = target.view(-1).long()
+            else:
+                target_normed = normalizer.norm(target)
 
             if args.cuda:
                 image = image.cuda(device=cuda_device)
-                target = target.cuda(device=cuda_device)
+                target_normed = target_normed.cuda(device=cuda_device)
 
             # compute output
             output = model(image)
-            loss = criterion(output, target)
+            loss = criterion(output, target_normed)
         
             # measure accuracy and record loss
-            accuracy, precision, recall, fscore, auc_score =\
-                class_eval(output, target)
-            losses.update(loss.item(), target.size(0))
-            accuracies.update(accuracy.item(), target.size(0))
-            precisions.update(precision.item(), target.size(0))
-            recalls.update(recall.item(), target.size(0))
-            fscores.update(fscore.item(), target.size(0))
-            auc_scores.update(auc_score.item(), target.size(0))
-            if test_mode:
-                test_pred = torch.exp(output)
-                test_target = target
-                test_preds += test_pred[:, 1].tolist()
-                test_targets += test_target.view(-1).tolist()
+            if args.task == 'classification':
+                accuracy, precision, recall, fscore, auc_score =\
+                    class_eval(output, target)
+                losses.update(loss.item(), target.size(0))
+                accuracies.update(accuracy.item(), target.size(0))
+                precisions.update(precision.item(), target.size(0))
+                recalls.update(recall.item(), target.size(0))
+                fscores.update(fscore.item(), target.size(0))
+                auc_scores.update(auc_score.item(), target.size(0))
+                if test_mode:
+                    test_pred = torch.exp(output)
+                    test_target = target
+                    assert test_pred.shape[1] == 2
+                    test_preds += test_pred[:, 1].tolist()
+                    test_targets += test_target.view(-1).tolist()
+            else:
+                mae = compute_mae(normalizer.denorm(output), target)
+                losses.update(loss.item(), target.size(0))
+                maes.update(mae.item(), target.size(0))
+                if test_mode:
+                    test_pred = normalizer.denorm(output)
+                    test_target = target
+                    test_preds += test_pred.view(-1).tolist()
+                    test_targets += test_target.view(-1).tolist()
 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -298,8 +372,34 @@ def validate(val_loader, model, criterion, epoch, writer, test_mode=False):
                                 epoch * len(val_loader) + idx)
                 running_loss = 0.0
     
-    print(' * AUC {auc.avg:.3f}'.format(auc=auc_scores), flush=True)
-    return auc_scores.avg
+    if args.task == 'classification':
+        print(' * AUC {auc.avg:.3f}'.format(auc=auc_scores), flush=True)
+        return auc_scores.avg
+    else:
+        print(' * MAE {maes.avg:.3f}'.format(maes=maes), flush=True)
+        return maes.avg
+
+
+class Normalizer(object):
+    """Normalize a Tensor and restore it later. """
+    def __init__(self, tensor):
+        """tensor is taken as a sample to calculate the mean and std"""
+        self.mean = torch.mean(tensor)
+        self.std = torch.std(tensor)
+
+    def norm(self, tensor):
+        return (tensor - self.mean) / self.std
+
+    def denorm(self, normed_tensor):
+        return normed_tensor * self.std + self.mean
+
+    def state_dict(self):
+        return {'mean': self.mean,
+                'std': self.std}
+
+    def load_state_dict(self, state_dict):
+        self.mean = state_dict['mean']
+        self.std = state_dict['std']
 
 
 def save_checkpoint(state, is_best):
@@ -322,6 +422,12 @@ def load_best_model():
         print('checkpoint {} not found, exiting...', flush=True)
         sys.exit(1)
     return torch.load(filename)
+
+
+def compute_mae(prediction, target):
+    target = target.detach().cpu()
+    prediction = prediction.detach().cpu()
+    return torch.mean(torch.abs(target - prediction))
 
 
 def class_eval(prediction, target):

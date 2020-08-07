@@ -4,60 +4,61 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class PointNet(nn.Module):
-    def __init__(self, k, dp, attn, nbert, embed_dim, classification, pool):
+    def __init__(self, k, conv_dims, fc_dims, nbert, pool, dp):
         super(PointNet, self).__init__()
         self.k = k
-        self.dp = dp
-        self.attn = attn
+        self.embed_dim = conv_dims[-1]
         self.nbert = nbert
-        self.embed_dim = embed_dim
-        self.classification = classification
         self.pool = pool
+        self.dp = dp
 
-        self.conv1 = torch.nn.Conv1d(self.k, 256, 1)
-        self.conv2 = torch.nn.Conv1d(256, self.embed_dim, 1)
-        self.bn1 = nn.BatchNorm1d(256)
-        self.bn2 = nn.BatchNorm1d(self.embed_dim)
+        assert(conv_dims[0] == 4 and len(conv_dims) > 1)
+        self.conv_layers = nn.ModuleList([nn.Conv1d(conv_dims[i], conv_dims[i+1], 1) \
+                                          for i in range(len(conv_dims)-1)])
+        self.conv_bn_layers = nn.ModuleList([nn.BatchNorm1d(conv_dims[i]) \
+                                             for i in range(1, len(conv_dims))])
 
-        if self.attn:
-            self.bert = nn.ModuleList([BertLayer(self.embed_dim) for _ in range(self.nbert)])
+        self.bert = nn.ModuleList([BertLayer(self.embed_dim) \
+                                   for _ in range(self.nbert)])
 
-        self.fc1 = nn.Linear(self.embed_dim, 256)
-        self.fc2 = nn.Linear(256, 128)
-        if self.classification:
-            self.logsoftmax = nn.LogSoftmax(dim=1)
-            self.dropout = nn.Dropout(self.dp)
-            self.fc_out = nn.Linear(128, 2)
-        else:
-            self.fc_out = nn.Linear(128, 1)
-        self.bn4 = nn.BatchNorm1d(256)
-        self.bn5 = nn.BatchNorm1d(128)
+        self.fc_layers = nn.ModuleList([nn.Linear(fc_dims[i], fc_dims[i+1]) \
+                                        for i in range(len(fc_dims)-1)])
+        
+        self.fc_bn_layers = nn.ModuleList([nn.BatchNorm1d(fc_dims[i]) \
+                                           for i in range(1, len(fc_dims))])
+        
+        self.logsoftmax = nn.LogSoftmax(dim=1)
+        self.dropout = nn.Dropout(self.dp)
+        self.fc_out = nn.Linear(fc_dims[-1], 2)
 
     def forward(self, x):
-        x = F.relu(self.bn1(self.conv1(x)))
-        x = F.relu(self.bn2(self.conv2(x)))
+        # PointNet
+        for idx in range(len(self.conv_layers)):
+            x = F.relu(self.conv_bn_layers[idx](self.conv_layers[idx](x)))
+        
+        # self-attention
+        x = x.permute(2, 0, 1)
+        for bert in self.bert:
+            x = bert(x)
+        x = x.permute(1, 2, 0)
 
-        if self.attn:
-            x = x.permute(2, 0, 1)
-            for bert in self.bert:
-                x = bert(x)
-            x = x.permute(1, 2, 0)
-
-        if self.pool == 'max':
-            x = torch.max(x, 2, keepdim=True)[0]
-        elif self.pool == 'CLS':
+        # pooling
+        if self.pool == 'CLS':
             x = x[:, :, 0]
+        elif self.pool == 'max':
+            x = torch.max(x, 2, keepdim=True)[0]
         else:
             raise NotImplementedError
         x = x.view(-1, self.embed_dim)
         
-        x = F.relu(self.bn4(self.fc1(x)))
-        if self.classification:
-            x = self.dropout(x)
-        x = F.relu(self.bn5(self.fc2(x)))
-        out = self.fc_out(x)
-        if self.classification:
-            out = self.logsoftmax(out)
+        # FC
+        for idx in range(len(self.fc_layers)):
+            x = F.relu(self.fc_bn_layers[idx](self.fc_layers[idx](x)))
+            if idx == 0:
+                x = self.dropout(x)
+        
+        out = self.logsoftmax(self.fc_out(x))
+        
         return out
 
 
@@ -76,8 +77,8 @@ class BertLayer(nn.Module):
     def forward(self, x):
         y, _ = self.attn(x, x, x)
         y = self.norm1(x + y)
-        z = torch.relu(self.fc1(y))
-        z = torch.relu(self.fc2(z))
+        z = F.relu(self.fc1(y))
+        z = F.relu(self.fc2(z))
         return self.norm2(y + z)
 
 
