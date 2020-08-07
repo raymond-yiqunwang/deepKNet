@@ -5,20 +5,19 @@ import numpy as np
 import pandas as pd
 from torch.utils.data import Dataset, DataLoader
 
-def get_train_val_test_loader(root, target, cutoff, padding, data_aug, rot_all,
+def get_train_val_test_loader(root, target, cut, pad, daug, rot_all,
                               batch_size, num_data_workers, pin_memory):
 
     train_dataset = deepKNetDataset(root=root+'/train/', target=target,
-                                    cutoff=cutoff, padding=padding,
-                                    data_aug=(data_aug=='True' or
-                                              rot_all=='True'))
+                                    cutoff=cut, padding=pad,
+                                    data_aug=(daug=='True'))
     val_dataset = deepKNetDataset(root=root+'/valid/', target=target,
-                                  cutoff=cutoff, padding=padding,
-                                  data_aug=(data_aug=='True' and
+                                  cutoff=cut, padding=pad,
+                                  data_aug=(daug=='True' and
                                             rot_all=='True'))
     test_dataset = deepKNetDataset(root=root+'/test/', target=target,
-                                   cutoff=cutoff, padding=padding,
-                                   data_aug=(data_aug=='True' and
+                                   cutoff=cut, padding=pad,
+                                   data_aug=(daug=='True' and
                                              rot_all=='True'))
     # init DataLoader
     train_loader = DataLoader(train_dataset, batch_size=batch_size,
@@ -86,8 +85,21 @@ class deepKNetDataset(Dataset):
         # load target property
         properties = pd.read_csv(self.root+self.file_names[idx]+'.csv',
                                  sep=';', header=0, index_col=None)
-        prop = torch.Tensor(properties[self.target].values)
-        return point_cloud, prop
+        band_gap = properties['band_gap'].values[0]
+        # binary metal-insulator classification
+        if self.target == 'MIC2':
+            prop = torch.Tensor([band_gap>1E-6])
+        # ternary metal-insulator classification
+        elif self.target == 'MIC3':
+            if band_gap <= 1E-6:
+                out = 0
+            else:
+                out = 1 if band_gap <= 1.5 else 2
+            prop = torch.Tensor([out])
+        else:
+            raise NotImplementedError
+
+        return point_cloud, prop.long()
 
     def __len__(self):
         return len(self.file_names)

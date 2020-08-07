@@ -4,9 +4,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class PointNet(nn.Module):
-    def __init__(self, k, conv_dims, fc_dims, nbert, pool, dp):
+    def __init__(self, k, nclass, conv_dims, fc_dims, nbert, pool, dp):
         super(PointNet, self).__init__()
         self.k = k
+        self.nclass = nclass
         self.embed_dim = conv_dims[-1]
         self.nbert = nbert
         self.pool = pool
@@ -29,7 +30,7 @@ class PointNet(nn.Module):
         
         self.logsoftmax = nn.LogSoftmax(dim=1)
         self.dropout = nn.Dropout(self.dp)
-        self.fc_out = nn.Linear(fc_dims[-1], 2)
+        self.fc_out = nn.Linear(fc_dims[-1], self.nclass)
 
     def forward(self, x):
         # PointNet

@@ -16,7 +16,8 @@ from deepKNet.model3D import PointNet
 
 parser = argparse.ArgumentParser(description='deepKNet model')
 parser.add_argument('--root', default='./data_gen/data_pointnet/', metavar='DATA_DIR')
-parser.add_argument('--target', default='MIT', metavar='TARGET_PROPERTY')
+parser.add_argument('--target', default='MIC3', metavar='TARGET_PROPERTY')
+parser.add_argument('--nclass', default=3, type=int)
 parser.add_argument('--run_name', default='run1', metavar='RUNID')
 parser.add_argument('--gpu_id', default=0, type=int, metavar='GPUID')
 # hyper parameter tuning
@@ -24,9 +25,9 @@ parser.add_argument('--cutoff', default=500, type=int, metavar='NPOINT CUTOFF')
 parser.add_argument('--padding', default='zero', type=str, metavar='POINT PADDING')
 parser.add_argument('--data_aug', default='True', type=str)
 parser.add_argument('--rot_all', default='True', type=str)
-parser.add_argument('--conv_dims', default=[4, 256, 512], type=int, nargs='+')
-parser.add_argument('--fc_dims', default=[512, 256, 128], type=int, nargs='+')
-parser.add_argument('--nbert', default=4, type=int)
+parser.add_argument('--conv_dims', default=[4, 128, 256], type=int, nargs='+')
+parser.add_argument('--fc_dims', default=[256, 128], type=int, nargs='+')
+parser.add_argument('--nbert', default=3, type=int)
 parser.add_argument('--pool', default='CLS', type=str)
 parser.add_argument('--epochs', default=60, type=int, metavar='N')
 parser.add_argument('--batch_size', default=64, type=int, metavar='N')
@@ -65,13 +66,14 @@ def main():
     # get data loader
     train_loader, val_loader, test_loader = get_train_val_test_loader(
         root=args.root, target=args.target,
-        cutoff=args.cutoff, padding=args.padding,
-        data_aug=args.data_aug=='True', rot_all=args.rot_all=='True',
+        cut=args.cutoff, pad=args.padding,
+        daug=args.data_aug=='True', rot_all=args.rot_all=='True',
         batch_size=args.batch_size, pin_memory=args.cuda, 
         num_data_workers=args.num_data_workers)
 
     # build model
     model = PointNet(k=4, 
+                     nclass=args.nclass,
                      conv_dims=args.conv_dims,
                      fc_dims=args.fc_dims,
                      nbert=args.nbert,
@@ -91,6 +93,8 @@ def main():
 
     # define loss function 
     criterion = nn.NLLLoss()
+    if args.cuda:
+        criterion = criterion.cuda(device=cuda_device)
 
     # optimization algo
     if args.optim == 'Adam':
@@ -135,10 +139,10 @@ def main():
     
     for epoch in range(args.start_epoch, args.start_epoch+args.epochs):
         # train for one epoch
-        train(train_loader, model, criterion, optimizer, epoch, writer)
+        train(train_loader, model, criterion, args.nclass, optimizer, epoch, writer)
 
         # evaluate on validation set
-        performance = validate(val_loader, model, criterion, epoch, writer)
+        performance = validate(val_loader, model, criterion, args.nclass, epoch, writer)
 
         scheduler.step()
 
@@ -163,7 +167,7 @@ def main():
             validate(test_loader, model, criterion, epoch, writer, test_mode=True)
 
 
-def train(train_loader, model, criterion, optimizer, epoch, writer):
+def train(train_loader, model, criterion, nclass, optimizer, epoch, writer):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':4.2f')
     losses = AverageMeter('Loss', ':6.3f')
@@ -172,9 +176,14 @@ def train(train_loader, model, criterion, optimizer, epoch, writer):
     recalls = AverageMeter('Rec', ':6.3f')
     fscores = AverageMeter('Fsc', ':6.3f')
     auc_scores = AverageMeter('AUC', ':6.3f')
+    if nclass == 2:
+        report = [batch_time, data_time, losses, accuracies, precisions, 
+                  recalls, fscores, auc_scores]
+    else:
+        report = [batch_time, data_time, losses, accuracies]
     progress = ProgressMeter(
         len(train_loader),
-        [batch_time, data_time, losses, accuracies, precisions, recalls, fscores, auc_scores],
+        report,
         prefix="Epoch: [{}]".format(epoch)
     )
 
@@ -192,7 +201,7 @@ def train(train_loader, model, criterion, optimizer, epoch, writer):
         # optionally skip the last batch
         if target.size(0) < 16: continue
 
-        target = target.view(-1).long()
+        target = target.view(-1)
 
         if args.cuda:
             image = image.cuda(device=cuda_device)
@@ -231,7 +240,7 @@ def train(train_loader, model, criterion, optimizer, epoch, writer):
             running_loss = 0.0
 
 
-def validate(val_loader, model, criterion, epoch, writer, test_mode=False):
+def validate(val_loader, model, criterion, nclass, epoch, writer, test_mode=False):
     batch_time = AverageMeter('Time', ':4.2f')
     losses = AverageMeter('Loss', ':6.3f')
     accuracies = AverageMeter('Accu', ':6.3f')
@@ -239,14 +248,16 @@ def validate(val_loader, model, criterion, epoch, writer, test_mode=False):
     recalls = AverageMeter('Rec', ':6.3f')
     fscores = AverageMeter('Fsc', ':6.3f')
     auc_scores = AverageMeter('AUC', ':6.3f')
+    if nclass == 2:
+        report = [batch_time, data_time, losses, accuracies, precisions, 
+                  recalls, fscores, auc_scores]
+    else:
+        report = [batch_time, data_time, losses, accuracies]
     progress = ProgressMeter(
         len(val_loader),
-        [batch_time, losses, accuracies, precisions, recalls, fscores, auc_scores],
+        report,
         prefix='Validate: ' if not test_mode else 'Test: '
     )
-    if test_mode:
-        test_targets = []
-        test_preds = []
     
     # switch to evaluation mode
     model.eval()
@@ -260,7 +271,7 @@ def validate(val_loader, model, criterion, epoch, writer, test_mode=False):
             # optionally skip the last batch
             if target.size(0) < 8: continue
             
-            target = target.view(-1).long()
+            target = target.view(-1)
 
             if args.cuda:
                 image = image.cuda(device=cuda_device)
@@ -279,11 +290,6 @@ def validate(val_loader, model, criterion, epoch, writer, test_mode=False):
             recalls.update(recall.item(), target.size(0))
             fscores.update(fscore.item(), target.size(0))
             auc_scores.update(auc_score.item(), target.size(0))
-            if test_mode:
-                test_pred = torch.exp(output)
-                test_target = target
-                test_preds += test_pred[:, 1].tolist()
-                test_targets += test_target.view(-1).tolist()
 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -335,10 +341,13 @@ def class_eval(prediction, target):
         try:
             auc_score = metrics.roc_auc_score(target_label, prediction[:, 1])
         except:
-            auc_score = np.float64(0.0)
+            auc_score = np.float64(-1E8)
         accuracy = metrics.accuracy_score(target_label, pred_label)
     else:
-        raise NotImplementedError
+        correct = np.equal(pred_label, target_label).sum()
+        accuracy = np.float64(correct/float(target_label.size))
+        precision, recall = np.float64(0.0), np.float64(0.0)
+        fscore, auc_score = np.float64(0.0), np.float64(0.0)
     return accuracy, precision, recall, fscore, auc_score
 
 
@@ -375,7 +384,7 @@ class ProgressMeter(object):
     def display(self, batch):
         entries = [self.prefix + self.batch_fmtstr.format(batch)]
         entries += [str(meter) for meter in self.meters]
-        print('\t'.join(entries), flush=True)
+        print('  '.join(entries), flush=True)
 
     def _get_batch_fmtstr(self, num_batches):
         num_digits = len(str(num_batches // 1))

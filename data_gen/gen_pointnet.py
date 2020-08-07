@@ -54,12 +54,10 @@ def generate_dataset(xrd_data, features_dir, target_dir):
         energy_per_atom = irow['energy_per_atom'] 
         formation_energy_per_atom = irow['formation_energy_per_atom']
         e_above_hull = irow['e_above_hull']
-        MIT = float(band_gap > 1E-6)
-        stability = float(e_above_hull < 0.02)
+        
         # write target
-        properties = [[band_gap, energy_per_atom, formation_energy_per_atom, MIT, stability]]
-        header_target = ['band_gap', 'energy_per_atom', 'formation_energy_per_atom',
-                         'MIT', 'stability']
+        properties = [[band_gap, energy_per_atom, formation_energy_per_atom, e_above_hull]]
+        header_target = ['band_gap', 'energy_per_atom', 'formation_energy_per_atom', 'e_above_hull']
         properties = pd.DataFrame(properties)
         properties.to_csv(target_dir+filename+'.csv', sep=';', \
                           header=header_target, index=False, mode='w')
@@ -126,6 +124,8 @@ def train_val_test_split(train_ratio=0.7, val_ratio=0.15, test_ratio=0.15):
     random.shuffle(file_names)
     # train
     train_dir = os.path.join(root_dir, 'train/')
+    if os.path.exists(train_dir):
+        shutil.rmtree(train_dir, ignore_errors=False)
     os.mkdir(train_dir)
     train_split = int(np.floor(len(file_names) * train_ratio))
     for ifile in file_names[:train_split]:
@@ -135,6 +135,8 @@ def train_val_test_split(train_ratio=0.7, val_ratio=0.15, test_ratio=0.15):
                         os.path.join(train_dir, ifile+'.csv'))
     # valid
     val_dir = os.path.join(root_dir, 'valid/')
+    if os.path.exists(val_dir):
+        shutil.rmtree(val_dir, ignore_errors=False)
     os.mkdir(val_dir)
     val_split = train_split + int(np.floor((len(file_names) * val_ratio)))
     for jfile in file_names[train_split:val_split]:
@@ -144,6 +146,8 @@ def train_val_test_split(train_ratio=0.7, val_ratio=0.15, test_ratio=0.15):
                         os.path.join(val_dir, jfile+'.csv'))
     # test
     test_dir = os.path.join(root_dir, 'test/')
+    if os.path.exists(test_dir):
+        shutil.rmtree(test_dir, ignore_errors=False)
     os.mkdir(test_dir)
     for kfile in file_names[val_split:]:
         shutil.copyfile(os.path.join(features_dir, kfile+'.npy'),
@@ -169,6 +173,8 @@ def data_split():
     # train
     train_files = file_names['train']
     train_dir = os.path.join(root_dir, 'train/')
+    if os.path.exists(train_dir):
+        shutil.rmtree(train_dir, ignore_errors=False)
     os.mkdir(train_dir)
     for ifile in train_files:
         shutil.copyfile(os.path.join(features_dir, ifile+'.npy'),
@@ -178,6 +184,8 @@ def data_split():
     # valid
     val_files = file_names['valid'].dropna()
     val_dir = os.path.join(root_dir, 'valid/')
+    if os.path.exists(val_dir):
+        shutil.rmtree(val_dir, ignore_errors=False)
     os.mkdir(val_dir)
     for jfile in val_files:
         shutil.copyfile(os.path.join(features_dir, jfile+'.npy'),
@@ -187,6 +195,8 @@ def data_split():
     # test
     test_files = file_names['test'].dropna()
     test_dir = os.path.join(root_dir, 'test/')
+    if os.path.exists(test_dir):
+        shutil.rmtree(test_dir, ignore_errors=False)
     os.mkdir(test_dir)
     for kfile in test_files:
         shutil.copyfile(os.path.join(features_dir, kfile+'.npy'),
