@@ -13,7 +13,7 @@ class PointNet(nn.Module):
         self.pool = pool
         self.dp = dp
 
-        assert(conv_dims[0] == 4 and len(conv_dims) > 1)
+        assert(conv_dims[0] == 4)
         self.conv_layers = nn.ModuleList([nn.Conv1d(conv_dims[i], conv_dims[i+1], 1) \
                                           for i in range(len(conv_dims)-1)])
         self.conv_bn_layers = nn.ModuleList([nn.BatchNorm1d(conv_dims[i]) \

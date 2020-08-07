@@ -42,7 +42,7 @@ def generate_dataset(xrd_data, features_dir, target_dir):
         # normalize diffraction intensity
         intensity = np.log(1+features[:,-1]) / 3
         intensity = intensity.reshape(-1, 1)
-        assert(np.amax(intensity) <= 1.5)
+        assert(np.amax(intensity) <= 1.3)
         assert(np.amin(intensity) >= 0.)
 
         # generate point cloud and write to file

@@ -5,18 +5,18 @@ import numpy as np
 import pandas as pd
 from torch.utils.data import Dataset, DataLoader
 
-def get_train_val_test_loader(root, target, cut, pad, daug, rot_all,
+def get_train_val_test_loader(root, target, thresh, cut, pad, daug, rot_all,
                               batch_size, num_data_workers, pin_memory):
 
     train_dataset = deepKNetDataset(root=root+'/train/', target=target,
-                                    cutoff=cut, padding=pad,
+                                    threshold=thresh, cutoff=cut, padding=pad,
                                     data_aug=(daug=='True'))
     val_dataset = deepKNetDataset(root=root+'/valid/', target=target,
-                                  cutoff=cut, padding=pad,
+                                  threshold=thresh, cutoff=cut, padding=pad,
                                   data_aug=(daug=='True' and
                                             rot_all=='True'))
     test_dataset = deepKNetDataset(root=root+'/test/', target=target,
-                                   cutoff=cut, padding=pad,
+                                   threshold=thresh, cutoff=cut, padding=pad,
                                    data_aug=(daug=='True' and
                                              rot_all=='True'))
     # init DataLoader
@@ -33,9 +33,10 @@ def get_train_val_test_loader(root, target, cut, pad, daug, rot_all,
 
 
 class deepKNetDataset(Dataset):
-    def __init__(self, root, target, cutoff, padding, data_aug):
+    def __init__(self, root, target, threshold, cutoff, padding, data_aug):
         self.root = root
         self.target = target
+        self.threshold = threshold
         self.cutoff = cutoff
         self.padding = padding
         self.data_aug = data_aug
@@ -94,7 +95,7 @@ class deepKNetDataset(Dataset):
             if band_gap <= 1E-6:
                 out = 0
             else:
-                out = 1 if band_gap <= 1.5 else 2
+                out = 1 if band_gap <= self.threshold else 2
             prop = torch.Tensor([out])
         else:
             raise NotImplementedError
