@@ -16,7 +16,7 @@ parser.add_argument('--debug', dest='debug', action='store_true')
 parser.add_argument('--wavelength',  default='CuKa', metavar='X-RAY WAVELENGTH')
 args = parser.parse_args()
 
-def generate_dataset(xrd_data, features_dir, target_dir):
+def generate_dataset(xrd_data, topo_data, features_dir, target_dir):
     # store point cloud representation for each material
     for _, irow in xrd_data.iterrows():
         # unique material ID
@@ -44,6 +44,17 @@ def generate_dataset(xrd_data, features_dir, target_dir):
         intensity = intensity.reshape(-1, 1)
         assert(np.amax(intensity) <= 1.3)
         assert(np.amin(intensity) >= 0.)
+        
+        # topo properties
+        try:
+            topo_row = topo_data.loc[topo_data['material_id'] == material_id].iloc[0]
+            topo_class = topo_row['topo_class'][:-1]
+            topo_sub_class = topo_row['sub_class'][:-1]
+            topo_cross_type = topo_row['cross_type']
+        except:
+            #topo_class, topo_sub_class, topo_cross_type = 'nan', 'nan', 'nan'
+            continue
+        
 
         # generate point cloud and write to file
         point_cloud = np.concatenate((recip_pos, intensity), axis=1)
@@ -54,10 +65,12 @@ def generate_dataset(xrd_data, features_dir, target_dir):
         energy_per_atom = irow['energy_per_atom'] 
         formation_energy_per_atom = irow['formation_energy_per_atom']
         e_above_hull = irow['e_above_hull']
-        
+
         # write target
-        properties = [[band_gap, energy_per_atom, formation_energy_per_atom, e_above_hull]]
-        header_target = ['band_gap', 'energy_per_atom', 'formation_energy_per_atom', 'e_above_hull']
+        properties = [[band_gap, energy_per_atom, formation_energy_per_atom,
+                       e_above_hull, topo_class, topo_sub_class, topo_cross_type]]
+        header_target = ['band_gap', 'energy_per_atom', 'formation_energy_per_atom',
+                         'e_above_hull', 'topo_class', 'topo_sub_class', 'topo_cross_type']
         properties = pd.DataFrame(properties)
         properties.to_csv(target_dir+filename+'.csv', sep=';', \
                           header=header_target, index=False, mode='w')
@@ -91,6 +104,9 @@ def main():
     if os.path.exists(features_dir):
         shutil.rmtree(features_dir, ignore_errors=False)
     os.mkdir(features_dir)
+
+    # read topo data
+    topo_data = pd.read_csv('../utils/topo_MPdata_28k.csv', sep=';', header=0, index_col=None)
     
     # parameters
     nworkers = max(multiprocessing.cpu_count(), 1)
@@ -102,7 +118,7 @@ def main():
         # parallel processing
         xrd_data_chunk = np.array_split(xrd_data, nworkers)
         pool = Pool(nworkers)
-        pargs = [(data, features_dir, target_dir) for data in xrd_data_chunk]
+        pargs = [(data, topo_data, features_dir, target_dir) for data in xrd_data_chunk]
         pool.starmap(generate_dataset, pargs)
         pool.close()
         pool.join()
@@ -168,7 +184,7 @@ def data_split():
         root_dir = os.path.join(args.root, 'raw_data/debug_data/data_pointnet/')
     features_dir = os.path.join(root_dir, 'features/')
     target_dir = os.path.join(root_dir, 'target/')
-    file_names = pd.read_csv('./data_split1.csv', header=0, index_col=None)
+    file_names = pd.read_csv('../utils/data_split1.csv', header=0, index_col=None)
 
     # train
     train_files = file_names['train']
@@ -227,9 +243,9 @@ def check_npoint(wavelength='CuKa'):
 
 if __name__ == "__main__":
     if True:
-        main()
-        data_split()
-#        train_val_test_split(train_ratio=0.7, val_ratio=0.15, test_ratio=0.15)
+#        main()
+#        data_split()
+        train_val_test_split(train_ratio=0.7, val_ratio=0.15, test_ratio=0.15)
 
     if False:
         # CuKa:

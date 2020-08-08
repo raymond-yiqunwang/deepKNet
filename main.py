@@ -243,6 +243,7 @@ def train(train_loader, model, criterion, nclass, optimizer, epoch, writer):
 
 def validate(val_loader, model, criterion, nclass, epoch, writer, test_mode=False):
     batch_time = AverageMeter('Time', ':4.2f')
+    data_time = AverageMeter('Data', ':4.2f')
     losses = AverageMeter('Loss', ':6.3f')
     accuracies = AverageMeter('Accu', ':6.3f')
     precisions = AverageMeter('Prec', ':6.3f')
@@ -305,8 +306,12 @@ def validate(val_loader, model, criterion, nclass, epoch, writer, test_mode=Fals
                                 epoch * len(val_loader) + idx)
                 running_loss = 0.0
     
-    print(' * AUC {auc.avg:.3f}'.format(auc=auc_scores), flush=True)
-    return auc_scores.avg
+    if nclass == 2:
+        print(' * AUC {auc.avg:.3f}'.format(auc=auc_scores), flush=True)
+        return auc_scores.avg
+    else:
+        print(' * ACCU {accu.avg:.3f}'.format(accu=accuracies), flush=True)
+        return accuracies.avg
 
 
 def save_checkpoint(state, is_best):

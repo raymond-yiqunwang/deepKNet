@@ -87,6 +87,10 @@ class deepKNetDataset(Dataset):
         properties = pd.read_csv(self.root+self.file_names[idx]+'.csv',
                                  sep=';', header=0, index_col=None)
         band_gap = properties['band_gap'].values[0]
+        topo_class = properties['topo_class'].values[0]
+        topo_sub_class = properties['topo_sub_class'].values[0]
+        topo_cross_type = properties['topo_cross_type'].values[0]
+
         # binary metal-insulator classification
         if self.target == 'MIC2':
             prop = torch.Tensor([band_gap>1E-6])
@@ -96,6 +100,24 @@ class deepKNetDataset(Dataset):
                 out = 0
             else:
                 out = 1 if band_gap <= self.threshold else 2
+            prop = torch.Tensor([out])
+        elif self.target == 'TIC2':
+            if topo_class == 'trivial':
+                out = 0
+            elif topo_class == 'TI' or topo_class == 'SM':
+                out = 1
+            else:
+                raise NotImplementedError
+            prop = torch.Tensor([out])
+        elif self.target == 'TIC3':
+            if topo_class == 'trivial':
+                out = 0
+            elif topo_class == 'TI':
+                out = 1
+            elif topo_class == 'SM':
+                out = 2
+            else:
+                raise NotImplementedError
             prop = torch.Tensor([out])
         else:
             raise NotImplementedError
