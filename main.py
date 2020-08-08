@@ -165,7 +165,7 @@ def main():
             best_model = load_best_model()
             print('best validation performance: {:.3f}'.format(best_model['best_performance']))
             model.load_state_dict(best_model['state_dict'])
-            validate(test_loader, model, criterion, epoch, writer, test_mode=True)
+            validate(test_loader, model, criterion, args.nclass, epoch, writer, test_mode=True)
 
 
 def train(train_loader, model, criterion, nclass, optimizer, epoch, writer):
