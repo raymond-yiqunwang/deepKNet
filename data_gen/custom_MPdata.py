@@ -1,7 +1,6 @@
 import os
 import sys
 import ast
-import argparse
 import numpy as np
 import pandas as pd
 import warnings
@@ -12,10 +11,6 @@ from multiprocessing import Pool
 from collections import defaultdict
 from pymatgen.core.structure import Structure
 from pymatgen.core.periodic_table import Element
-
-parser = argparse.ArgumentParser()
-parser.add_argument('--root', default='./', metavar='DATA_DIR')
-args = parser.parse_args()
 
 """ properties
         "material_id", "icsd_ids",
@@ -161,7 +156,7 @@ def customize_data(raw_data):
 
 
 def main():
-    filename = os.path.join(args.root, "raw_data/fetch_MPdata.csv")
+    filename = "./raw_data/fetch_MPdata.csv"
     if not os.path.isfile(filename):
         print("{} file does not exist, please generate it first..".format(filename))
         sys.exit(1)
@@ -180,7 +175,7 @@ def main():
     show_statistics(data=data_custom, plot=False)
 
     # write customized data
-    out_file = os.path.join(args.root, "raw_data/custom_MPdata.csv")
+    out_file = "./raw_data/custom_MPdata.csv"
     data_custom.to_csv(out_file, sep=';', columns=None, mode='w', \
                        header=data_custom.columns, index=None)
 

@@ -3,8 +3,7 @@ job_submit.sh
 pre-trained/
 runs/
 checkpoints/
-data_gen/data_multiview*/
-data_gen/data_pointnet*/
+data_gen/data_*/
 data_gen/*.tar.gz
 data_gen/raw_data/
 */__pycache__/

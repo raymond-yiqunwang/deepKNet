@@ -1,6 +1,5 @@
 import os
 import sys
-import argparse
 import numpy as np
 import pandas as pd
 import warnings
@@ -9,12 +8,6 @@ import xrd_simulator.xrd_simulator as xrd
 import multiprocessing
 from multiprocessing import Pool
 from pymatgen.core.structure import Structure
-
-parser = argparse.ArgumentParser()
-parser.add_argument('--root', default='./', metavar='DATA_DIR')
-parser.add_argument('--debug', dest='debug', action='store_true')
-parser.add_argument('--wavelength', default='CuKa', metavar='X-ray wavelength')
-args = parser.parse_args()
 
 """ properties
         "material_id", "icsd_ids",
@@ -63,29 +56,15 @@ def parallel_computing(df_in, wavelength, nworkers=1):
 
 
 def main():
-    global args
-
-    filename = os.path.join(args.root, "raw_data/custom_MPdata.csv")
+    filename = "./raw_data/custom_MPdata.csv"
     if not os.path.isfile(filename):
         print("{} file does not exist, please generate it first..".format(filename))
         sys.exit(1)
     # read customized data
     MP_data = pd.read_csv(filename, sep=';', header=0, index_col=None)
     
-    if args.debug:
-        # random subsample in debug mode
-        subsample_size = 1000
-        MP_data = MP_data.sample(n=subsample_size, replace=False, random_state=1, axis=0)
-
     # specify output
-    if not args.debug:
-        out_file = os.path.join(args.root, "raw_data/compute_xrd.csv")
-    else:
-        out_dir = os.path.join(args.root, "raw_data/debug_data/")
-        if not os.path.exists(out_dir):
-            print("{} folder does not exist, making directory..".format(out_dir))
-            os.mkdir(out_dir)
-        out_file = os.path.join(out_dir, "debug_compute_xrd.csv")
+    out_file = "./raw_data/compute_xrd.csv"
     
     # output safeguard
     if os.path.exists(out_file):
@@ -96,17 +75,16 @@ def main():
     df.to_csv(out_file, sep=';', header=None, index=False, mode='w')
     
     # parameters
+    wavelength = 'CuKa' # CuKa by default
     nworkers = max(multiprocessing.cpu_count()-2, 1)
     n_slices = MP_data.shape[0] // (20*nworkers) # number of batches to split into
-    if args.wavelength == 'mywave':
-        n_slices *= 10
 
     # parallel processing
     MP_data_chunk = np.array_split(MP_data, n_slices)
     print("start computing xrd on {} workers and {} slices".format(nworkers, n_slices))
     for idx, chunk in enumerate(MP_data_chunk):
         # generate xrd point cloud representations
-        xrd_data = parallel_computing(chunk, args.wavelength, nworkers)
+        xrd_data = parallel_computing(chunk, wavelength, nworkers)
         # write to file
         xrd_data.to_csv(out_file, sep=';', header=None, index=False, mode='a')
         print('finished processing chunk {}/{}'.format(idx+1, n_slices)) 

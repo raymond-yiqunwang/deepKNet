@@ -10,25 +10,23 @@ def get_train_val_test_loader(root, target, thresh, cut, pad, daug, rot_all,
 
     train_dataset = deepKNetDataset(root=root+'/train/', target=target,
                                     threshold=thresh, cutoff=cut, padding=pad,
-                                    data_aug=(daug=='True'))
+                                    data_aug=daug)
     val_dataset = deepKNetDataset(root=root+'/valid/', target=target,
                                   threshold=thresh, cutoff=cut, padding=pad,
-                                  data_aug=(daug=='True' and
-                                            rot_all=='True'))
+                                  data_aug=(daug and rot_all))
     test_dataset = deepKNetDataset(root=root+'/test/', target=target,
                                    threshold=thresh, cutoff=cut, padding=pad,
-                                   data_aug=(daug=='True' and
-                                             rot_all=='True'))
+                                   data_aug=(daug and rot_all))
     # init DataLoader
     train_loader = DataLoader(train_dataset, batch_size=batch_size,
-                              shuffle=True,
-                              num_workers=num_data_workers, pin_memory=pin_memory)
+                              shuffle=True, num_workers=num_data_workers,
+                              pin_memory=pin_memory)
     val_loader = DataLoader(val_dataset, batch_size=batch_size,
-                            shuffle=True,
-                            num_workers=num_data_workers, pin_memory=pin_memory)
+                            shuffle=True, num_workers=num_data_workers,
+                            pin_memory=pin_memory)
     test_loader = DataLoader(test_dataset, batch_size=batch_size,
-                             shuffle=True,
-                             num_workers=num_data_workers, pin_memory=pin_memory)
+                             shuffle=True, num_workers=num_data_workers,
+                             pin_memory=pin_memory)
     return train_loader, val_loader, test_loader
 
 
@@ -65,7 +63,6 @@ class deepKNetDataset(Dataset):
 
         # apply random 3D rotation for data augmentation
         if self.data_aug:
-            np.random.seed(8)
             alpha, beta, gamma = np.pi * np.random.random(3)
             rot_matrix = [
                 np.cos(alpha)*np.cos(beta),
