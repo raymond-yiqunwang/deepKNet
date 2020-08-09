@@ -21,8 +21,7 @@ def split_gap(out_file, train_ratio, val_ratio, test_ratio):
 def split_topo(out_file, train_ratio, val_ratio, test_ratio):
     topo_data = pd.read_csv("./topo_MPdata_14k.csv", sep=';', header=0, index_col=None)
     file_names = topo_data['material_id'].values.tolist()
-#    random.shuffle(file_names)
-    print(file_names[:5])
+    random.shuffle(file_names)
     train_split = int(np.floor(len(file_names) * train_ratio))
     val_split = train_split + int(np.floor((len(file_names) * val_ratio)))
     train_data = file_names[:train_split]
@@ -36,7 +35,7 @@ def split_topo(out_file, train_ratio, val_ratio, test_ratio):
 if __name__ == "__main__":
     # band gap
     if False:
-        out_file = "band_gap_splitx.csv"
+        out_file = "gap_splitx.csv"
         train_ratio = 0.7
         val_ratio = 0.15
         test_ratio = 0.15
@@ -44,7 +43,7 @@ if __name__ == "__main__":
 
     # topo
     if True:
-        out_file = "topo_split1.csv"
+        out_file = "topo_splitx.csv"
         train_ratio = 0.7
         val_ratio = 0.15
         test_ratio = 0.15

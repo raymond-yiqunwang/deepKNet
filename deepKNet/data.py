@@ -5,18 +5,17 @@ import numpy as np
 import pandas as pd
 from torch.utils.data import Dataset, DataLoader
 
-def get_train_val_test_loader(root, target, thresh, cut, pad, daug, rot_all,
+def get_train_val_test_loader(root, target, cut, pad, daug, rot_all,
                               batch_size, num_data_workers, pin_memory):
 
+    print('data aug -- train: {}, val/test: {}'.format(daug, (daug and rot_all)))
     train_dataset = deepKNetDataset(root=root+'/train/', target=target,
-                                    threshold=thresh, cutoff=cut, padding=pad,
-                                    data_aug=daug)
+                                    cutoff=cut, padding=pad, data_aug=daug)
     val_dataset = deepKNetDataset(root=root+'/valid/', target=target,
-                                  threshold=thresh, cutoff=cut, padding=pad,
-                                  data_aug=(daug and rot_all))
+                                  cutoff=cut, padding=pad, data_aug=(daug and rot_all))
     test_dataset = deepKNetDataset(root=root+'/test/', target=target,
-                                   threshold=thresh, cutoff=cut, padding=pad,
-                                   data_aug=(daug and rot_all))
+                                   cutoff=cut, padding=pad, data_aug=(daug and rot_all))
+
     # init DataLoader
     train_loader = DataLoader(train_dataset, batch_size=batch_size,
                               shuffle=True, num_workers=num_data_workers,
@@ -31,16 +30,17 @@ def get_train_val_test_loader(root, target, thresh, cut, pad, daug, rot_all,
 
 
 class deepKNetDataset(Dataset):
-    def __init__(self, root, target, threshold, cutoff, padding, data_aug):
+    def __init__(self, root, target, cutoff, padding, data_aug):
         self.root = root
         self.target = target
-        self.threshold = threshold
         self.cutoff = cutoff
         self.padding = padding
         self.data_aug = data_aug
         self.file_names = [fname.split('.')[0] for fname in \
                            os.listdir(self.root)
                            if fname.split('.')[-1] == 'csv']
+        # for safety shuffle init
+        random.shuffle(self.file_names)
 
     def __getitem__(self, idx):
         # load point cloud data
@@ -91,31 +91,14 @@ class deepKNetDataset(Dataset):
         # binary metal-insulator classification
         if self.target == 'MIC2':
             prop = torch.Tensor([band_gap>1E-6])
-        # ternary metal-insulator classification
-        elif self.target == 'MIC3':
-            if band_gap <= 1E-6:
-                out = 0
-            else:
-                out = 1 if band_gap <= self.threshold else 2
-            prop = torch.Tensor([out])
+        # binary topological classification
         elif self.target == 'TIC2':
-            if topo_class == 'trivial':
-                out = 0
-            elif topo_class == 'TI' or topo_class == 'SM':
-                out = 1
-            else:
-                raise NotImplementedError
-            prop = torch.Tensor([out])
+            assert(topo_class in ['trivial', 'TI', 'SM'])
+            prop = torch.Tensor([topo_class=='trivial'])
+        # ternary topological classification
         elif self.target == 'TIC3':
-            if topo_class == 'trivial':
-                out = 0
-            elif topo_class == 'TI':
-                out = 1
-            elif topo_class == 'SM':
-                out = 2
-            else:
-                raise NotImplementedError
-            prop = torch.Tensor([out])
+            topo_dict = {'trivial': 0, 'TI': 1, 'SM': 2}
+            prop = torch.Tensor([topo_dict[topo_class]])
         else:
             raise NotImplementedError
 

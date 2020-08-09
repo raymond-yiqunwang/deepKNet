@@ -16,9 +16,8 @@ from deepKNet.model3D import PointNet
 
 parser = argparse.ArgumentParser(description='deepKNet model')
 parser.add_argument('--root', default='./data_gen/data_pointnet/', metavar='DATA_DIR')
-parser.add_argument('--target', default='MIC3', metavar='TARGET_PROPERTY')
-parser.add_argument('--nclass', default=3, type=int)
-parser.add_argument('--threshold', default=2., type=float)
+parser.add_argument('--target', default='MIC2', metavar='TARGET_PROPERTY')
+parser.add_argument('--nclass', default=2, type=int)
 parser.add_argument('--run_name', default='run0', metavar='RUNID')
 parser.add_argument('--gpu_id', default=0, type=int, metavar='GPUID')
 # hyper parameter tuning
@@ -30,11 +29,11 @@ parser.add_argument('--conv_dims', default=[4, 256, 512], type=int, nargs='+')
 parser.add_argument('--fc_dims', default=[512, 256, 128], type=int, nargs='+')
 parser.add_argument('--nbert', default=3, type=int)
 parser.add_argument('--pool', default='CLS', type=str)
-parser.add_argument('--epochs', default=60, type=int, metavar='N')
+parser.add_argument('--epochs', default=100, type=int, metavar='N')
 parser.add_argument('--batch_size', default=64, type=int, metavar='N')
 parser.add_argument('--optim', default='SGD', type=str, metavar='OPTIM')
 parser.add_argument('--lr', default=0.01, type=float, metavar='LR')
-parser.add_argument('--lr_milestones', default=[20, 40], nargs='+', type=int)
+parser.add_argument('--lr_milestones', default=[20, 40, 60, 80], nargs='+', type=int)
 parser.add_argument('--dropout', default=0.1, type=float, metavar='DROPOUT')
 # default params
 parser.add_argument('--start_epoch', default=0, type=int, metavar='N')
@@ -66,15 +65,13 @@ def main():
 
     # get data loader
     train_loader, val_loader, test_loader = get_train_val_test_loader(
-        root=args.root, target=args.target, thresh=args.threshold,
-        cut=args.cutoff, pad=args.padding,
-        daug=args.data_aug=='True', rot_all=args.rot_all=='True',
-        batch_size=args.batch_size, pin_memory=args.cuda, 
-        num_data_workers=args.num_data_workers)
+        root=args.root, target=args.target, cut=args.cutoff, 
+        pad=args.padding, daug=args.data_aug=='True',
+        rot_all=args.rot_all=='True', batch_size=args.batch_size,
+        pin_memory=args.cuda, num_data_workers=args.num_data_workers)
 
     # build model
-    model = PointNet(k=4, 
-                     nclass=args.nclass,
+    model = PointNet(k=4, nclass=args.nclass,
                      conv_dims=args.conv_dims,
                      fc_dims=args.fc_dims,
                      nbert=args.nbert,
