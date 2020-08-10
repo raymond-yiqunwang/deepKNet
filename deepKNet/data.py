@@ -5,16 +5,19 @@ import numpy as np
 import pandas as pd
 from torch.utils.data import Dataset, DataLoader
 
-def get_train_val_test_loader(root, target, cut, pad, daug, rot_all,
+def get_train_val_test_loader(root, target, cut, pad, daug, rot_all, permut,
                               batch_size, num_data_workers, pin_memory):
 
     print('data aug -- train: {}, val/test: {}'.format(daug, (daug and rot_all)))
-    train_dataset = deepKNetDataset(root=root+'/train/', target=target,
-                                    cutoff=cut, padding=pad, data_aug=daug)
-    val_dataset = deepKNetDataset(root=root+'/valid/', target=target,
-                                  cutoff=cut, padding=pad, data_aug=(daug and rot_all))
+    print('permutation: {}'.format(permut))
+    train_dataset = deepKNetDataset(root=root+'/train/', target=target, cutoff=cut, 
+                                    padding=pad, data_aug=daug, permutation=permut)
+    val_dataset = deepKNetDataset(root=root+'/valid/', target=target, cutoff=cut,
+                                  padding=pad, data_aug=(daug and rot_all),
+                                  permutation=permut)
     test_dataset = deepKNetDataset(root=root+'/test/', target=target,
-                                   cutoff=cut, padding=pad, data_aug=(daug and rot_all))
+                                   cutoff=cut, padding=pad, data_aug=(daug and rot_all),
+                                   permutation=permut)
 
     # init DataLoader
     train_loader = DataLoader(train_dataset, batch_size=batch_size,
@@ -31,12 +34,13 @@ def get_train_val_test_loader(root, target, cut, pad, daug, rot_all,
 
 
 class deepKNetDataset(Dataset):
-    def __init__(self, root, target, cutoff, padding, data_aug):
+    def __init__(self, root, target, cutoff, padding, data_aug, permutation):
         self.root = root
         self.target = target
         self.cutoff = cutoff
         self.padding = padding
         self.data_aug = data_aug
+        self.permutation = permutation
         self.file_names = [fname.split('.')[0] for fname in \
                            os.listdir(self.root)
                            if fname.split('.')[-1] == 'csv']
@@ -79,6 +83,9 @@ class deepKNetDataset(Dataset):
             rot_matrix = np.array(rot_matrix).reshape(3,3)
             point_cloud[:,:-1] = np.dot(point_cloud[:,:-1], rot_matrix.T)
         
+        if self.permutation:
+            np.random.shuffle(point_cloud)
+
         point_cloud = torch.Tensor(point_cloud.transpose())
 
         # load target property

@@ -25,6 +25,7 @@ parser.add_argument('--cutoff', default=500, type=int, metavar='NPOINT CUTOFF')
 parser.add_argument('--padding', default='zero', type=str, metavar='POINT PADDING')
 parser.add_argument('--data_aug', default='True', type=str)
 parser.add_argument('--rot_all', default='True', type=str)
+parser.add_argument('--permutation', default='True', type=str)
 parser.add_argument('--conv_dims', default=[4, 256, 512], type=int, nargs='+')
 parser.add_argument('--nbert', default=3, type=int)
 parser.add_argument('--fc_dims', default=[512, 256, 128], type=int, nargs='+')
@@ -67,8 +68,9 @@ def main():
     train_loader, val_loader, test_loader = get_train_val_test_loader(
         root=args.root, target=args.target, cut=args.cutoff, 
         pad=args.padding, daug=args.data_aug=='True',
-        rot_all=args.rot_all=='True', batch_size=args.batch_size,
-        pin_memory=args.cuda, num_data_workers=args.num_data_workers)
+        permut=args.permutation=='True', rot_all=args.rot_all=='True',
+        batch_size=args.batch_size, pin_memory=args.cuda,
+        num_data_workers=args.num_data_workers)
 
     # build model
     model = PointNet(k=4, nclass=args.nclass,
