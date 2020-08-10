@@ -18,14 +18,15 @@ def get_train_val_test_loader(root, target, cut, pad, daug, rot_all,
 
     # init DataLoader
     train_loader = DataLoader(train_dataset, batch_size=batch_size,
-                              shuffle=True, num_workers=num_data_workers,
-                              pin_memory=pin_memory)
+                              num_workers=num_data_workers,
+                              shuffle=True, pin_memory=pin_memory)
     val_loader = DataLoader(val_dataset, batch_size=batch_size,
-                            shuffle=True, num_workers=num_data_workers,
-                            pin_memory=pin_memory)
+                            num_workers=num_data_workers,
+                            shuffle=True, pin_memory=pin_memory)
     test_loader = DataLoader(test_dataset, batch_size=batch_size,
-                             shuffle=True, num_workers=num_data_workers,
-                             pin_memory=pin_memory)
+                             num_workers=num_data_workers,
+                             shuffle=True, pin_memory=pin_memory)
+    
     return train_loader, val_loader, test_loader
 
 
@@ -84,6 +85,7 @@ class deepKNetDataset(Dataset):
         properties = pd.read_csv(self.root+self.file_names[idx]+'.csv',
                                  sep=';', header=0, index_col=None)
         band_gap = properties['band_gap'].values[0]
+        e_above_hull = properties['e_above_hull'].values[0]
         topo_class = properties['topo_class'].values[0]
         topo_sub_class = properties['topo_sub_class'].values[0]
         topo_cross_type = properties['topo_cross_type'].values[0]
@@ -99,6 +101,8 @@ class deepKNetDataset(Dataset):
         elif self.target == 'TIC3':
             topo_dict = {'trivial': 0, 'TI': 1, 'SM': 2}
             prop = torch.Tensor([topo_dict[topo_class]])
+        elif self.target == 'stability':
+            prop = torch.Tensor([e_above_hull<=0.05])
         else:
             raise NotImplementedError
 

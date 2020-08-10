@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class PointNet(nn.Module):
-    def __init__(self, k, nclass, conv_dims, fc_dims, nbert, pool, dp):
+    def __init__(self, k, nclass, conv_dims, nbert, fc_dims, pool, dp):
         super(PointNet, self).__init__()
         self.k = k
         self.nclass = nclass

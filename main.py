@@ -26,8 +26,8 @@ parser.add_argument('--padding', default='zero', type=str, metavar='POINT PADDIN
 parser.add_argument('--data_aug', default='True', type=str)
 parser.add_argument('--rot_all', default='True', type=str)
 parser.add_argument('--conv_dims', default=[4, 256, 512], type=int, nargs='+')
-parser.add_argument('--fc_dims', default=[512, 256, 128], type=int, nargs='+')
 parser.add_argument('--nbert', default=3, type=int)
+parser.add_argument('--fc_dims', default=[512, 256, 128], type=int, nargs='+')
 parser.add_argument('--pool', default='CLS', type=str)
 parser.add_argument('--epochs', default=100, type=int, metavar='N')
 parser.add_argument('--batch_size', default=64, type=int, metavar='N')
@@ -73,8 +73,8 @@ def main():
     # build model
     model = PointNet(k=4, nclass=args.nclass,
                      conv_dims=args.conv_dims,
-                     fc_dims=args.fc_dims,
                      nbert=args.nbert,
+                     fc_dims=args.fc_dims,
                      pool=args.pool,
                      dp=args.dropout)
     # number of trainable model parameters
