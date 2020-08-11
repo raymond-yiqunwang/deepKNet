@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 def gen_gap(gap_split_file, out_dir):
-    print('gen band gap train val test data using {}'.format(gap_split_file))
+    print('gen band gap train valid test data using {}'.format(gap_split_file))
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir, ignore_errors=False)
     os.mkdir(out_dir)
@@ -23,14 +23,14 @@ def gen_gap(gap_split_file, out_dir):
         shutil.copyfile(os.path.join(root_dir,  ifile+'.csv'),
                         os.path.join(train_dir, ifile+'.csv'))        
     # valid
-    val_files = file_names['valid'].dropna()
-    val_dir = os.path.join(out_dir, 'valid/')
-    os.mkdir(val_dir)
-    for jfile in val_files:
-        shutil.copyfile(os.path.join(root_dir, jfile+'.npy'),
-                        os.path.join(val_dir,  jfile+'.npy'))
-        shutil.copyfile(os.path.join(root_dir, jfile+'.csv'),
-                        os.path.join(val_dir,  jfile+'.csv'))
+    valid_files = file_names['valid'].dropna()
+    valid_dir = os.path.join(out_dir, 'valid/')
+    os.mkdir(valid_dir)
+    for jfile in valid_files:
+        shutil.copyfile(os.path.join(root_dir,  jfile+'.npy'),
+                        os.path.join(valid_dir, jfile+'.npy'))
+        shutil.copyfile(os.path.join(root_dir,  jfile+'.csv'),
+                        os.path.join(valid_dir, jfile+'.csv'))
     # test
     test_files = file_names['test'].dropna()
     test_dir = os.path.join(out_dir, 'test/')
@@ -43,7 +43,7 @@ def gen_gap(gap_split_file, out_dir):
 
 
 def gen_topo(topo_split_file, out_dir):
-    print('gen topo train val test data using {}'.format(topo_split_file))
+    print('gen topo train valid test data using {}'.format(topo_split_file))
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir, ignore_errors=False)
     os.mkdir(out_dir)
@@ -61,14 +61,14 @@ def gen_topo(topo_split_file, out_dir):
         shutil.copyfile(os.path.join(root_dir,  ifile+'.csv'),
                         os.path.join(train_dir, ifile+'.csv'))        
     # valid
-    val_files = file_names['valid'].dropna()
-    val_dir = os.path.join(out_dir, 'valid/')
-    os.mkdir(val_dir)
-    for jfile in val_files:
-        shutil.copyfile(os.path.join(root_dir, jfile+'.npy'),
-                        os.path.join(val_dir,  jfile+'.npy'))
-        shutil.copyfile(os.path.join(root_dir, jfile+'.csv'),
-                        os.path.join(val_dir,  jfile+'.csv'))
+    valid_files = file_names['valid'].dropna()
+    valid_dir = os.path.join(out_dir, 'valid/')
+    os.mkdir(valid_dir)
+    for jfile in valid_files:
+        shutil.copyfile(os.path.join(root_dir,  jfile+'.npy'),
+                        os.path.join(valid_dir, jfile+'.npy'))
+        shutil.copyfile(os.path.join(root_dir,  jfile+'.csv'),
+                        os.path.join(valid_dir, jfile+'.csv'))
     # test
     test_files = file_names['test'].dropna()
     test_dir = os.path.join(out_dir, 'test/')
@@ -83,14 +83,22 @@ def gen_topo(topo_split_file, out_dir):
 if __name__ == "__main__":
     # gen band gap 
     if True:
-        gap_split_file = "../misc/gap_split1.csv"
-        gap_out_dir = "./data_gap_split1/"
+        #gap_split_file = "../misc/gap_split1.csv"
+        #gap_out_dir = "./data_gap_split1/"
+        #gap_split_file = "../misc/gap_split2.csv"
+        #gap_out_dir = "./data_gap_split2/"
+        #gap_split_file = "../misc/gap_split3.csv"
+        #gap_out_dir = "./data_gap_split3/"
         gen_gap(gap_split_file, gap_out_dir)
 
     # gen topological data
     if True:
-        topo_split_file = "../misc/topo_split1.csv"
-        topo_out_dir = "./data_topo_split1/"
+        #topo_split_file = "../misc/topo_split1.csv"
+        #topo_out_dir = "./data_topo_split1/"
+        #topo_split_file = "../misc/topo_split2.csv"
+        #topo_out_dir = "./data_topo_split2/"
+        #topo_split_file = "../misc/topo_split3.csv"
+        #topo_out_dir = "./data_topo_split3/"
         gen_topo(topo_split_file, topo_out_dir)
 
 

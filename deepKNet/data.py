@@ -84,7 +84,7 @@ class deepKNetDataset(Dataset):
             point_cloud[:,:-1] = np.dot(point_cloud[:,:-1], rot_matrix.T)
         
         if self.permutation:
-            np.random.shuffle(point_cloud)
+            np.random.shuffle(point_cloud[1:])
 
         point_cloud = torch.Tensor(point_cloud.transpose())
 

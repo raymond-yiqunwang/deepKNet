@@ -47,8 +47,8 @@ def generate_dataset(xrd_data, topo_data, out_dir):
         # topo properties
         try:
             topo_row = topo_data.loc[topo_data['material_id'] == material_id].iloc[0]
-            topo_class = topo_row['topo_class'][:-1]
-            topo_sub_class = topo_row['sub_class'][:-1]
+            topo_class = topo_row['topo_class'][:-1] # get rid of *
+            topo_sub_class = topo_row['sub_class'][:-1] # get rid of *
             topo_cross_type = topo_row['cross_type']
         except:
             topo_class, topo_sub_class, topo_cross_type = 'UNK', 'UNK', 'UNK'
