@@ -1,0 +1,29 @@
+pip3 install torch==1.1.0 torchvision==0.3.0 tensorboardX
+git clone https://github.com/raymond931118/deepKNet.git
+
+#!/bin/bash
+
+jobname=Lambdarun0
+CUDA_VISIBLE_DEVICES=3 python3 main.py \
+    --root ./data_gen/data_topo_split1/ \
+    --target TIC2 \
+    --nclass 2 \
+    --run_name ${jobname} \
+    --gpu_id 0 \
+    --cutoff 500 \
+    --padding zero \
+    --data_aug True \
+    --rot_all True \
+    --permutation True \
+    --conv_dims 4 128 512 \
+    --nbert 4 \
+    --fc_dims 512 256 128 \
+    --pool CLS \
+    --epochs 80 \
+    --batch_size 64 \
+    --optim SGD \
+    --lr 0.01 \
+    --lr_milestones 20 40 60 \
+    --dropout 0.0 \
+    | tee 2>&1 ${jobname}.log
+
