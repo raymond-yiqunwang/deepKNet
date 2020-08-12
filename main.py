@@ -25,6 +25,7 @@ parser.add_argument('--cutoff', default=500, type=int, metavar='NPOINT CUTOFF')
 parser.add_argument('--padding', default='zero', type=str, metavar='POINT PADDING')
 parser.add_argument('--data_aug', default='True', type=str)
 parser.add_argument('--rot_all', default='True', type=str)
+parser.add_argument('--stn', default='True', type=str)
 parser.add_argument('--permutation', default='True', type=str)
 parser.add_argument('--conv_dims', default=[4, 256, 512], type=int, nargs='+')
 parser.add_argument('--nbert', default=4, type=int)
@@ -78,7 +79,8 @@ def main():
                      nbert=args.nbert,
                      fc_dims=args.fc_dims,
                      pool=args.pool,
-                     dp=args.dropout)
+                     dp=args.dropout,
+                     stn=args.stn=='True')
     # number of trainable model parameters
     trainable_params = sum(p.numel() for p in model.parameters() 
                            if p.requires_grad)
