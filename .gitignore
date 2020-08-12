@@ -1,6 +1,6 @@
 *.log
 job_submit.sh
-pre-trained/
+hyper_params/
 runs/
 checkpoints/
 data_gen/data_*/
