@@ -17,7 +17,7 @@ from pymatgen.core.structure import Structure
         "energy", "energy_per_atom", "formation_energy_per_atom", "e_above_hull",
         "band_gap", "density", "total_magnetization", "elasticity",
         "is_hubbard", "hubbards",
-        "warnings", "tags",
+        "warnings", "tags", "crystal_system"
 """
 
 def compute_xrd(raw_data, wavelength):
@@ -30,13 +30,14 @@ def compute_xrd(raw_data, wavelength):
 
         # properties of interest
         material_id = irow['material_id']
+        crystal_system = irow['crystal_system']
         band_gap = irow['band_gap']
         energy_per_atom = irow['energy_per_atom']
         formation_energy_per_atom = irow['formation_energy_per_atom']
         e_above_hull = irow['e_above_hull']
 
         # property list
-        ifeat = [material_id, recip_latt.tolist(), features,
+        ifeat = [material_id, recip_latt.tolist(), features, crystal_system,
                  band_gap, energy_per_atom, formation_energy_per_atom, e_above_hull]
         # append to dataset
         xrd_data_batch.append(ifeat)
@@ -69,7 +70,7 @@ def main():
     # output safeguard
     if os.path.exists(out_file):
         print("Attention, the existing xrd data will be deleted and regenerated..")
-    header = [['material_id', 'recip_latt', 'features',
+    header = [['material_id', 'recip_latt', 'features', 'crystal_system',
                'band_gap', 'energy_per_atom', 'formation_energy_per_atom', 'e_above_hull']]
     df = pd.DataFrame(header)
     df.to_csv(out_file, sep=';', header=None, index=False, mode='w')

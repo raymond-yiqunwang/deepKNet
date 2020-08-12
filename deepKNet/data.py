@@ -96,6 +96,7 @@ class deepKNetDataset(Dataset):
         topo_class = properties['topo_class'].values[0]
         topo_sub_class = properties['topo_sub_class'].values[0]
         topo_cross_type = properties['topo_cross_type'].values[0]
+        crystal_system = properties['crystal_system'].values[0]
 
         # binary metal-insulator classification
         if self.target == 'MIC2':
@@ -110,6 +111,13 @@ class deepKNetDataset(Dataset):
             prop = torch.Tensor([topo_dict[topo_class]])
         elif self.target == 'stability':
             prop = torch.Tensor([e_above_hull<1E-6])
+        elif self.target == 'crystal_system':
+            cryst_sys_dict = {
+                'cubic': 0, 'hexagonal': 1, 'tetragonal': 2,
+                'trigonal': 3, 'orthorhombic': 4, 
+                'monoclinic': 5, 'triclinic': 6
+            }
+            prop = torch.Tensor([cryst_sys_dict[crystal_system]])
         else:
             raise NotImplementedError
 

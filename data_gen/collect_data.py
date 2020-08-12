@@ -42,6 +42,7 @@ def generate_dataset(xrd_data, topo_data, out_dir):
         band_gap = irow['band_gap'] 
         energy_per_atom = irow['energy_per_atom'] 
         formation_energy_per_atom = irow['formation_energy_per_atom']
+        crystal_system = irow['crystal_system']
         e_above_hull = irow['e_above_hull']
 
         # topo properties
@@ -55,9 +56,11 @@ def generate_dataset(xrd_data, topo_data, out_dir):
 
         # write target
         properties = [[band_gap, energy_per_atom, formation_energy_per_atom,
-                       e_above_hull, topo_class, topo_sub_class, topo_cross_type]]
+                       crystal_system, e_above_hull, topo_class,
+                       topo_sub_class, topo_cross_type]]
         header_target = ['band_gap', 'energy_per_atom', 'formation_energy_per_atom',
-                         'e_above_hull', 'topo_class', 'topo_sub_class', 'topo_cross_type']
+                         'crystal_system', 'e_above_hull', 'topo_class', 
+                         'topo_sub_class', 'topo_cross_type']
         properties = pd.DataFrame(properties)
         properties.to_csv(out_dir+filename+'.csv', sep=';', \
                           header=header_target, index=False, mode='w')

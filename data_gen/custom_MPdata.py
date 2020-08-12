@@ -42,6 +42,12 @@ def show_statistics(data, plot=False):
         sg_dict = ast.literal_eval(sg)
         sg_set.add(sg_dict['number'])
     print('>> Number of unique space groups: {:d}'.format(len(sg_set)))
+    
+    # crystal system
+    syst_set = set()
+    for syst in data['crystal_system']:
+        syst_set.add(syst)
+    print('>> Number of unique crystal systems: {:d}'.format(len(syst_set)))
 
     # volume
     vol = data['volume']
