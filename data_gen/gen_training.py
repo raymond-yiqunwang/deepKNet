@@ -83,22 +83,14 @@ def gen_topo(topo_split_file, out_dir):
 if __name__ == "__main__":
     # gen band gap 
     if True:
-        gap_split_file = "../misc/gap_split1.csv"
-        gap_out_dir = "./data_gap_split1/"
-        #gap_split_file = "../misc/gap_split2.csv"
-        #gap_out_dir = "./data_gap_split2/"
-        #gap_split_file = "../misc/gap_split3.csv"
-        #gap_out_dir = "./data_gap_split3/"
+        gap_split_file = "../misc/gap_splitx.csv"
+        gap_out_dir = "./data_gap_splitx/"
         gen_gap(gap_split_file, gap_out_dir)
 
     # gen topological data
-    if False:
-        #topo_split_file = "../misc/topo_split1.csv"
-        #topo_out_dir = "./data_topo_split1/"
-        #topo_split_file = "../misc/topo_split2.csv"
-        #topo_out_dir = "./data_topo_split2/"
-        #topo_split_file = "../misc/topo_split3.csv"
-        #topo_out_dir = "./data_topo_split3/"
+    if True:
+        topo_split_file = "../misc/topo_splitx.csv"
+        topo_out_dir = "./data_topo_splitx/"
         gen_topo(topo_split_file, topo_out_dir)
 
 

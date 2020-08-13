@@ -34,8 +34,8 @@ def split_topo(out_file, train_ratio, valid_ratio, test_ratio):
 
 if __name__ == "__main__":
     # band gap
-    if True:
-        out_file = "gap_split3.csv"
+    if False:
+        out_file = "gap_splitx.csv"
         train_ratio = 0.7
         valid_ratio = 0.15
         test_ratio = 0.15
@@ -43,7 +43,7 @@ if __name__ == "__main__":
 
     # topo
     if True:
-        out_file = "topo_split3.csv"
+        out_file = "topo_splitx.csv"
         train_ratio = 0.7
         valid_ratio = 0.15
         test_ratio = 0.15

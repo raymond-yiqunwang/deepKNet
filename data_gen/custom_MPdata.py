@@ -20,7 +20,7 @@ from pymatgen.core.periodic_table import Element
         "energy", "energy_per_atom", "formation_energy_per_atom", "e_above_hull",
         "band_gap", "density", "total_magnetization", "elasticity",
         "is_hubbard", "hubbards",
-        "warnings", "tags",
+        "warnings", "tags", "crystal_system"
 """
 
 def show_statistics(data, plot=False):

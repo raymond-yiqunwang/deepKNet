@@ -25,7 +25,6 @@ parser.add_argument('--cutoff', default=500, type=int, metavar='NPOINT CUTOFF')
 parser.add_argument('--padding', default='zero', type=str, metavar='POINT PADDING')
 parser.add_argument('--data_aug', default='True', type=str)
 parser.add_argument('--rot_all', default='True', type=str)
-parser.add_argument('--stn', default='True', type=str)
 parser.add_argument('--permutation', default='True', type=str)
 parser.add_argument('--conv_dims', default=[4, 256, 512], type=int, nargs='+')
 parser.add_argument('--nbert', default=4, type=int)
@@ -74,13 +73,12 @@ def main():
         num_data_workers=args.num_data_workers)
 
     # build model
-    model = PointNet(k=4, nclass=args.nclass,
+    model = PointNet(nclass=args.nclass,
                      conv_dims=args.conv_dims,
                      nbert=args.nbert,
                      fc_dims=args.fc_dims,
                      pool=args.pool,
-                     dp=args.dropout,
-                     stn=args.stn=='True')
+                     dp=args.dropout)
     # number of trainable model parameters
     trainable_params = sum(p.numel() for p in model.parameters() 
                            if p.requires_grad)
