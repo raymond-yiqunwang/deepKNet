@@ -110,7 +110,7 @@ class deepKNetDataset(Dataset):
             topo_dict = {'trivial': 0, 'TI': 1, 'SM': 2}
             prop = torch.Tensor([topo_dict[topo_class]])
         elif self.target == 'stability':
-            prop = torch.Tensor([e_above_hull<1E-6])
+            prop = torch.Tensor([e_above_hull<0.05])
         elif self.target == 'crystal_system':
             cryst_sys_dict = {
                 'cubic': 0, 'hexagonal': 1, 'tetragonal': 2,
