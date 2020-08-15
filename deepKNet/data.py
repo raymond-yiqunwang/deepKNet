@@ -122,7 +122,7 @@ class deepKNetDataset(Dataset):
             prop = torch.Tensor([topo_dict[topo_class]])
         # binary stability
         elif self.target == 'stability':
-            prop = torch.Tensor([e_above_hull<0.05])
+            prop = torch.Tensor([e_above_hull<0.01])
         # 7-class
         elif self.target == 'crystal_system':
             cryst_sys_dict = {

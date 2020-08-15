@@ -48,6 +48,7 @@ def show_statistics(data, plot=False):
     for syst in data['crystal_system']:
         syst_set.add(syst)
     print('>> Number of unique crystal systems: {:d}'.format(len(syst_set)))
+    print(data['crystal_system'].value_counts())
 
     # volume
     vol = data['volume']
@@ -98,6 +99,8 @@ def show_statistics(data, plot=False):
                 'std = {:.2f}, min = {:.2f}, max = {:.2f}' \
                 .format(e_above_hull.mean(), e_above_hull.median(),\
                      e_above_hull.std(), e_above_hull.min(), e_above_hull.max()))
+    print('>> Energy above hull (eV) < 10meV: {:d}'.format( \
+          e_above_hull[e_above_hull < 0.01].size))
 
     # band gap 
     gap_threshold = 1E-6
