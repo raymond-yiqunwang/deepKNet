@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from pymatgen import MPRester
 
-def fetch_materials_data(out_file):
+def fetch_materials_data(out_file, criteria_in):
     # properties of interest
     properties = [ 
         "material_id", "icsd_ids",
@@ -20,9 +20,7 @@ def fetch_materials_data(out_file):
     m = MPRester(api_key=my_API_key)
     
     # query data with calculated band structures
-    mp_data = m.query(criteria={
-        "has": "bandstructure",
-    }, properties=properties)
+    mp_data = m.query(criteria=criteria_in, properties=properties)
     
     data_origin = pd.DataFrame(entry.values() for entry in mp_data)
     data_origin.to_csv(out_file, sep=';', index=False, header=properties, mode='w')
@@ -34,10 +32,20 @@ def main():
     if not os.path.exists(root_dir):
         print("{} folder does not exist, making directory..".format(root_dir))
         os.mkdir(root_dir)
-    out_file = os.path.join(root_dir, "fetch_MPdata.csv")
+    
+    # crystal system classification
+    if True:
+        out_file = os.path.join(root_dir, "fetch_Xsys_data.csv")
+        criteria = {}
+    # metal-insulator classification
+    elif False:
+        out_file = os.path.join(root_dir, "fetch_MIC_data.csv")
+        criteria = {"has": "bandstructure"}
+    else:
+        raise NotImplementedError
 
     # fetch raw data from the Materials Project
-    fetch_materials_data(out_file)
+    fetch_materials_data(out_file, criteria)
 
 
 if __name__ == "__main__":

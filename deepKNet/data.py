@@ -68,7 +68,7 @@ class deepKNetDataset(Dataset):
 
         # apply random 3D rotation for data augmentation
         if self.data_aug:
-            alpha, beta, gamma = np.pi * np.random.random(3)
+            alpha, beta, gamma = 0.25 * np.pi * np.random.random(3)
             rot_matrix = [
                 np.cos(alpha)*np.cos(beta),
                 np.cos(alpha)*np.sin(beta)*np.sin(gamma) - np.sin(alpha)*np.cos(gamma),
@@ -126,9 +126,9 @@ class deepKNetDataset(Dataset):
         # 7-class
         elif self.target == 'crystal_system':
             cryst_sys_dict = {
-                'cubic': 0, 'hexagonal': 1, 'tetragonal': 2,
-                'trigonal': 3, 'orthorhombic': 4, 
-                'monoclinic': 5, 'triclinic': 6
+                'cubic': 0, 'orthorhombic': 1, 'tetragonal': 2,
+                'hexagonal': 3, 'trigonal': 3, 
+                'monoclinic': 4, 'triclinic': 5
             }
             prop = torch.Tensor([cryst_sys_dict[crystal_system]])
         # elasticity

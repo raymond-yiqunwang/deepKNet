@@ -11,6 +11,7 @@ from multiprocessing import Pool
 from collections import defaultdict
 from pymatgen.core.structure import Structure
 from pymatgen.core.periodic_table import Element
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 """ properties
         "material_id", "icsd_ids",
@@ -179,13 +180,104 @@ def customize_data(raw_data):
     return data_custom
 
 
-def main():
-    filename = "./raw_data/fetch_MPdata.csv"
-    if not os.path.isfile(filename):
-        print("{} file does not exist, please generate it first..".format(filename))
+def check_crystal_system(custom_data):
+    print('total size:', custom_data.shape[0])
+    print(custom_data['crystal_system'].value_counts())
+    drop_list =[]
+    for idx, irow in custom_data.iterrows():
+        struct = Structure.from_str(irow['cif'], fmt="cif")
+        # try until find a match
+        try:
+            sga = SpacegroupAnalyzer(struct, symprec=0.1)
+            assert(sga.get_crystal_system() == irow['crystal_system'])
+        except:
+            print('0.1 failed', irow['material_id'], 'added to drop list')
+            print(sga.get_crystal_system(), irow['crystal_system'])
+            drop_list.append(idx)
+            continue
+        # get conventional cell
+        conventional_struct = sga.get_conventional_standard_structure()
+        latt = conventional_struct.lattice.matrix
+        a, b, c = latt[0], latt[1], latt[2]
+        lena = np.linalg.norm(a)
+        lenb = np.linalg.norm(b)
+        lenc = np.linalg.norm(c)
+        theta_ab = np.arccos(np.dot(a,b)/(lena*lenb))/np.pi*180
+        theta_bc = np.arccos(np.dot(b,c)/(lenb*lenc))/np.pi*180
+        theta_ac = np.arccos(np.dot(a,c)/(lena*lenc))/np.pi*180
+        if irow['crystal_system'] == 'hexagonal' or \
+           irow['crystal_system'] == 'trigonal':
+            try:
+                assert(abs(lena - lenb) < 1E-1)
+                assert(abs(theta_ab-120) < 1E-1)
+                assert(abs(theta_bc-90) < 1E-1)
+                assert(abs(theta_ac-90) < 1E-1)
+            except:
+                print(irow['material_id'])
+                print('hexagonal or trigonal')
+                print(lena, lenb, lenc, theta_ab, theta_bc, theta_ac)
+        elif irow['crystal_system'] == 'cubic':
+            try:
+                assert(abs(lena - lenb) < 1E-1)
+                assert(abs(lenb - lenc) < 1E-1)
+                assert(abs(lena - lenc) < 1E-1)
+                assert(abs(theta_ab-90) < 1E-1)
+                assert(abs(theta_bc-90) < 1E-1)
+                assert(abs(theta_ac-90) < 1E-1)
+            except:
+                print(irow['material_id'])
+                print('cubic')
+                print(lena, lenb, lenc, theta_ab, theta_bc, theta_ac)
+        elif irow['crystal_system'] == 'tetragonal':
+            try:
+                assert(abs(lena - lenb) < 1E-1)
+                assert(abs(theta_ab-90) < 1E-1)
+                assert(abs(theta_bc-90) < 1E-1)
+                assert(abs(theta_ac-90) < 1E-1)
+            except:
+                print(irow['material_id'])
+                print('tetragonal')
+                print(lena, lenb, lenc, theta_ab, theta_bc, theta_ac)
+        elif irow['crystal_system'] == 'orthorhombic':
+            try:
+                assert(abs(theta_ab-90) < 1E-1)
+                assert(abs(theta_bc-90) < 1E-1)
+                assert(abs(theta_ac-90) < 1E-1)
+            except:
+                print(irow['material_id'])
+                print('orthorhombic')
+                print(lena, lenb, lenc, theta_ab, theta_bc, theta_ac)
+        elif irow['crystal_system'] == 'monoclinic':
+            try:
+                assert(abs(theta_ab-90) < 1E-1 and abs(theta_bc-90) < 1E-1) 
+            except:
+                print(irow['material_id'])
+                print('monoclinic')
+                print(lena, lenb, lenc, theta_ab, theta_bc, theta_ac)
+        else:
+            try:
+                assert(irow['crystal_system'] == 'triclinic')
+            except:
+                print(irow['material_id'])
+                print('UNK --', irow['crystal_system'])
+                print(lena, lenb, lenc, theta_ab, theta_bc, theta_ac)
+    
+    print('total number of entries to drop:', len(drop_list))
+    data_out = custom_data.drop(drop_list)
+    print('size with matched crystal system:', data_out.shape[0])
+    return data_out
+        
+
+if __name__ == "__main__":
+
+    input_file = "./raw_data/fetch_Xsys_data.csv"
+    out_file = "./raw_data/custom_Xsys_data.csv"
+
+    if not os.path.isfile(input_file):
+        print("{} file does not exist, please generate it first..".format(input_file))
         sys.exit(1)
     # get raw data from Materials Project
-    raw_data = pd.read_csv(filename, sep=';', header=0, index_col=None)
+    raw_data = pd.read_csv(input_file, sep=';', header=0, index_col=None)
 
     # show statistics of raw data
     print('\nShowing raw data:')
@@ -198,13 +290,12 @@ def main():
     print('\nShowing customized data:')
     show_statistics(data=data_custom, plot=False)
 
+    if True:
+        # only for crystal system classification
+        data_custom = check_crystal_system(data_custom)
+
     # write customized data
-    out_file = "./raw_data/custom_MPdata.csv"
     data_custom.to_csv(out_file, sep=';', columns=None, mode='w', \
                        header=data_custom.columns, index=None)
-
-
-if __name__ == "__main__":
-    main()
-
+    
 

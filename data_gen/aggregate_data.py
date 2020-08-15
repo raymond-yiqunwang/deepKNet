@@ -71,14 +71,14 @@ def generate_dataset(xrd_data, topo_data, out_dir):
                           header=header_target, index=False, mode='w')
 
 
-def main():
-
+if __name__ == "__main__":
     # safeguard
     print("Attention, all existing training data will be deleted and regenerated..")
     
     # read xrd raw data
-    out_dir = "./raw_data/data_pointnet/"
-    xrd_file = "./raw_data/compute_xrd.csv"
+    out_dir = "./raw_data/data_Xsys27/"
+    xrd_file = "./raw_data/compute_xrd_Xsys27.csv"
+
     if not os.path.isfile(xrd_file):
         print("{} file does not exist, please generate it first..".format(xrd_file))
         sys.exit(1)
@@ -107,32 +107,5 @@ def main():
         pool.join()
         cnt += xrd_data.shape[0]
         print('finished processing {} materials'.format(cnt))
-
-
-def check_npoint(wavelength='CuKa'):
-    xrd_file = './raw_data/compute_xrd.csv'
-    data_all = pd.read_csv(xrd_file, sep=';', header=0, index_col=None, chunksize=100)
-    npoints = []
-    for idx, xrd_data in enumerate(data_all):
-        feat_len = xrd_data['features'].apply(ast.literal_eval).apply(len)
-        feat_len_list = feat_len.tolist()
-        print('Chunk min: {}, max: {}, mean: {}, median: {}, std: {}'.format(
-               np.min(feat_len_list), np.max(feat_len_list), np.mean(feat_len_list),
-               np.median(feat_len_list), np.std(feat_len_list)))
-        npoints += feat_len_list
-
-    print('Total min: {}, max: {}, mean: {}, median: {}, std: {}'.format(
-           np.min(npoints), np.max(npoints), np.mean(npoints),
-           np.median(npoints), np.std(npoints)))
-
-
-if __name__ == "__main__":
-    if True:
-        main()
-
-    if False:
-        # CuKa:
-        #   min: 50, max: 53000, mean: 4000, median: 3000, std: 4000
-        check_npoint(wavelength='CuKa')
 
 

@@ -9,6 +9,7 @@ import xrd_simulator.xrd_simulator as xrd
 import multiprocessing
 from multiprocessing import Pool
 from pymatgen.core.structure import Structure
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 """ properties
         "material_id", "icsd_ids",
@@ -26,7 +27,11 @@ def compute_xrd(raw_data, wavelength):
     xrd_simulator = xrd.XRDSimulator(wavelength=wavelength)
     for idx, irow in raw_data.iterrows():
         # obtain xrd features
-        struct = Structure.from_str(irow['cif'], fmt="cif")
+        cif_struct = Structure.from_str(irow['cif'], fmt="cif")
+        # conventional cell
+        sga = SpacegroupAnalyzer(cif_struct, symprec=0.1)
+        assert(sga.get_crystal_system() == irow['crystal_system'])
+        struct = sga.get_conventional_standard_structure()
         _, recip_latt, features = xrd_simulator.get_pattern(structure=struct)
 
         # properties of interest
@@ -67,15 +72,14 @@ def parallel_computing(df_in, wavelength, nworkers=1):
 
 
 def main():
-    filename = "./raw_data/custom_MPdata.csv"
-    if not os.path.isfile(filename):
-        print("{} file does not exist, please generate it first..".format(filename))
+    input_file = "./raw_data/custom_Xsys_data.csv"
+    out_file = "./raw_data/compute_xrd_Xsys3.csv"
+
+    if not os.path.isfile(input_file):
+        print("{} file does not exist, please generate it first..".format(input_file))
         sys.exit(1)
     # read customized data
-    MP_data = pd.read_csv(filename, sep=';', header=0, index_col=None)
-    
-    # specify output
-    out_file = "./raw_data/compute_xrd.csv"
+    MP_data = pd.read_csv(input_file, sep=';', header=0, index_col=None)
     
     # output safeguard
     if os.path.exists(out_file):
