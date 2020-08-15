@@ -97,20 +97,33 @@ class deepKNetDataset(Dataset):
         topo_sub_class = properties['topo_sub_class'].values[0]
         topo_cross_type = properties['topo_cross_type'].values[0]
         crystal_system = properties['crystal_system'].values[0]
+        shear_mod = properties['shear_mod'].values[0]
+        bulk_mod = properties['bulk_mod'].values[0]
+        poisson_ratio = properties['poisson_ratio'].values[0]
 
         # binary metal-insulator classification
         if self.target == 'MIC2':
             prop = torch.Tensor([band_gap>1E-6])
-        # binary topological classification
+        # binary trivial vs. non-trivial
         elif self.target == 'TIC2':
             assert(topo_class in ['trivial', 'TI', 'SM'])
             prop = torch.Tensor([topo_class=='trivial'])
+        # binary TI vs. the rest
+        elif self.target == 'TI2':
+            assert(topo_class in ['trivial', 'TI', 'SM'])
+            prop = torch.Tensor([topo_class=='TI'])
+        # binary SM vs. the rest
+        elif self.target == 'SM2':
+            assert(topo_class in ['trivial', 'TI', 'SM'])
+            prop = torch.Tensor([topo_class=='SM'])
         # ternary topological classification
         elif self.target == 'TIC3':
             topo_dict = {'trivial': 0, 'TI': 1, 'SM': 2}
             prop = torch.Tensor([topo_dict[topo_class]])
+        # binary stability
         elif self.target == 'stability':
             prop = torch.Tensor([e_above_hull<0.05])
+        # 7-class
         elif self.target == 'crystal_system':
             cryst_sys_dict = {
                 'cubic': 0, 'hexagonal': 1, 'tetragonal': 2,
@@ -118,6 +131,12 @@ class deepKNetDataset(Dataset):
                 'monoclinic': 5, 'triclinic': 6
             }
             prop = torch.Tensor([cryst_sys_dict[crystal_system]])
+        # elasticity
+        elif self.target == 'super_hard':
+            criterion = bulk_mod >= 200. and shear_mod >= 100. # AUC 0.9+
+            #criterion = shear_mod >= 100. # AUC 0.88
+            #criterion = bulk_mod >= 200. # AUC 0.9+
+            prop = torch.Tensor([criterion])
         else:
             raise NotImplementedError
 

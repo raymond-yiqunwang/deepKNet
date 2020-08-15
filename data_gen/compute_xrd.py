@@ -1,5 +1,6 @@
 import os
 import sys
+import ast
 import numpy as np
 import pandas as pd
 import warnings
@@ -35,10 +36,19 @@ def compute_xrd(raw_data, wavelength):
         energy_per_atom = irow['energy_per_atom']
         formation_energy_per_atom = irow['formation_energy_per_atom']
         e_above_hull = irow['e_above_hull']
+        elastic = irow['elasticity']
+        try:
+            elastic_dict = ast.literal_eval(elastic)
+            shear_mod = elastic_dict['G_Voigt_Reuss_Hill']
+            bulk_mod = elastic_dict['K_Voigt_Reuss_Hill']
+            poisson_ratio = elastic_dict['poisson_ratio']
+        except:
+            shear_mod, bulk_mod, poisson_ratio = 'UNK', 'UNK', 'UNK'
 
         # property list
         ifeat = [material_id, recip_latt.tolist(), features, crystal_system,
-                 band_gap, energy_per_atom, formation_energy_per_atom, e_above_hull]
+                 band_gap, energy_per_atom, formation_energy_per_atom, e_above_hull,
+                 shear_mod, bulk_mod, poisson_ratio]
         # append to dataset
         xrd_data_batch.append(ifeat)
     
@@ -71,7 +81,8 @@ def main():
     if os.path.exists(out_file):
         print("Attention, the existing xrd data will be deleted and regenerated..")
     header = [['material_id', 'recip_latt', 'features', 'crystal_system',
-               'band_gap', 'energy_per_atom', 'formation_energy_per_atom', 'e_above_hull']]
+               'band_gap', 'energy_per_atom', 'formation_energy_per_atom', 'e_above_hull',
+               'shear_mod', 'bulk_mod', 'poisson_ratio']]
     df = pd.DataFrame(header)
     df.to_csv(out_file, sep=';', header=None, index=False, mode='w')
     

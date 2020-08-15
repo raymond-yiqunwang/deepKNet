@@ -118,6 +118,30 @@ def show_statistics(data, plot=False):
     no_warnings = data[data['warnings'] == '[]']
     print('>> Number of entries with no warnings: {:d}'.format(no_warnings.shape[0]))
 
+    # elasticity
+    elastic = data['elasticity'].dropna()
+    print('>> Number of elastic data: {:d}'.format(elastic.size))
+    Gs, Ks, Ps = [], [], []
+    for imat in elastic:
+        shear_mod = ast.literal_eval(imat)['G_Voigt_Reuss_Hill']
+        if shear_mod > -1E-6: Gs.append(shear_mod)
+        bulk_mod = ast.literal_eval(imat)['K_Voigt_Reuss_Hill']
+        if bulk_mod > -1E-6: Ks.append(bulk_mod)
+        poisson_ratio = ast.literal_eval(imat)['poisson_ratio']
+        if poisson_ratio > -1E-6: Ps.append(poisson_ratio)
+
+    print('Shear modulus > 100: {:d}'.format((np.array(Gs)>100).sum()))
+    print('Bulk modulus > 200: {:d}'.format((np.array(Ks)>200).sum()))
+    print('Shear modulus: mean = {:.2f}, median = {:.2f}, std = {:.2f}, '
+                         'min = {:.5f}, max = {:.2f}' \
+           .format(np.mean(Gs), np.median(Gs), np.std(Gs), np.min(Gs), np.max(Gs)))
+    print('Bulk modulus: mean = {:.2f}, median = {:.2f}, std = {:.2f}, '
+                         'min = {:.5f}, max = {:.2f}' \
+           .format(np.mean(Ks), np.median(Ks), np.std(Ks), np.min(Ks), np.max(Ks)))
+    print('Poisson ratio: mean = {:.2f}, median = {:.2f}, std = {:.2f}, '
+                         'min = {:.5f}, max = {:.2f}' \
+           .format(np.mean(Ps), np.median(Ps), np.std(Ps), np.min(Ps), np.max(Ps)))
+
 
 def customize_data(raw_data):
     data_custom = raw_data.copy()
@@ -148,15 +172,6 @@ def customize_data(raw_data):
     # only take crystals in ICSD
     if True:
         data_custom = data_custom[data_custom['icsd_ids'] != '[]']
-
-    # only take stable compounds
-    if False:
-        data_custom = data_custom[data_custom['e_above_hull'] < 0.25]
-
-    # get rid of extreme volumes
-    if False:
-        data_custom = data_custom[data_custom['volume'] > 100]
-        data_custom = data_custom[data_custom['volume'] < 4000]
 
     return data_custom
 
