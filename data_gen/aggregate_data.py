@@ -76,10 +76,10 @@ if __name__ == "__main__":
     print("Attention, all existing training data will be deleted and regenerated..")
     
     # read xrd raw data
-    xrd_file = "./raw_data/compute_xrd_Xsys_P343.csv"
-    out_dir = "./raw_data/data_Xsys_P343/"
-    #xrd_file = "./raw_data/compute_xrd_MIC343.csv"
-    #out_dir = "./raw_data/data_MIC343/"
+    #xrd_file = "./raw_data/compute_xrd_Xsys_P343.csv"
+    #out_dir = "./raw_data/data_Xsys_P343/"
+    xrd_file = "./raw_data/compute_xrd_MIC_P3.csv"
+    out_dir = "./raw_data/data_MIC_P3/"
 
     if not os.path.isfile(xrd_file):
         print("{} file does not exist, please generate it first..".format(xrd_file))

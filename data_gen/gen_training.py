@@ -4,7 +4,7 @@ import shutil
 import numpy as np
 import pandas as pd
 
-def gen_Xsys(root_dir, Xsys_split_file, out_dir):
+def gen_Xsys(Xsys_split_file, out_dir):
     print('gen crystal system train valid test data using {}'.format(Xsys_split_file))
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir, ignore_errors=False)
@@ -13,7 +13,6 @@ def gen_Xsys(root_dir, Xsys_split_file, out_dir):
     return file_names, out_dir
 
 
-"""
 def gen_MIC(MIC_split_file, out_dir):
     print('gen MIC train valid test data using {}'.format(MIC_split_file))
     if os.path.exists(out_dir):
@@ -22,6 +21,8 @@ def gen_MIC(MIC_split_file, out_dir):
     file_names = pd.read_csv(MIC_split_file, header=0, index_col=None)
     return file_names, out_dir
 
+
+"""
 def gen_topo(topo_split_file, out_dir):
     print('gen topo train valid test data using {}'.format(topo_split_file))
     if os.path.exists(out_dir):
@@ -43,20 +44,20 @@ def gen_elastic(elastic_split_file, out_dir):
 
 if __name__ == "__main__":
     # gen crystal system
-    if True:
+    if False:
         root_dir = "./raw_data/data_Xsys_P343/"
         Xsys_split_file = "../misc/Xsys_split1.csv"
         Xsys_out_dir = "./data_Xsys_P343_split1/"
-        file_names, out_dir = gen_Xsys(root_dir, Xsys_split_file, Xsys_out_dir)
+        file_names, out_dir = gen_Xsys(Xsys_split_file, Xsys_out_dir)
 
-    """
     # gen MIC
     if True:
-        root_dir = "./raw_data/data_MIC343/"
+        root_dir = "./raw_data/data_MIC_P3/"
         MIC_split_file = "../misc/MIC_split1.csv"
-        MIC_out_dir = "./data_MIC343_split1/"
-        gen_MIC(MIC_split_file, MIC_out_dir)
+        MIC_out_dir = "./data_MIC_P3_split1/"
+        file_names, out_dir = gen_MIC(MIC_split_file, MIC_out_dir)
 
+    """
     # gen topological data
     if False:
         topo_split_file = "../misc/topo_split5.csv"

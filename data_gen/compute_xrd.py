@@ -72,10 +72,10 @@ def parallel_computing(df_in, wavelength, nworkers=1):
 
 
 def main():
-    input_file = "./raw_data/custom_Xsys_data.csv"
-    out_file = "./raw_data/compute_xrd_Xsys_P343.csv"
-    #input_file = "./raw_data/custom_MIC_data.csv"
-    #out_file = "./raw_data/compute_xrd_MIC_P343.csv"
+    #input_file = "./raw_data/custom_Xsys_data.csv"
+    #out_file = "./raw_data/compute_xrd_Xsys_P343.csv"
+    input_file = "./raw_data/custom_MIC_data.csv"
+    out_file = "./raw_data/compute_xrd_MIC_P3.csv"
 
     if not os.path.isfile(input_file):
         print("{} file does not exist, please generate it first..".format(input_file))

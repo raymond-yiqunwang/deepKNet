@@ -151,7 +151,7 @@ def customize_data(raw_data):
     data_custom = raw_data.copy()
     
     # get rid of rare elements
-    if False:
+    if True:
         # identify rare elements
         elem_dict = defaultdict(int)
         for entry in data_custom['elements']:
@@ -272,10 +272,10 @@ def check_crystal_system(data_custom):
 
 if __name__ == "__main__":
 
-    input_file = "./raw_data/fetch_Xsys_data.csv"
-    out_file = "./raw_data/custom_Xsys_data.csv"
-    #input_file = "./raw_data/fetch_MIC_data.csv"
-    #out_file = "./raw_data/custom_MIC_data.csv"
+    #input_file = "./raw_data/fetch_Xsys_data.csv"
+    #out_file = "./raw_data/custom_Xsys_data.csv"
+    input_file = "./raw_data/fetch_MIC_data.csv"
+    out_file = "./raw_data/custom_MIC_data.csv"
 
     if not os.path.isfile(input_file):
         print("{} file does not exist, please generate it first..".format(input_file))
