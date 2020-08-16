@@ -151,7 +151,7 @@ def customize_data(raw_data):
     data_custom = raw_data.copy()
     
     # get rid of rare elements
-    if True:
+    if False:
         # identify rare elements
         elem_dict = defaultdict(int)
         for entry in data_custom['elements']:
@@ -180,13 +180,10 @@ def customize_data(raw_data):
     return data_custom
 
 
-def check_crystal_system(custom_data):
-    print('total size:', custom_data.shape[0])
-    print(custom_data['crystal_system'].value_counts())
+def check_crystal_system(data_custom):
     drop_list =[]
-    for idx, irow in custom_data.iterrows():
+    for idx, irow in data_custom.iterrows():
         struct = Structure.from_str(irow['cif'], fmt="cif")
-        # try until find a match
         try:
             sga = SpacegroupAnalyzer(struct, symprec=0.1)
             assert(sga.get_crystal_system() == irow['crystal_system'])
@@ -206,21 +203,23 @@ def check_crystal_system(custom_data):
         theta_bc = np.arccos(np.dot(b,c)/(lenb*lenc))/np.pi*180
         theta_ac = np.arccos(np.dot(a,c)/(lena*lenc))/np.pi*180
         if irow['crystal_system'] == 'hexagonal' or \
-           irow['crystal_system'] == 'trigonal':
+            irow['crystal_system'] == 'trigonal':
+            # a==b!=c, ab==120, bc==ac==90
             try:
-                assert(abs(lena - lenb) < 1E-1)
+                assert(abs(lena - lenb) < 1E-2)
                 assert(abs(theta_ab-120) < 1E-1)
                 assert(abs(theta_bc-90) < 1E-1)
                 assert(abs(theta_ac-90) < 1E-1)
             except:
                 print(irow['material_id'])
-                print('hexagonal or trigonal')
+                print(irow['crystal_system'])
                 print(lena, lenb, lenc, theta_ab, theta_bc, theta_ac)
         elif irow['crystal_system'] == 'cubic':
+            # a==b==c, ab==bc==ac==90
             try:
-                assert(abs(lena - lenb) < 1E-1)
-                assert(abs(lenb - lenc) < 1E-1)
-                assert(abs(lena - lenc) < 1E-1)
+                assert(abs(lena - lenb) < 1E-2)
+                assert(abs(lenb - lenc) < 1E-2)
+                assert(abs(lena - lenc) < 1E-2)
                 assert(abs(theta_ab-90) < 1E-1)
                 assert(abs(theta_bc-90) < 1E-1)
                 assert(abs(theta_ac-90) < 1E-1)
@@ -229,8 +228,9 @@ def check_crystal_system(custom_data):
                 print('cubic')
                 print(lena, lenb, lenc, theta_ab, theta_bc, theta_ac)
         elif irow['crystal_system'] == 'tetragonal':
+            # a==b!=c, ab==bc==ac==90
             try:
-                assert(abs(lena - lenb) < 1E-1)
+                assert(abs(lena - lenb) < 1E-2)
                 assert(abs(theta_ab-90) < 1E-1)
                 assert(abs(theta_bc-90) < 1E-1)
                 assert(abs(theta_ac-90) < 1E-1)
@@ -239,6 +239,7 @@ def check_crystal_system(custom_data):
                 print('tetragonal')
                 print(lena, lenb, lenc, theta_ab, theta_bc, theta_ac)
         elif irow['crystal_system'] == 'orthorhombic':
+            # a!=b!=c, ab==bc==ac==90
             try:
                 assert(abs(theta_ab-90) < 1E-1)
                 assert(abs(theta_bc-90) < 1E-1)
@@ -248,8 +249,10 @@ def check_crystal_system(custom_data):
                 print('orthorhombic')
                 print(lena, lenb, lenc, theta_ab, theta_bc, theta_ac)
         elif irow['crystal_system'] == 'monoclinic':
+            # a!=b!=c, ab==bc==90, ac!=90
             try:
-                assert(abs(theta_ab-90) < 1E-1 and abs(theta_bc-90) < 1E-1) 
+                assert(abs(theta_ab-90) < 1E-1)
+                assert(abs(theta_bc-90) < 1E-1) 
             except:
                 print(irow['material_id'])
                 print('monoclinic')
@@ -262,9 +265,8 @@ def check_crystal_system(custom_data):
                 print('UNK --', irow['crystal_system'])
                 print(lena, lenb, lenc, theta_ab, theta_bc, theta_ac)
     
-    print('total number of entries to drop:', len(drop_list))
-    data_out = custom_data.drop(drop_list)
-    print('size with matched crystal system:', data_out.shape[0])
+    print('number of entries to drop in this batch:', len(drop_list))
+    data_out = data_custom.drop(drop_list)
     return data_out
         
 
@@ -272,6 +274,8 @@ if __name__ == "__main__":
 
     input_file = "./raw_data/fetch_Xsys_data.csv"
     out_file = "./raw_data/custom_Xsys_data.csv"
+    #input_file = "./raw_data/fetch_MIC_data.csv"
+    #out_file = "./raw_data/custom_MIC_data.csv"
 
     if not os.path.isfile(input_file):
         print("{} file does not exist, please generate it first..".format(input_file))
@@ -290,9 +294,16 @@ if __name__ == "__main__":
     print('\nShowing customized data:')
     show_statistics(data=data_custom, plot=False)
 
-    if True:
-        # only for crystal system classification
-        data_custom = check_crystal_system(data_custom)
+    # parallel processing
+    print(data_custom['crystal_system'].value_counts())
+    nworkers = max(multiprocessing.cpu_count(), 1)
+    pool = Pool(processes=nworkers)
+    df_split = np.array_split(data_custom, nworkers)
+    parg = [data for data in df_split]
+    data_custom = pd.concat(pool.map(check_crystal_system, parg), axis=0)
+    pool.close()
+    pool.join()
+    print('size with matched crystal system:', data_custom.shape[0])
 
     # write customized data
     data_custom.to_csv(out_file, sep=';', columns=None, mode='w', \

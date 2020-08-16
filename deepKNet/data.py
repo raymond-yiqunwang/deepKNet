@@ -101,21 +101,29 @@ class deepKNetDataset(Dataset):
         bulk_mod = properties['bulk_mod'].values[0]
         poisson_ratio = properties['poisson_ratio'].values[0]
 
+        # 6-class crystal family
+        if self.target == 'crystal_family':
+            cryst_sys_dict = {
+                'cubic': 0, 'orthorhombic': 1, 'tetragonal': 2,
+                'hexagonal': 3, 'trigonal': 3, 
+                'monoclinic': 4, 'triclinic': 5
+            }
+            prop = torch.Tensor([cryst_sys_dict[crystal_system]])
+        # 7-class crystal system
+        elif self.target == 'crystal_system':
+            cryst_sys_dict = {
+                'hexagonal': 0, 'trigonal': 1, 
+                'cubic': 2, 'orthorhombic': 3, 'tetragonal': 4,
+                'monoclinic': 5, 'triclinic': 6
+            }
+            prop = torch.Tensor([cryst_sys_dict[crystal_system]])
         # binary metal-insulator classification
-        if self.target == 'MIC2':
+        elif self.target == 'MIC':
             prop = torch.Tensor([band_gap>1E-6])
         # binary trivial vs. non-trivial
         elif self.target == 'TIC2':
             assert(topo_class in ['trivial', 'TI', 'SM'])
             prop = torch.Tensor([topo_class=='trivial'])
-        # binary TI vs. the rest
-        elif self.target == 'TI2':
-            assert(topo_class in ['trivial', 'TI', 'SM'])
-            prop = torch.Tensor([topo_class=='TI'])
-        # binary SM vs. the rest
-        elif self.target == 'SM2':
-            assert(topo_class in ['trivial', 'TI', 'SM'])
-            prop = torch.Tensor([topo_class=='SM'])
         # ternary topological classification
         elif self.target == 'TIC3':
             topo_dict = {'trivial': 0, 'TI': 1, 'SM': 2}
@@ -123,14 +131,6 @@ class deepKNetDataset(Dataset):
         # binary stability
         elif self.target == 'stability':
             prop = torch.Tensor([e_above_hull<0.01])
-        # 7-class
-        elif self.target == 'crystal_system':
-            cryst_sys_dict = {
-                'cubic': 0, 'orthorhombic': 1, 'tetragonal': 2,
-                'hexagonal': 3, 'trigonal': 3, 
-                'monoclinic': 4, 'triclinic': 5
-            }
-            prop = torch.Tensor([cryst_sys_dict[crystal_system]])
         # elasticity
         elif self.target == 'super_hard':
             criterion = bulk_mod >= 200. and shear_mod >= 100. # AUC 0.9+

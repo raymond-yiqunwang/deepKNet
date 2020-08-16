@@ -17,9 +17,8 @@ def split_Xsys(root, out_file, train_ratio, valid_ratio, test_ratio):
     out.to_csv(out_file, header=['train', 'valid', 'test'], index=False)
 
 
-def split_gap(out_file, train_ratio, valid_ratio, test_ratio):
-    data_root = "../data_gen/raw_data/data_pointnet/"
-    file_names = [fname.split('.')[0] for fname in os.listdir(data_root) \
+def split_MIC(root, out_file, train_ratio, valid_ratio, test_ratio):
+    file_names = [fname.split('.')[0] for fname in os.listdir(root) \
                  if fname.split('.')[-1] == 'csv']
     random.shuffle(file_names)
     train_split = int(np.floor(len(file_names) * train_ratio))
@@ -63,8 +62,8 @@ def split_elastic(out_file, train_ratio, valid_ratio, test_ratio):
 
 
 if __name__ == "__main__":
-    # crystal system
-    if True:
+    # crystal system classification
+    if False:
         root = "../data_gen/raw_data/data_Xsys3/"
         out_file = "Xsys_split1.csv"
         train_ratio = 0.7
@@ -72,13 +71,14 @@ if __name__ == "__main__":
         test_ratio = 0.15
         split_Xsys(root, out_file, train_ratio, valid_ratio, test_ratio)
 
-    # band gap
-    if False:
-        out_file = "gap_splitx.csv"
+    # metal-insulator classification
+    if True:
+        root = "../data_gen/raw_data/data_MIC125/"
+        out_file = "MIC_split1.csv"
         train_ratio = 0.7
         valid_ratio = 0.15
         test_ratio = 0.15
-        split_gap(out_file, train_ratio, valid_ratio, test_ratio)
+        split_MIC(root, out_file, train_ratio, valid_ratio, test_ratio)
 
     # topo
     if False:
