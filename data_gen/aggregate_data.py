@@ -78,8 +78,8 @@ if __name__ == "__main__":
     # read xrd raw data
     #xrd_file = "./raw_data/compute_xrd_Xsys_P343.csv"
     #out_dir = "./raw_data/data_Xsys_P343/"
-    xrd_file = "./raw_data/compute_xrd_MIC_P3.csv"
-    out_dir = "./raw_data/data_MIC_P3/"
+    xrd_file = "./raw_data/compute_xrd_MIC_P729.csv"
+    out_dir = "./raw_data/data_MIC_P729/"
 
     if not os.path.isfile(xrd_file):
         print("{} file does not exist, please generate it first..".format(xrd_file))

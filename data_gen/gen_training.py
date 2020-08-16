@@ -12,7 +12,6 @@ def gen_Xsys(Xsys_split_file, out_dir):
     file_names = pd.read_csv(Xsys_split_file, header=0, index_col=None)
     return file_names, out_dir
 
-
 def gen_MIC(MIC_split_file, out_dir):
     print('gen MIC train valid test data using {}'.format(MIC_split_file))
     if os.path.exists(out_dir):
@@ -21,6 +20,13 @@ def gen_MIC(MIC_split_file, out_dir):
     file_names = pd.read_csv(MIC_split_file, header=0, index_col=None)
     return file_names, out_dir
 
+def gen_elastic(elastic_split_file, out_dir):
+    print('gen elastic train valid test data using {}'.format(elastic_split_file))
+    if os.path.exists(out_dir):
+        shutil.rmtree(out_dir, ignore_errors=False)
+    os.mkdir(out_dir)
+    file_names = pd.read_csv(elastic_split_file, header=0, index_col=None)
+    return file_names, out_dir
 
 """
 def gen_topo(topo_split_file, out_dir):
@@ -30,17 +36,7 @@ def gen_topo(topo_split_file, out_dir):
     os.mkdir(out_dir)
     file_names = pd.read_csv(topo_split_file, header=0, index_col=None)
     return file_names, out_dir
-
-
-def gen_elastic(elastic_split_file, out_dir):
-    print('gen elastic train valid test data using {}'.format(elastic_split_file))
-    if os.path.exists(out_dir):
-        shutil.rmtree(out_dir, ignore_errors=False)
-    os.mkdir(out_dir)
-    file_names = pd.read_csv(elastic_split_file, header=0, index_col=None)
-    return file_names, out_dir
 """
-
 
 if __name__ == "__main__":
     # gen crystal system
@@ -51,24 +47,25 @@ if __name__ == "__main__":
         file_names, out_dir = gen_Xsys(Xsys_split_file, Xsys_out_dir)
 
     # gen MIC
-    if True:
-        root_dir = "./raw_data/data_MIC_P3/"
+    if False:
+        root_dir = "./raw_data/data_MIC_P729/"
         MIC_split_file = "../misc/MIC_split1.csv"
-        MIC_out_dir = "./data_MIC_P3_split1/"
+        MIC_out_dir = "./data_MIC_P729_split1/"
         file_names, out_dir = gen_MIC(MIC_split_file, MIC_out_dir)
 
+    # gen elastic data
+    if True:
+        root_dir = "./raw_data/data_Xsys_P343/"
+        elastic_split_file = "../misc/elastic_split1.csv"
+        elastic_out_dir = "./data_elastic_P343_split1/"
+        file_names, out_dir = gen_elastic(elastic_split_file, elastic_out_dir)
+    
     """
     # gen topological data
     if False:
         topo_split_file = "../misc/topo_split5.csv"
         topo_out_dir = "./data_topo_split5/"
         gen_topo(topo_split_file, topo_out_dir)
-
-    # gen elastic data
-    if False:
-        elastic_split_file = "../misc/elastic_split5.csv"
-        elastic_out_dir = "./data_elastic_split5/"
-        gen_elastic(elastic_split_file, elastic_out_dir)
     """
 
     # train

@@ -38,7 +38,7 @@ def main():
         out_file = os.path.join(root_dir, "fetch_Xsys_data.csv")
         criteria = {}
     # metal-insulator classification
-    elif True:
+    elif False:
         out_file = os.path.join(root_dir, "fetch_MIC_data.csv")
         criteria = {"has": "bandstructure"}
     else:

@@ -133,7 +133,7 @@ class deepKNetDataset(Dataset):
             prop = torch.Tensor([e_above_hull<0.01])
         # elasticity
         elif self.target == 'super_hard':
-            criterion = bulk_mod >= 200. and shear_mod >= 100. # AUC 0.9+
+            criterion = bulk_mod >= 100. and shear_mod >= 50. # AUC 0.9+
             #criterion = shear_mod >= 100. # AUC 0.88
             #criterion = bulk_mod >= 200. # AUC 0.9+
             prop = torch.Tensor([criterion])

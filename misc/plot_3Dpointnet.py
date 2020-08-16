@@ -11,7 +11,6 @@ ry = r_max * np.outer(np.sin(u), np.sin(v))
 rz = r_max * np.outer(np.ones(np.size(u)), np.cos(v))
 
 data = np.load('mp-981386.npy')
-data = data.transpose()
 
 xs = data[:,0]
 ys = data[:,1]

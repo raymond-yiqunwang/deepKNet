@@ -128,11 +128,14 @@ def show_statistics(data, plot=False):
     Gs, Ks, Ps = [], [], []
     for imat in elastic:
         shear_mod = ast.literal_eval(imat)['G_Voigt_Reuss_Hill']
-        if shear_mod > -1E-6: Gs.append(shear_mod)
+        #if shear_mod > -1E-6: Gs.append(shear_mod)
+        Gs.append(shear_mod)
         bulk_mod = ast.literal_eval(imat)['K_Voigt_Reuss_Hill']
-        if bulk_mod > -1E-6: Ks.append(bulk_mod)
+        #if bulk_mod > -1E-6: Ks.append(bulk_mod)
+        Ks.append(bulk_mod)
         poisson_ratio = ast.literal_eval(imat)['poisson_ratio']
-        if poisson_ratio > -1E-6: Ps.append(poisson_ratio)
+        #if poisson_ratio > -1E-6: Ps.append(poisson_ratio)
+        Ps.append(poisson_ratio)
 
     print('Shear modulus > 100: {:d}'.format((np.array(Gs)>100).sum()))
     print('Bulk modulus > 200: {:d}'.format((np.array(Ks)>200).sum()))
@@ -151,6 +154,8 @@ def customize_data(raw_data):
     data_custom = raw_data.copy()
     
     # get rid of rare elements
+    # True for MIC 
+    # False for Xsys
     if True:
         # identify rare elements
         elem_dict = defaultdict(int)
@@ -168,12 +173,13 @@ def customize_data(raw_data):
                 drop_instance.append(idx)
         data_custom = data_custom.drop(drop_instance)
 
-
     # only take no-warning entries
+    # True for MIC, Xsys
     if True:
         data_custom = data_custom[data_custom['warnings'] == '[]']
 
     # only take crystals in ICSD
+    # True for MIC, Xsys
     if True:
         data_custom = data_custom[data_custom['icsd_ids'] != '[]']
 
