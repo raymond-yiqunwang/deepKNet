@@ -210,23 +210,12 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
 
         total_electrons = sum(zs)
         features = [[0, 0, 0, float(total_electrons/volume)**2]]
-        #features = []
         for hkl, g_hkl, _, _ in sorted(recip_pts,
-                                    key=lambda i: (-i[0][0], -i[0][1], -i[0][2])):
-                                    #key=lambda i: (i[1], -i[0][0], -i[0][1], -i[0][2])):
+                                       key=lambda i: (i[1], -i[0][0], -i[0][1], -i[0][2])):
             
-            if (min(hkl) < -4.1) or (max(hkl) > 4.1): continue
-            #if (min(hkl) < 0) or (sum(hkl) != 1): continue
-
             # skip origin and points on the limiting sphere to avoid precision problems
             if (g_hkl < 1e-4) or (g_hkl > 2./self.wavelength): continue
 
-            # Force miller indices to be integers.
-            hkl = [int(round(i)) for i in hkl]
-
-            # only keep non-negative h
-            if hkl[0] < 0: continue
-        
             d_hkl = 1. / g_hkl
 
             # Bragg condition
@@ -253,7 +242,7 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
             #          [d[0] * exp(-d[1] * s2) for d in coeff])
             fs = zs - 41.78214 * s2 * np.sum(
                 coeffs[:, :, 0] * np.exp(-coeffs[:, :, 1] * s2), axis=1)
-
+            
             # Structure factor = sum of atomic scattering factors (with
             # position factor exp(2j * pi * g.r and occupancies).
             # Vectorized computation.
@@ -270,8 +259,6 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
             
             # add to features 
             features.append([hkl[0], hkl[1], hkl[2], i_hkl_out])
-            if hkl[0] > 0:
-                features.append([int(-1*hkl[0]), int(-1*hkl[1]), int(-1*hkl[2]), i_hkl_out])
 
             ### for diffractin pattern plotting only
             two_theta = math.degrees(2 * theta)
@@ -308,7 +295,6 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
         if scale_intensity:
             xrd.normalize(mode="max", value=100)
 
-        assert(len(features) <= 729)
         return xrd, recip_latt.matrix, features
 
 
@@ -317,13 +303,14 @@ if __name__ == "__main__":
     # obtain material cif file
     my_API_key = "gxTAyXSm2GvCdWer"
     m = MPRester(api_key=my_API_key)
-    #mp_data = m.query(criteria={"material_id": { "$eq" : "mp-2885" }}, properties=['cif'])
-    mp_data = m.query(criteria={"material_id": { "$eq" : "mp-10163" }}, properties=['cif'])
+    mp_data = m.query(criteria={"material_id": { "$eq" : "mp-2885" }}, properties=['cif'])
+    #mp_data = m.query(criteria={"material_id": { "$eq" : "mp-10163" }}, properties=['cif'])
     struct = Structure.from_str(mp_data[0]['cif'], fmt='cif')
     
     # compute XRD diffraction pattern and compare outputs
-    pattern, _, _ = XRDSimulator('CuKa').get_pattern(struct, two_theta_range=None) # this implementation
-#    pattern_pymatgen = XRDCalculator('AgKa').get_pattern(struct, two_theta_range=None) # pymatgen original implementation
-#    print('Error rate: {}'.format(max(abs(np.array(pattern.x) - np.array(pattern_pymatgen.x)))))
+    pattern, _, features = XRDSimulator('CuKa').get_pattern(struct, two_theta_range=None) # this implementation
+    pattern_pymatgen = XRDCalculator('CuKa').get_pattern(struct, two_theta_range=None) # pymatgen original implementation
+    print('Error rate: {:.6f}'.format(max(abs(np.array(pattern.x) - np.array(pattern_pymatgen.x)))))
+    print(len(features))
 
 

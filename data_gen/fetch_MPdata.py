@@ -1,54 +1,53 @@
 import os
+import shutil
 import pandas as pd
 from pymatgen import MPRester
 
-def fetch_materials_data(out_file, criteria_in):
+def fetch_materials_data():
+    # specify IO
+    out_dir = "./MPdata_all/"
+    out_file = os.path.join(out_dir, "MPdata_all.csv")
+    if os.path.exists(out_dir):
+        shutil.rmtree(out_dir)
+    os.mkdir(out_dir)
+
     # properties of interest
     properties = [ 
-        "material_id", "icsd_ids",
+        "material_id", "icsd_ids", "cif",
         "unit_cell_formula", "pretty_formula",
-        "spacegroup", "cif",
+        "spacegroup", "crystal_system"
         "volume", "nsites", "elements", "nelements",
         "energy", "energy_per_atom", "formation_energy_per_atom", "e_above_hull",
-        "band_gap", "density", "total_magnetization", "elasticity",
-        "is_hubbard", "hubbards",
-        "warnings", "tags", "crystal_system"
+        "band_gap", "elasticity", "density", "total_magnetization",
+        "warnings", "tags"
     ]
     
     # MaterialsProject API settings
     my_API_key = "gxTAyXSm2GvCdWer"
     m = MPRester(api_key=my_API_key)
     
-    # query data with calculated band structures
-    mp_data = m.query(criteria=criteria_in, properties=properties)
-    
-    data_origin = pd.DataFrame(entry.values() for entry in mp_data)
-    data_origin.to_csv(out_file, sep=';', index=False, header=properties, mode='w')
+    # query all materials data
+    query_all = m.query(criteria={"volume": {"$lt": 100}}, properties=properties)
+    MPdata_all = pd.DataFrame(entry.values() for entry in query_all)
+    MPdata_all.columns = properties
 
+    # write cif to file
+    for _, irow in MPdata_all[["material_id", "cif"]].iterrows():
+        cif_file = os.path.join(out_dir, irow["material_id"] + ".cif")
+        with open(cif_file, 'w') as f:
+            f.write(irow["cif"])
+    MPdata_all = MPdata_all.drop(columns=["cif"])
 
-def main():
-    # specify IO
-    root_dir = './raw_data/'
-    if not os.path.exists(root_dir):
-        print("{} folder does not exist, making directory..".format(root_dir))
-        os.mkdir(root_dir)
-    
-    # crystal system classification
-    if False:
-        out_file = os.path.join(root_dir, "fetch_Xsys_data.csv")
-        criteria = {}
-    # metal-insulator classification
-    elif False:
-        out_file = os.path.join(root_dir, "fetch_MIC_data.csv")
-        criteria = {"has": "bandstructure"}
-    else:
-        raise NotImplementedError
+    # materials with calculated band structures
+    query_band = m.query(criteria={"has": "bandstructure", "volume": {"$lt": 100}}, 
+                         properties=["material_id"])
+    band_filenames = [list(entry.values())[0] for entry in query_band]
 
-    # fetch raw data from the Materials Project
-    fetch_materials_data(out_file, criteria)
+    MPdata_all['has_band_structure'] = MPdata_all["material_id"].isin(band_filenames)
+    MPdata_all.to_csv(out_file, sep=';', index=False, header=MPdata_all.columns, mode='w')
 
 
 if __name__ == "__main__":
-    main()
+    fetch_materials_data()
 
 
