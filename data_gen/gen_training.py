@@ -154,6 +154,36 @@ def gen_elasticity_data(data_custom):
     generate_train_valid_test(data_custom, out_dir, properties, npoint, random_seed)
 
 
+def gen_stability_data(data_custom):
+    print("\ngenerate stability data..")
+    print("size before customization:", data_custom.shape[0])
+    
+#    # only take materials with calculated band structures
+#    print('>> remove entries with no calculated band structures')
+#    data_custom = data_custom[data_custom['has_band_structure']]
+
+#    # only take crystals in ICSD
+#    print('>> remove entries with no ICSD IDs')
+#    data_custom = data_custom[data_custom['icsd_ids'] != '[]']
+    
+    # only take no-warning entries
+    print('>> remove entries with warnings')
+    data_custom = data_custom[data_custom['warnings'] == '[]']
+
+    print("statistics after customization:")
+    show_statistics(data_custom)
+    
+    # output directory
+    npoint = 343
+    random_seed = 8
+    out_dir = "./data_stability_P343/"
+    if os.path.exists(out_dir):
+        shutil.rmtree(out_dir)
+    os.mkdir(out_dir)
+    properties = ['material_id', 'e_above_hull']
+    generate_train_valid_test(data_custom, out_dir, properties, npoint, random_seed)
+
+
 def show_statistics(data):
     # size of database
     print('>> total number of materials: {:d}, number of properties: {:d}'\
@@ -478,8 +508,12 @@ def main():
         gen_MIC_data(MPdata_all)
 
     # elasticity classification
-    if True:
+    if False:
         gen_elasticity_data(MPdata_all)
+
+    # stability classification
+    if True:
+        gen_stability_data(MPdata_all)
 
 
 if __name__ == "__main__":

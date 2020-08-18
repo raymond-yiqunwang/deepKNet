@@ -123,12 +123,12 @@ class deepKNetDataset(Dataset):
             target_prop = ast.literal_eval(target_prop)
             shear_mod, bulk_mod, poisson_ratio = \
                 target_prop[0], target_prop[1], target_prop[2]
-            criterion = bulk_mod >= 200. # AUC 0.9+
+            criterion = bulk_mod >= 100. # AUC 0.9+
             #criterion = shear_mod >= 100. # AUC 0.88
             prop = torch.Tensor([criterion])
         # binary stability
         elif self.target == 'stability':
-            prop = torch.Tensor([target_prop<0.01])
+            prop = torch.Tensor([target_prop<0.02])
         # binary trivial vs. non-trivial
         elif self.target == 'TIC2':
             assert(target_prop in ['trivial', 'TI', 'SM'])
