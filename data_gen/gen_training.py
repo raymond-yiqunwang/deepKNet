@@ -115,6 +115,45 @@ def gen_MIC_data(data_custom):
     generate_train_valid_test(data_custom, out_dir, properties, npoint, random_seed)
 
 
+def gen_elasticity_data(data_custom):
+    print("\ngenerate elasticity data..")
+    print("size before customization:", data_custom.shape[0])
+    
+    # only take materials with elasticity data
+    data_custom = data_custom[data_custom['elasticity'].notnull()]
+
+    # only take crystals in ICSD
+    print('>> remove entries with no ICSD IDs')
+    data_custom = data_custom[data_custom['icsd_ids'] != '[]']
+    
+    # only take no-warning entries
+    print('>> remove entries with warnings')
+    data_custom = data_custom[data_custom['warnings'] == '[]']
+
+    print("statistics after customization:")
+    show_statistics(data_custom)
+    
+    # elasticity
+    GKP = []
+    for idx, irow in data_custom.iterrows():
+        elasticity = ast.literal_eval(irow['elasticity'])
+        shear_mod = elasticity['G_Voigt_Reuss_Hill']
+        bulk_mod = elasticity['K_Voigt_Reuss_Hill']
+        poisson_ratio = elasticity['poisson_ratio']
+        GKP.append([shear_mod, bulk_mod, poisson_ratio])
+    data_custom['elasticity_data'] = GKP
+
+    # output directory
+    npoint = 343
+    random_seed = 8
+    out_dir = "./data_elasticity_P343/"
+    if os.path.exists(out_dir):
+        shutil.rmtree(out_dir)
+    os.mkdir(out_dir)
+    properties = ['material_id', 'elasticity_data']
+    generate_train_valid_test(data_custom, out_dir, properties, npoint, random_seed)
+
+
 def show_statistics(data):
     # size of database
     print('>> total number of materials: {:d}, number of properties: {:d}'\
@@ -205,10 +244,10 @@ def show_statistics(data):
     print('>> Number of entries with no warnings: {:d}'.format(no_warnings.shape[0]))
 
     # elasticity
-    elastic = data['elasticity'].dropna()
-    print('>> Number of elastic data: {:d}'.format(elastic.size))
+    elasticity = data['elasticity'].dropna()
+    print('>> Number of elasticity data: {:d}'.format(elasticity.size))
     Gs, Ks, Ps = [], [], []
-    for imat in elastic:
+    for imat in elasticity:
         shear_mod = ast.literal_eval(imat)['G_Voigt_Reuss_Hill']
         #if shear_mod > -1E-6: Gs.append(shear_mod)
         Gs.append(shear_mod)
@@ -431,12 +470,16 @@ def main():
         gen_Xsys_data(MPdata_all)
 
     # trigonal-hexagonal classification
-    if True:
+    if False:
         gen_tri_hex_cls_data(MPdata_all)
 
     # metal-insulator classification
     if False:
         gen_MIC_data(MPdata_all)
+
+    # elasticity classification
+    if True:
+        gen_elasticity_data(MPdata_all)
 
 
 if __name__ == "__main__":
