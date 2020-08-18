@@ -229,14 +229,40 @@ def check_crystal_system(data_input, sym_thresh):
 
 def gen_Xsys_data(data_custom):
     print("\ngenerate Xsys data..")
-
-    # only take no-warning entries
-    print('>> remove entries with warnings')
-    data_custom = data_custom[data_custom['warnings'] == '[]']
     
     # only take crystals in ICSD
     print('>> remove entries with no ICSD IDs')
     data_custom = data_custom[data_custom['icsd_ids'] != '[]']
+    
+    # only take no-warning entries
+    print('>> remove entries with warnings')
+    data_custom = data_custom[data_custom['warnings'] == '[]']
+    
+    # output directory
+    npoint = 3
+    random_seed = 8
+    out_dir = "./data_Xsys_P3/"
+    if os.path.exists(out_dir):
+        shutil.rmtree(out_dir)
+    os.mkdir(out_dir)
+    properties = ['material_id', 'crystal_system']
+    generate_train_valid_test(data_custom, out_dir, properties, npoint, random_seed)
+
+
+def gen_MIC_data(data_custom):
+    print("\ngenerate MIC data..")
+    
+    # only take materials with calculated band structures
+    print('>> remove entries with no calculated band structures')
+    data_custom = data_custom[data_custom['has_band_structure']]
+    
+    # only take crystals in ICSD
+    print('>> remove entries with no ICSD IDs')
+    data_custom = data_custom[data_custom['icsd_ids'] != '[]']
+    
+    # only take no-warning entries
+    print('>> remove entries with warnings')
+    data_custom = data_custom[data_custom['warnings'] == '[]']
     
     # get rid of rare elements
     elem_dict = defaultdict(int)
@@ -253,15 +279,15 @@ def gen_Xsys_data(data_custom):
         if rare_elements & set(ast.literal_eval(value)):
             drop_instance.append(idx)
     data_custom = data_custom.drop(drop_instance)
-
+    
     # output directory
     npoint = 3
     random_seed = 8
-    out_dir = "./data_Xsys_P3/"
+    out_dir = "./data_MIC_P3/"
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
     os.mkdir(out_dir)
-    properties = ['material_id', 'crystal_system']
+    properties = ['material_id', 'band_gap']
     generate_train_valid_test(data_custom, out_dir, properties, npoint, random_seed)
 
 
@@ -349,7 +375,7 @@ def main():
         show_statistics(data=MPdata_all)
 
     # check crystal system match
-    if False:
+    if True:
         print('\nchecking crystal system match on all {} data'.format(MPdata_all.shape[0]))
         sym_thresh = 0.1
         nworkers = multiprocessing.cpu_count()
@@ -364,6 +390,10 @@ def main():
     # crystal system classification
     if True:
         gen_Xsys_data(MPdata_all)
+
+    # metal-insulator classification
+    if True:
+        gen_MIC_data(MPdata_all)
 
 
 if __name__ == "__main__":

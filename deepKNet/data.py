@@ -5,19 +5,20 @@ import numpy as np
 import pandas as pd
 from torch.utils.data import Dataset, DataLoader
 
-def get_train_val_test_loader(root, target, cut, pad, daug, rot_all, permut,
-                              batch_size, num_data_workers, pin_memory):
+def get_train_val_test_loader(root, target, npt, pt_dim, pad, daug, rot_all,
+                              permut, batch_size, num_data_workers, pin_memory):
 
     print('data aug -- train: {}, val/test: {}'.format(daug, (daug and rot_all)))
     print('permutation: {}'.format(permut))
-    train_dataset = deepKNetDataset(root=root+'/train/', target=target, cutoff=cut, 
+    train_dataset = deepKNetDataset(root=os.path.join(root, 'train'), 
+                                    target=target, npoint=npt, point_dim=pt_dim,
                                     padding=pad, data_aug=daug, permutation=permut)
-    val_dataset = deepKNetDataset(root=root+'/valid/', target=target, cutoff=cut,
-                                  padding=pad, data_aug=(daug and rot_all),
-                                  permutation=permut)
-    test_dataset = deepKNetDataset(root=root+'/test/', target=target,
-                                   cutoff=cut, padding=pad, data_aug=(daug and rot_all),
-                                   permutation=permut)
+    val_dataset = deepKNetDataset(root=os.path.join(root, 'valid'),
+                                  target=target, npoint=npt, point_dim=pt_dim,
+                                  padding=pad, data_aug=(daug and rot_all), permutation=permut)
+    test_dataset = deepKNetDataset(root=os.path.join(root, 'test'),
+                                   target=target, npoint=npt, point_dim=pt_dim,
+                                   padding=pad, data_aug=(daug and rot_all), permutation=permut)
 
     # init DataLoader
     train_loader = DataLoader(train_dataset, batch_size=batch_size,
@@ -34,35 +35,37 @@ def get_train_val_test_loader(root, target, cut, pad, daug, rot_all, permut,
 
 
 class deepKNetDataset(Dataset):
-    def __init__(self, root, target, cutoff, padding, data_aug, permutation):
+    def __init__(self, root, target, npoint, point_dim, padding, data_aug, permutation):
         self.root = root
         self.target = target
-        self.cutoff = cutoff
+        self.npoint = npoint
+        self.point_dim = point_dim
         self.padding = padding
         self.data_aug = data_aug
         self.permutation = permutation
-        self.file_names = [fname.split('.')[0] for fname in \
-                           os.listdir(self.root)
-                           if fname.split('.')[-1] == 'csv']
+        id_prop_data = pd.read_csv(os.path.join(root, 'id_prop.csv'), \
+                                   header=0, sep=',', index_col=None)
+        self.id_prop = id_prop_data.values
         # for safety shuffle init
-        random.shuffle(self.file_names)
+        random.shuffle(self.id_prop)
 
     def __getitem__(self, idx):
+        material_id, target_prop = self.id_prop[idx]
         # load point cloud data
-        point_cloud = np.load(self.root+self.file_names[idx]+'.npy')
+        point_cloud = np.load(os.path.join(self.root, material_id+'.npy'))
         
         # padding and cutoff
         if self.padding == 'zero':
-            if point_cloud.shape[0] < self.cutoff:
+            if point_cloud.shape[0] < self.npoint:
                 point_cloud = np.pad(point_cloud, 
-                                     ((0, self.cutoff-point_cloud.shape[0]), (0, 0)),
+                                     ((0, self.npoint-point_cloud.shape[0]), (0, 0)),
                                      mode='constant')
             else:
-                point_cloud = point_cloud[:self.cutoff, :]
+                point_cloud = point_cloud[:self.npoint, :]
         elif self.padding == 'periodic':
-            while point_cloud.shape[0] < self.cutoff:
+            while point_cloud.shape[0] < self.npoint:
                 point_cloud = np.repeat(point_cloud, 2, axis=0)
-            point_cloud = point_cloud[:self.cutoff, :]
+            point_cloud = point_cloud[:self.npoint, :]
         else:
             raise NotImplementedError
 
@@ -86,66 +89,56 @@ class deepKNetDataset(Dataset):
         if self.permutation:
             np.random.shuffle(point_cloud[1:])
 
-        point_cloud = torch.Tensor(point_cloud.transpose())
+        if self.point_dim != 4:
+            assert(self.point_dim == 3)
+            point_cloud = point_cloud[:,:-1]
 
-        # load target property
-        properties = pd.read_csv(self.root+self.file_names[idx]+'.csv',
-                                 sep=';', header=0, index_col=None)
-        band_gap = properties['band_gap'].values[0]
-        e_above_hull = properties['e_above_hull'].values[0]
-        topo_class = properties['topo_class'].values[0]
-        topo_sub_class = properties['topo_sub_class'].values[0]
-        topo_cross_type = properties['topo_cross_type'].values[0]
-        crystal_system = properties['crystal_system'].values[0]
-        shear_mod = properties['shear_mod'].values[0]
-        bulk_mod = properties['bulk_mod'].values[0]
-        poisson_ratio = properties['poisson_ratio'].values[0]
+        point_cloud = torch.Tensor(point_cloud.transpose())
 
         # 6-class crystal family
         if self.target == 'crystal_family':
             cryst_sys_dict = {
                 'cubic': 0, 'orthorhombic': 1, 'tetragonal': 2,
-                'hexagonal': 3, 'trigonal': 3, 
-                'monoclinic': 4, 'triclinic': 5
+                'monoclinic': 3, 'triclinic': 4,
+                'hexagonal': 5, 'trigonal': 5 
             }
-            prop = torch.Tensor([cryst_sys_dict[crystal_system]])
+            prop = torch.Tensor([cryst_sys_dict[target_prop]])
         # 7-class crystal system
         elif self.target == 'crystal_system':
             cryst_sys_dict = {
-                'hexagonal': 0, 'trigonal': 1, 
-                'cubic': 2, 'orthorhombic': 3, 'tetragonal': 4,
-                'monoclinic': 5, 'triclinic': 6
+                'cubic': 0, 'orthorhombic': 1, 'tetragonal': 2,
+                'monoclinic': 3, 'triclinic': 4,
+                'hexagonal': 5, 'trigonal': 6
             }
-            prop = torch.Tensor([cryst_sys_dict[crystal_system]])
-        elif self.target == 'test_Xsys':
-            assert(crystal_system in ['hexagonal', 'trigonal'])
-            prop = torch.Tensor([crystal_system == 'hexagonal'])
+            prop = torch.Tensor([cryst_sys_dict[target_prop]])
+        elif self.target == 'tri_hex_cls':
+            assert(target_prop in ['hexagonal', 'trigonal'])
+            prop = torch.Tensor([target_prop == 'hexagonal'])
         # binary metal-insulator classification
         elif self.target == 'MIC':
-            prop = torch.Tensor([band_gap>1E-6])
+            prop = torch.Tensor([target_prop>1E-6])
         # elasticity
         elif self.target == 'elasticity':
-            criterion = bulk_mod >= 100. and shear_mod >= 50. # AUC 0.9+
-            #criterion = bulk_mod >= 200. # AUC 0.9+
+            criterion = target_prop >= 200. # AUC 0.9+
             #criterion = shear_mod >= 100. # AUC 0.88
             prop = torch.Tensor([criterion])
         # binary stability
         elif self.target == 'stability':
-            prop = torch.Tensor([e_above_hull<0.01])
+            prop = torch.Tensor([target_prop<0.01])
         # binary trivial vs. non-trivial
         elif self.target == 'TIC2':
-            assert(topo_class in ['trivial', 'TI', 'SM'])
-            prop = torch.Tensor([topo_class=='trivial'])
+            assert(target_prop in ['trivial', 'TI', 'SM'])
+            prop = torch.Tensor([target_prop=='trivial'])
         # ternary topological classification
         elif self.target == 'TIC3':
             topo_dict = {'trivial': 0, 'TI': 1, 'SM': 2}
-            prop = torch.Tensor([topo_dict[topo_class]])
+            prop = torch.Tensor([topo_dict[target_prop]])
         else:
             raise NotImplementedError
 
         return point_cloud, prop.long()
 
     def __len__(self):
-        return len(self.file_names)
+        return self.id_prop.shape[0]
 
 

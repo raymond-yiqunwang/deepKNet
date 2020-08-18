@@ -15,20 +15,21 @@ from deepKNet.data import get_train_val_test_loader
 from deepKNet.model3D import PointNet
 
 parser = argparse.ArgumentParser(description='deepKNet model')
-parser.add_argument('--root', default='./data_gen/data_pointnet/', metavar='DATA_DIR')
-parser.add_argument('--target', default='MIC2', metavar='TARGET_PROPERTY')
-parser.add_argument('--nclass', default=2, type=int)
-parser.add_argument('--run_name', default='run0', metavar='RUNID')
+parser.add_argument('--root', metavar='DATA_DIR')
+parser.add_argument('--target', metavar='TARGET_PROPERTY')
+parser.add_argument('--nclass', type=int)
+parser.add_argument('--run_name', default='runx', metavar='RUNID')
 parser.add_argument('--gpu_id', default=0, type=int, metavar='GPUID')
 # hyper parameter tuning
-parser.add_argument('--cutoff', default=500, type=int, metavar='NPOINT CUTOFF')
+parser.add_argument('--npoint', type=int, metavar='NPOINT CUTOFF')
+parser.add_argument('--point_dim', default=4, type=int, metavar='NPOINT DIM')
 parser.add_argument('--padding', default='zero', type=str, metavar='POINT PADDING')
 parser.add_argument('--data_aug', default='True', type=str)
 parser.add_argument('--rot_all', default='True', type=str)
 parser.add_argument('--permutation', default='True', type=str)
-parser.add_argument('--conv_dims', default=[4, 256, 512], type=int, nargs='+')
+parser.add_argument('--conv_dims', default=[4, 256], type=int, nargs='+')
 parser.add_argument('--nbert', default=4, type=int)
-parser.add_argument('--fc_dims', default=[512, 256, 128], type=int, nargs='+')
+parser.add_argument('--fc_dims', default=[256, 64], type=int, nargs='+')
 parser.add_argument('--pool', default='CLS', type=str)
 parser.add_argument('--epochs', default=80, type=int, metavar='N')
 parser.add_argument('--batch_size', default=64, type=int, metavar='N')
@@ -66,13 +67,14 @@ def main():
 
     # get data loader
     train_loader, val_loader, test_loader = get_train_val_test_loader(
-        root=args.root, target=args.target, cut=args.cutoff, 
-        pad=args.padding, daug=args.data_aug=='True',
-        permut=args.permutation=='True', rot_all=args.rot_all=='True',
-        batch_size=args.batch_size, pin_memory=args.cuda,
-        num_data_workers=args.num_data_workers)
+        root=args.root, target=args.target, npt=args.npoint, 
+        pt_dim=args.point_dim, pad=args.padding, 
+        daug=args.data_aug=='True', permut=args.permutation=='True', 
+        rot_all=args.rot_all=='True', batch_size=args.batch_size,
+        pin_memory=args.cuda, num_data_workers=args.num_data_workers)
 
     # build model
+    assert(args.conv_dims[0] == args.point_dim)
     model = PointNet(nclass=args.nclass,
                      conv_dims=args.conv_dims,
                      nbert=args.nbert,
