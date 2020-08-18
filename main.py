@@ -176,9 +176,10 @@ def train(train_loader, model, criterion, nclass, optimizer, epoch, writer):
     recalls = AverageMeter('Rec', ':6.3f')
     fscores = AverageMeter('Fsc', ':6.3f')
     auc_scores = AverageMeter('AUC', ':6.3f')
+    ave_precisions = AverageMeter('AP', ':6.3f')
     if nclass == 2:
         report = [batch_time, data_time, losses, accuracies, precisions, 
-                  recalls, fscores, auc_scores]
+                  recalls, fscores, auc_scores, ave_precisions]
     else:
         report = [batch_time, data_time, losses, accuracies]
     progress = ProgressMeter(
@@ -212,7 +213,7 @@ def train(train_loader, model, criterion, nclass, optimizer, epoch, writer):
         loss = criterion(output, target)
 
         # measure accuracy and record loss
-        accuracy, precision, recall, fscore, auc_score =\
+        accuracy, precision, recall, fscore, auc_score, ave_precision =\
             class_eval(output, target)
         losses.update(loss.item(), target.size(0))
         accuracies.update(accuracy.item(), target.size(0))
@@ -220,6 +221,7 @@ def train(train_loader, model, criterion, nclass, optimizer, epoch, writer):
         recalls.update(recall.item(), target.size(0))
         fscores.update(fscore.item(), target.size(0))
         auc_scores.update(auc_score.item(), target.size(0))
+        ave_precisions.update(ave_precision.item(), target.size(0))
 
         # compute gradient and optimize
         optimizer.zero_grad()
@@ -249,9 +251,10 @@ def validate(val_loader, model, criterion, nclass, epoch, writer, test_mode=Fals
     recalls = AverageMeter('Rec', ':6.3f')
     fscores = AverageMeter('Fsc', ':6.3f')
     auc_scores = AverageMeter('AUC', ':6.3f')
+    ave_precisions = AverageMeter('AP', ':6.3f')
     if nclass == 2:
         report = [batch_time, data_time, losses, accuracies, precisions, 
-                  recalls, fscores, auc_scores]
+                  recalls, fscores, auc_scores, ave_precisions]
     else:
         report = [batch_time, data_time, losses, accuracies]
     progress = ProgressMeter(
@@ -283,7 +286,7 @@ def validate(val_loader, model, criterion, nclass, epoch, writer, test_mode=Fals
             loss = criterion(output, target)
         
             # measure accuracy and record loss
-            accuracy, precision, recall, fscore, auc_score =\
+            accuracy, precision, recall, fscore, auc_score, ave_precision =\
                 class_eval(output, target)
             losses.update(loss.item(), target.size(0))
             accuracies.update(accuracy.item(), target.size(0))
@@ -291,6 +294,7 @@ def validate(val_loader, model, criterion, nclass, epoch, writer, test_mode=Fals
             recalls.update(recall.item(), target.size(0))
             fscores.update(fscore.item(), target.size(0))
             auc_scores.update(auc_score.item(), target.size(0))
+            ave_precisions.update(ave_precision.item(), target.size(0))
 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -337,23 +341,25 @@ def load_best_model():
 
 def class_eval(prediction, target):
     prediction = np.exp(prediction.detach().cpu().numpy())
-    target = target.detach().cpu().numpy()
     pred_label = np.argmax(prediction, axis=1)
+    target = target.detach().cpu().numpy()
     target_label = np.squeeze(target)
     if prediction.shape[1] == 2:
         precision, recall, fscore, _ = metrics.precision_recall_fscore_support(
             target_label, pred_label, average='binary', warn_for=tuple())
         try:
-            auc_score = metrics.roc_auc_score(target_label, prediction[:, 1])
+            auc_score = metrics.roc_auc_score(target_label, prediction[:,1])
         except:
             auc_score = np.float64(-1E8)
         accuracy = metrics.accuracy_score(target_label, pred_label)
+        ave_precision = metrics.average_precision_score(target_label, prediction[:,1])
     else:
         correct = np.equal(pred_label, target_label).sum()
-        accuracy = np.float64(correct/float(target_label.size))
         precision, recall = np.float64(0.0), np.float64(0.0)
         fscore, auc_score = np.float64(0.0), np.float64(0.0)
-    return accuracy, precision, recall, fscore, auc_score
+        accuracy = np.float64(correct/float(target_label.size))
+        ave_precision = np.float64(0.0)
+    return accuracy, precision, recall, fscore, auc_score, ave_precision
 
 
 class AverageMeter(object):

@@ -5,6 +5,6 @@ runs/
 checkpoints/
 data_gen/data_*/
 data_gen/*.tar.gz
-data_gen/raw_data/
+data_gen/MPdata_all/
 */__pycache__/
 */*/__pycache__/

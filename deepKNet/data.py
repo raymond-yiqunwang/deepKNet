@@ -117,9 +117,21 @@ class deepKNetDataset(Dataset):
                 'monoclinic': 5, 'triclinic': 6
             }
             prop = torch.Tensor([cryst_sys_dict[crystal_system]])
+        elif self.target == 'test_Xsys':
+            assert(crystal_system in ['hexagonal', 'trigonal'])
+            prop = torch.Tensor([crystal_system == 'hexagonal'])
         # binary metal-insulator classification
         elif self.target == 'MIC':
             prop = torch.Tensor([band_gap>1E-6])
+        # elasticity
+        elif self.target == 'elasticity':
+            criterion = bulk_mod >= 100. and shear_mod >= 50. # AUC 0.9+
+            #criterion = bulk_mod >= 200. # AUC 0.9+
+            #criterion = shear_mod >= 100. # AUC 0.88
+            prop = torch.Tensor([criterion])
+        # binary stability
+        elif self.target == 'stability':
+            prop = torch.Tensor([e_above_hull<0.01])
         # binary trivial vs. non-trivial
         elif self.target == 'TIC2':
             assert(topo_class in ['trivial', 'TI', 'SM'])
@@ -128,15 +140,6 @@ class deepKNetDataset(Dataset):
         elif self.target == 'TIC3':
             topo_dict = {'trivial': 0, 'TI': 1, 'SM': 2}
             prop = torch.Tensor([topo_dict[topo_class]])
-        # binary stability
-        elif self.target == 'stability':
-            prop = torch.Tensor([e_above_hull<0.01])
-        # elasticity
-        elif self.target == 'super_hard':
-            criterion = bulk_mod >= 100. and shear_mod >= 50. # AUC 0.9+
-            #criterion = shear_mod >= 100. # AUC 0.88
-            #criterion = bulk_mod >= 200. # AUC 0.9+
-            prop = torch.Tensor([criterion])
         else:
             raise NotImplementedError
 
