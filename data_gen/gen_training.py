@@ -251,8 +251,8 @@ def show_statistics(data):
                 'std = {:.2f}, min = {:.2f}, max = {:.2f}' \
                 .format(e_above_hull.mean(), e_above_hull.median(),\
                      e_above_hull.std(), e_above_hull.min(), e_above_hull.max()))
-    print('>> Energy above hull (eV) < 10meV: {:d}'.format( \
-          e_above_hull[e_above_hull < 0.01].size))
+    print('>> Energy above hull (eV) < 20meV: {:d}'.format( \
+          e_above_hull[e_above_hull < 0.02].size))
 
     # band gap
     gap_threshold = 1E-6
@@ -287,8 +287,8 @@ def show_statistics(data):
         poisson_ratio = ast.literal_eval(imat)['poisson_ratio']
         #if poisson_ratio > -1E-6: Ps.append(poisson_ratio)
         Ps.append(poisson_ratio)
-    print('Shear modulus > 100: {:d}'.format((np.array(Gs)>100).sum()))
-    print('Bulk modulus > 200: {:d}'.format((np.array(Ks)>200).sum()))
+    print('Shear modulus > 50: {:d}'.format((np.array(Gs)>50).sum()))
+    print('Bulk modulus > 100: {:d}'.format((np.array(Ks)>100).sum()))
     print('Shear modulus: mean = {:.2f}, median = {:.2f}, std = {:.2f}, '
                          'min = {:.5f}, max = {:.2f}' \
            .format(np.mean(Gs), np.median(Gs), np.std(Gs), np.min(Gs), np.max(Gs)))
