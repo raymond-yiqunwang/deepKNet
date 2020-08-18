@@ -13,6 +13,108 @@ from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
+def gen_Xsys_data(data_custom):
+    print("\ngenerate Xsys data..")
+    print("size before customization:", data_custom.shape[0])
+    
+    # only take crystals in ICSD
+    print('>> remove entries with no ICSD IDs')
+    data_custom = data_custom[data_custom['icsd_ids'] != '[]']
+    
+    # only take no-warning entries
+    print('>> remove entries with warnings')
+    data_custom = data_custom[data_custom['warnings'] == '[]']
+
+    print("statistics after customization:")
+    show_statistics(data_custom)
+    
+    # output directory
+    npoint = 343
+    random_seed = 8
+    out_dir = "./data_Xsys_P343/"
+    if os.path.exists(out_dir):
+        shutil.rmtree(out_dir)
+    os.mkdir(out_dir)
+    properties = ['material_id', 'crystal_system']
+    generate_train_valid_test(data_custom, out_dir, properties, npoint, random_seed)
+
+
+def gen_tri_hex_cls_data(data_custom):
+    print("\ngenerate tri_hex_cls data..")
+    print("size before customization:", data_custom.shape[0])
+    
+    # only take trigonal and hexagonal materials
+    print('only take trigonal and hexagonal materials')
+    data_custom = data_custom[data_custom['crystal_system'].isin(['trigonal', 'hexagonal'])]
+
+    # only take crystals in ICSD
+#    print('>> remove entries with no ICSD IDs')
+#    data_custom = data_custom[data_custom['icsd_ids'] != '[]']
+    
+    # only take no-warning entries
+    print('>> remove entries with warnings')
+    data_custom = data_custom[data_custom['warnings'] == '[]']
+    
+    print("statistics after customization:")
+    show_statistics(data_custom)
+    
+    # output directory
+    npoint = 27
+    random_seed = 8
+    out_dir = "./data_tri_hex_cls_P27/"
+    if os.path.exists(out_dir):
+        shutil.rmtree(out_dir)
+    os.mkdir(out_dir)
+    properties = ['material_id', 'crystal_system']
+    generate_train_valid_test(data_custom, out_dir, properties, npoint, random_seed)
+
+
+def gen_MIC_data(data_custom):
+    print("\ngenerate MIC data..")
+    print("size before customization:", data_custom.shape[0])
+    
+    # only take materials with calculated band structures
+    print('>> remove entries with no calculated band structures')
+    data_custom = data_custom[data_custom['has_band_structure']]
+    
+    # only take crystals in ICSD
+    print('>> remove entries with no ICSD IDs')
+    data_custom = data_custom[data_custom['icsd_ids'] != '[]']
+    
+    # only take no-warning entries
+    print('>> remove entries with warnings')
+    data_custom = data_custom[data_custom['warnings'] == '[]']
+
+    print("statistics after customization:")
+    show_statistics(data_custom)
+    
+    # get rid of rare elements
+    elem_dict = defaultdict(int)
+    for entry in data_custom['elements']:
+        for elem in ast.literal_eval(entry):
+            elem_dict[elem] += 1
+    rare_dict = {key: val for key, val in elem_dict.items() if val < 60}
+    print('>> get rid of rare elements: ')
+    print(rare_dict)
+    rare_elements = set(rare_dict.keys())
+    # drop entries containing rare elements
+    drop_instance = []
+    for idx, value in data_custom['elements'].iteritems():
+        if rare_elements & set(ast.literal_eval(value)):
+            drop_instance.append(idx)
+    data_custom = data_custom.drop(drop_instance)
+    
+    # output directory
+    npoint = 343
+    random_seed = 8
+    out_dir = "./data_MIC_P343/"
+    if os.path.exists(out_dir):
+        shutil.rmtree(out_dir)
+    os.mkdir(out_dir)
+    properties = ['material_id', 'band_gap']
+    generate_train_valid_test(data_custom, out_dir, properties, npoint, random_seed)
+
+
 def show_statistics(data):
     # size of database
     print('>> total number of materials: {:d}, number of properties: {:d}'\
@@ -227,74 +329,10 @@ def check_crystal_system(data_input, sym_thresh):
     return data_out
 
 
-def gen_Xsys_data(data_custom):
-    print("\ngenerate Xsys data..")
-    
-    # only take crystals in ICSD
-    print('>> remove entries with no ICSD IDs')
-    data_custom = data_custom[data_custom['icsd_ids'] != '[]']
-    
-    # only take no-warning entries
-    print('>> remove entries with warnings')
-    data_custom = data_custom[data_custom['warnings'] == '[]']
-    
-    # output directory
-    npoint = 3
-    random_seed = 8
-    out_dir = "./data_Xsys_P3/"
-    if os.path.exists(out_dir):
-        shutil.rmtree(out_dir)
-    os.mkdir(out_dir)
-    properties = ['material_id', 'crystal_system']
-    generate_train_valid_test(data_custom, out_dir, properties, npoint, random_seed)
-
-
-def gen_MIC_data(data_custom):
-    print("\ngenerate MIC data..")
-    
-    # only take materials with calculated band structures
-    print('>> remove entries with no calculated band structures')
-    data_custom = data_custom[data_custom['has_band_structure']]
-    
-    # only take crystals in ICSD
-    print('>> remove entries with no ICSD IDs')
-    data_custom = data_custom[data_custom['icsd_ids'] != '[]']
-    
-    # only take no-warning entries
-    print('>> remove entries with warnings')
-    data_custom = data_custom[data_custom['warnings'] == '[]']
-    
-    # get rid of rare elements
-    elem_dict = defaultdict(int)
-    for entry in data_custom['elements']:
-        for elem in ast.literal_eval(entry):
-            elem_dict[elem] += 1
-    rare_dict = {key: val for key, val in elem_dict.items() if val < 60}
-    print('>> get rid of rare elements: ')
-    print(rare_dict)
-    rare_elements = set(rare_dict.keys())
-    # drop entries containing rare elements
-    drop_instance = []
-    for idx, value in data_custom['elements'].iteritems():
-        if rare_elements & set(ast.literal_eval(value)):
-            drop_instance.append(idx)
-    data_custom = data_custom.drop(drop_instance)
-    
-    # output directory
-    npoint = 3
-    random_seed = 8
-    out_dir = "./data_MIC_P3/"
-    if os.path.exists(out_dir):
-        shutil.rmtree(out_dir)
-    os.mkdir(out_dir)
-    properties = ['material_id', 'band_gap']
-    generate_train_valid_test(data_custom, out_dir, properties, npoint, random_seed)
-
-
 def generate_train_valid_test(MPdata, out_dir, properties, npoint, random_seed):
     # id_prop file
     id_prop_all = MPdata[properties]
-    print('size of all data:', id_prop_all.shape[0])
+    print('size of all data:', id_prop_all.shape[0], 'npoint:', npoint)
     # random shuffle with seed
     id_prop_all = id_prop_all.sample(frac=1, random_state=random_seed)
     # split ratio
@@ -371,7 +409,8 @@ def main():
     MPdata_all = pd.read_csv("./MPdata_all/MPdata_all.csv", sep=';', header=0, index_col=None)
 
     # show statistics of original data
-    if False:
+    if True:
+        print('statistics of original data')
         show_statistics(data=MPdata_all)
 
     # check crystal system match
@@ -388,11 +427,15 @@ def main():
         print('size of data with matched crystal system:', MPdata_all.shape[0])
 
     # crystal system classification
-    if True:
+    if False:
         gen_Xsys_data(MPdata_all)
 
-    # metal-insulator classification
+    # trigonal-hexagonal classification
     if True:
+        gen_tri_hex_cls_data(MPdata_all)
+
+    # metal-insulator classification
+    if False:
         gen_MIC_data(MPdata_all)
 
 

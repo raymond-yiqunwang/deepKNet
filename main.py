@@ -181,7 +181,7 @@ def train(train_loader, model, criterion, nclass, optimizer, epoch, writer):
     ave_precisions = AverageMeter('AP', ':6.3f')
     if nclass == 2:
         report = [batch_time, data_time, losses, accuracies, precisions, 
-                  recalls, fscores, auc_scores, ave_precisions]
+                  recalls, fscores, ave_precisions, auc_scores]
     else:
         report = [batch_time, data_time, losses, accuracies]
     progress = ProgressMeter(
@@ -256,7 +256,7 @@ def validate(val_loader, model, criterion, nclass, epoch, writer, test_mode=Fals
     ave_precisions = AverageMeter('AP', ':6.3f')
     if nclass == 2:
         report = [batch_time, data_time, losses, accuracies, precisions, 
-                  recalls, fscores, auc_scores, ave_precisions]
+                  recalls, fscores, ave_precisions, auc_scores]
     else:
         report = [batch_time, data_time, losses, accuracies]
     progress = ProgressMeter(
