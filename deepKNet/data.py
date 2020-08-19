@@ -118,7 +118,7 @@ class deepKNetDataset(Dataset):
         # binary metal-insulator classification
         elif self.target == 'MIC':
             prop = torch.Tensor([target_prop>1E-6])
-        # elasticity
+        # binary elasticity
         elif self.target == 'elasticity':
             target_prop = ast.literal_eval(target_prop)
             shear_mod, bulk_mod, poisson_ratio = \
@@ -129,13 +129,13 @@ class deepKNetDataset(Dataset):
         # binary stability
         elif self.target == 'stability':
             prop = torch.Tensor([target_prop<0.02])
-        # binary trivial vs. non-trivial
+        # binary topologically trivial vs. non-trivial
         elif self.target == 'TIC2':
-            assert(target_prop in ['trivial', 'TI', 'SM'])
-            prop = torch.Tensor([target_prop=='trivial'])
+            assert(target_prop in ['trivial*', 'TI*', 'SM*'])
+            prop = torch.Tensor([target_prop=='trivial*'])
         # ternary topological classification
         elif self.target == 'TIC3':
-            topo_dict = {'trivial': 0, 'TI': 1, 'SM': 2}
+            topo_dict = {'trivial*': 0, 'TI*': 1, 'SM*': 2}
             prop = torch.Tensor([topo_dict[target_prop]])
         else:
             raise NotImplementedError

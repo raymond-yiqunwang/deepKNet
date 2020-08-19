@@ -184,6 +184,22 @@ def gen_stability_data(data_custom):
     generate_train_valid_test(data_custom, out_dir, properties, npoint, random_seed)
 
 
+def gen_topo_data():
+    print("\ngenerate topo data..")
+    
+    topo_data = pd.read_csv("../misc/topo_MPdata_14k.csv", sep=';', header=0, index_col=None)
+
+    # output directory
+    npoint = 343
+    random_seed = 8
+    out_dir = "./data_topo_P343/"
+    if os.path.exists(out_dir):
+        shutil.rmtree(out_dir)
+    os.mkdir(out_dir)
+    properties = ['material_id', 'topo_class']
+    generate_train_valid_test(topo_data, out_dir, properties, npoint, random_seed)
+
+
 def show_statistics(data):
     # size of database
     print('>> total number of materials: {:d}, number of properties: {:d}'\
@@ -478,12 +494,12 @@ def main():
     MPdata_all = pd.read_csv("./MPdata_all/MPdata_all.csv", sep=';', header=0, index_col=None)
 
     # show statistics of original data
-    if True:
+    if False:
         print('statistics of original data')
         show_statistics(data=MPdata_all)
 
     # check crystal system match
-    if True:
+    if False:
         print('\nchecking crystal system match on all {} data'.format(MPdata_all.shape[0]))
         sym_thresh = 0.1
         nworkers = multiprocessing.cpu_count()
@@ -512,8 +528,12 @@ def main():
         gen_elasticity_data(MPdata_all)
 
     # stability classification
-    if True:
+    if False:
         gen_stability_data(MPdata_all)
+
+    # topological trivialness classification
+    if True:
+        gen_topo_data()
 
 
 if __name__ == "__main__":
