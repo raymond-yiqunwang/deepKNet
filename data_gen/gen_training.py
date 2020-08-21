@@ -76,9 +76,9 @@ def gen_MIC_data(data_custom):
     print('>> remove entries with no calculated band structures')
     data_custom = data_custom[data_custom['has_band_structure']]
     
-#    # only take crystals in ICSD
-#    print('>> remove entries with no ICSD IDs')
-#    data_custom = data_custom[data_custom['icsd_ids'] != '[]']
+    # only take crystals in ICSD
+    print('>> remove entries with no ICSD IDs')
+    data_custom = data_custom[data_custom['icsd_ids'] != '[]']
     
     # only take no-warning entries
     print('>> remove entries with warnings')
@@ -106,7 +106,7 @@ def gen_MIC_data(data_custom):
     """
     
     # output directory
-    npoint = 343
+    npoint = 729
     use_primitive = True
     random_seed = 123
     out_dir = "./data_MIC_{}{}/".format("P" if use_primitive else "C", str(npoint))
