@@ -112,7 +112,7 @@ class deepKNetDataset(Dataset):
                 'hexagonal': 5, 'trigonal': 6
             }
             prop = torch.Tensor([cryst_sys_dict[target_prop]])
-        elif self.target == 'tri_hex_cls':
+        elif self.target == 'THC':
             assert(target_prop in ['hexagonal', 'trigonal'])
             prop = torch.Tensor([target_prop == 'hexagonal'])
         # binary metal-insulator classification

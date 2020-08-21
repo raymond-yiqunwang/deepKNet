@@ -3,14 +3,15 @@ git clone https://github.com/raymond931118/deepKNet.git
 
 #!/bin/bash
 
-jobname=Lambdarun0
+jobname=
 CUDA_VISIBLE_DEVICES=0 python3 main.py \
-    --root ./data_gen/data_topo_split1/ \
-    --target TIC2 \
-    --nclass 2 \
+    --root ./data_gen/data_ \
+    --target  \
+    --nclass  \
     --run_name ${jobname} \
     --gpu_id 0 \
-    --cutoff 300 \
+    --npoint 3 \
+    --point_dim 4 \
     --padding zero \
     --data_aug True \
     --rot_all True \
@@ -25,5 +26,6 @@ CUDA_VISIBLE_DEVICES=0 python3 main.py \
     --lr 0.01 \
     --lr_milestones 20 40 60 \
     --dropout 0.0 \
+    --print_freq 20 \
     | tee 2>&1 ${jobname}.log
 

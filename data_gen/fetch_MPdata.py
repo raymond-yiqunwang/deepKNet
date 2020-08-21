@@ -57,18 +57,33 @@ def parallel_computing(root_dir, fnames, wavelength, sym_thresh):
     # initialize XRD simulator
     xrd_simulator = xrd.XRDSimulator(wavelength=wavelength)
     for idx, filename in enumerate(fnames):
-        if (idx+1)%500 == 0:
+        if (idx+1)%100 == 0:
             print('this worker finished processing {} materials..'.format(idx+1), flush=True)
         with open(os.path.join(root_dir, filename+".cif")) as f:
             cif_struct = Structure.from_str(f.read(), fmt="cif")
-        # conventional cell
         sga = SpacegroupAnalyzer(cif_struct, symprec=sym_thresh)
+        
+        # conventional cell
         conventional_struct = sga.get_conventional_standard_structure()
-        _, recip_latt, features = xrd_simulator.get_pattern(structure=conventional_struct)
-        # save reciprocal lattice vector
-        np.save(os.path.join(root_dir, filename+"_basis.npy"), recip_latt)
-        # save diffraction pattern
-        np.save(os.path.join(root_dir, filename+".npy"), np.array(features))
+        _, conventional_recip_latt, conventional_features = \
+            xrd_simulator.get_pattern(structure=conventional_struct)
+        # save conventional reciprocal lattice vector
+        np.save(os.path.join(root_dir, filename+"_conventional_basis.npy"), \
+                conventional_recip_latt)
+        # save conventional diffraction pattern
+        np.save(os.path.join(root_dir, filename+"_conventional.npy"), \
+                np.array(conventional_features))
+        
+        # primitive cell
+        primitive_struct = sga.get_primitive_standard_structure()
+        _, primitive_recip_latt, primitive_features = \
+            xrd_simulator.get_pattern(structure=primitive_struct)
+        # save primitive reciprocal lattice vector
+        np.save(os.path.join(root_dir, filename+"_primitive_basis.npy"), \
+                primitive_recip_latt)
+        # save primitive diffraction pattern
+        np.save(os.path.join(root_dir, filename+"_primitive.npy"), \
+                np.array(primitive_features))
 
 
 def compute_xrd(root_dir):    
@@ -96,8 +111,10 @@ def compute_xrd(root_dir):
 if __name__ == "__main__":
     # output directory
     root_dir = "./MPdata_all/"
-    if not os.path.exists(root_dir):
-        os.mkdir(root_dir)
+    if os.path.exists(root_dir):
+        _ = input("MPdata_all dir already exists, deleting.. press enter to continue")
+#        shutil.rmtree(root_dir)
+#    os.mkdir(root_dir)
 
     # obtain data from MP database
 #    print('fetching data from MP..', flush=True)

@@ -15,33 +15,32 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 def gen_Xsys_data(data_custom):
     print("\ngenerate Xsys data..")
-    print("size before customization:", data_custom.shape[0])
     
     # only take crystals in ICSD
-    print('>> remove entries with no ICSD IDs')
-    data_custom = data_custom[data_custom['icsd_ids'] != '[]']
+#    print('>> remove entries with no ICSD IDs')
+#    data_custom = data_custom[data_custom['icsd_ids'] != '[]']
     
     # only take no-warning entries
     print('>> remove entries with warnings')
     data_custom = data_custom[data_custom['warnings'] == '[]']
 
-    print("statistics after customization:")
-    show_statistics(data_custom)
+#    print("statistics after customization:")
+#    show_statistics(data_custom)
     
     # output directory
-    npoint = 343
-    random_seed = 8
-    out_dir = "./data_Xsys_P343/"
+    npoint = 27
+    use_primitive = False
+    random_seed = 123
+    out_dir = "./data_Xsys_{}{}/".format("P" if use_primitive else "C", str(npoint))
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
     os.mkdir(out_dir)
-    properties = ['material_id', 'crystal_system']
-    generate_train_valid_test(data_custom, out_dir, properties, npoint, random_seed)
+    Xsys_data = data_custom[['material_id', 'crystal_system']]
+    generate_train_valid_test(Xsys_data, out_dir, npoint, use_primitive, random_seed)
 
 
-def gen_tri_hex_cls_data(data_custom):
-    print("\ngenerate tri_hex_cls data..")
-    print("size before customization:", data_custom.shape[0])
+def gen_THC_data(data_custom):
+    print("\ngenerate THC data..")
     
     # only take trigonal and hexagonal materials
     print('only take trigonal and hexagonal materials')
@@ -55,39 +54,40 @@ def gen_tri_hex_cls_data(data_custom):
     print('>> remove entries with warnings')
     data_custom = data_custom[data_custom['warnings'] == '[]']
     
-    print("statistics after customization:")
-    show_statistics(data_custom)
+#    print("statistics after customization:")
+#    show_statistics(data_custom)
     
     # output directory
     npoint = 27
-    random_seed = 8
-    out_dir = "./data_tri_hex_cls_P27/"
+    use_primitive = False
+    random_seed = 123
+    out_dir = "./data_THC_{}{}/".format("P" if use_primitive else "C", str(npoint))
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
     os.mkdir(out_dir)
-    properties = ['material_id', 'crystal_system']
-    generate_train_valid_test(data_custom, out_dir, properties, npoint, random_seed)
+    THC_data = data_custom[['material_id', 'crystal_system']]
+    generate_train_valid_test(THC_data, out_dir, npoint, use_primitive, random_seed)
 
 
 def gen_MIC_data(data_custom):
     print("\ngenerate MIC data..")
-    print("size before customization:", data_custom.shape[0])
     
     # only take materials with calculated band structures
     print('>> remove entries with no calculated band structures')
     data_custom = data_custom[data_custom['has_band_structure']]
     
-    # only take crystals in ICSD
-    print('>> remove entries with no ICSD IDs')
-    data_custom = data_custom[data_custom['icsd_ids'] != '[]']
+#    # only take crystals in ICSD
+#    print('>> remove entries with no ICSD IDs')
+#    data_custom = data_custom[data_custom['icsd_ids'] != '[]']
     
     # only take no-warning entries
     print('>> remove entries with warnings')
     data_custom = data_custom[data_custom['warnings'] == '[]']
 
-    print("statistics after customization:")
-    show_statistics(data_custom)
+#    print("statistics after customization:")
+#    show_statistics(data_custom)
     
+    """
     # get rid of rare elements
     elem_dict = defaultdict(int)
     for entry in data_custom['elements']:
@@ -103,21 +103,22 @@ def gen_MIC_data(data_custom):
         if rare_elements & set(ast.literal_eval(value)):
             drop_instance.append(idx)
     data_custom = data_custom.drop(drop_instance)
+    """
     
     # output directory
     npoint = 343
-    random_seed = 8
-    out_dir = "./data_MIC_P343/"
+    use_primitive = True
+    random_seed = 123
+    out_dir = "./data_MIC_{}{}/".format("P" if use_primitive else "C", str(npoint))
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
     os.mkdir(out_dir)
-    properties = ['material_id', 'band_gap']
-    generate_train_valid_test(data_custom, out_dir, properties, npoint, random_seed)
+    MIC_data = data_custom[['material_id', 'band_gap']]
+    generate_train_valid_test(MIC_data, out_dir, npoint, use_primitive, random_seed)
 
 
 def gen_elasticity_data(data_custom):
     print("\ngenerate elasticity data..")
-    print("size before customization:", data_custom.shape[0])
     
     # only take materials with elasticity data
     data_custom = data_custom[data_custom['elasticity'].notnull()]
@@ -144,19 +145,19 @@ def gen_elasticity_data(data_custom):
     data_custom['elasticity_data'] = GKP
 
     # output directory
-    npoint = 343
-    random_seed = 8
-    out_dir = "./data_elasticity_P343/"
+    npoint = 27
+    use_primitive = False
+    random_seed = 123
+    out_dir = "./data_elasticity_{}{}/".format("P" if use_primitive else "C", str(npoint))
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
     os.mkdir(out_dir)
-    properties = ['material_id', 'elasticity_data']
-    generate_train_valid_test(data_custom, out_dir, properties, npoint, random_seed)
+    elasticity_data = data_custom[['material_id', 'elasticity_data']]
+    generate_train_valid_test(elasticity_data, out_dir, npoint, use_primitive, random_seed)
 
 
 def gen_stability_data(data_custom):
     print("\ngenerate stability data..")
-    print("size before customization:", data_custom.shape[0])
     
 #    # only take materials with calculated band structures
 #    print('>> remove entries with no calculated band structures')
@@ -174,14 +175,15 @@ def gen_stability_data(data_custom):
     show_statistics(data_custom)
     
     # output directory
-    npoint = 343
-    random_seed = 8
-    out_dir = "./data_stability_P343/"
+    npoint = 27
+    use_primitive = False
+    random_seed = 123
+    out_dir = "./data_stability_{}{}/".format("P" if use_primitive else "C", str(npoint))
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
     os.mkdir(out_dir)
-    properties = ['material_id', 'e_above_hull']
-    generate_train_valid_test(data_custom, out_dir, properties, npoint, random_seed)
+    stability_data = data_custom[['material_id', 'e_above_hull']]
+    generate_train_valid_test(stability_data, out_dir, npoint, use_primitive, random_seed)
 
 
 def gen_topo_data():
@@ -190,14 +192,102 @@ def gen_topo_data():
     topo_data = pd.read_csv("../misc/topo_MPdata_14k.csv", sep=';', header=0, index_col=None)
 
     # output directory
-    npoint = 343
-    random_seed = 8
-    out_dir = "./data_topo_P343/"
+    npoint = 27
+    use_primitive = False
+    random_seed = 123
+    out_dir = "./data_topo_{}{}/".format("P" if use_primitive else "C", str(npoint))
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
     os.mkdir(out_dir)
-    properties = ['material_id', 'topo_class']
-    generate_train_valid_test(topo_data, out_dir, properties, npoint, random_seed)
+    topo_data = topo_data[['material_id', 'topo_class']]
+    generate_train_valid_test(topo_data, out_dir, npoint, use_primitive, random_seed)
+
+
+def generate_train_valid_test(id_prop_all, out_dir, npoint, use_primitive, random_seed=None):
+    print('size of dataset:', id_prop_all.shape[0], 'npoint:', npoint)
+    # random shuffle with seed
+    id_prop_all = id_prop_all.sample(frac=1, random_state=random_seed)
+    # split ratio
+    train_ratio, valid_ratio = 0.7, 0.15
+    # train
+    train_dir = os.path.join(out_dir, "train/")
+    os.mkdir(train_dir)
+    train_file = os.path.join(train_dir, "id_prop.csv")
+    train_split = int(np.floor(id_prop_all.shape[0] * train_ratio))
+    train_data = id_prop_all.iloc[:train_split]
+    train_data.to_csv(train_file, sep=',', header=id_prop_all.columns, index=False, mode='w')
+    # valid
+    valid_dir = os.path.join(out_dir, "valid/")
+    os.mkdir(valid_dir)
+    valid_file = os.path.join(valid_dir, "id_prop.csv")
+    valid_split = train_split + int(np.floor(id_prop_all.shape[0] * valid_ratio))
+    valid_data = id_prop_all.iloc[train_split:valid_split]
+    valid_data.to_csv(valid_file, sep=',', header=id_prop_all.columns, index=False, mode='w')
+    # test
+    test_dir = os.path.join(out_dir, "test/")
+    os.mkdir(test_dir)
+    test_file = os.path.join(test_dir, "id_prop.csv")
+    test_data = id_prop_all.iloc[valid_split:]
+    test_data.to_csv(test_file, sep=',', header=id_prop_all.columns, index=False, mode='w')
+    # write to file
+    for (save_data, save_dir) in [(train_data, train_dir), (valid_data, valid_dir), \
+                             (test_data, test_dir)]:
+        for mat_id in save_data['material_id']:
+            # primitive or conventional cell
+            if use_primitive:
+                feat_file = "./MPdata_all/"+mat_id+"_primitive.npy"
+            else:
+                feat_file = "./MPdata_all/"+mat_id+"_conventional.npy"
+            hkl_feat = np.load(feat_file)
+            # select hkl points
+            if npoint == 3:
+                conditions = np.where((np.sum(hkl_feat[:,:-1], axis=1)==1) & \
+                                      (np.min(hkl_feat[:,:-1], axis=1)>-1))
+                selected_hkl_feat = hkl_feat[conditions]
+                assert(selected_hkl_feat.shape[0] == 3)
+            elif npoint == 27:
+                conditions = np.where((np.max(hkl_feat[:,:-1], axis=1)<1.1) & \
+                                      (np.min(hkl_feat[:,:-1], axis=1)>-1.1))
+                selected_hkl_feat = hkl_feat[conditions]
+                assert(selected_hkl_feat.shape[0] <= 27)
+            elif npoint == 125:
+                conditions = np.where((np.max(hkl_feat[:,:-1], axis=1)<2.1) & \
+                                      (np.min(hkl_feat[:,:-1], axis=1)>-2.1))
+                selected_hkl_feat = hkl_feat[conditions]
+                assert(selected_hkl_feat.shape[0] <= 125)
+            elif npoint == 343:
+                conditions = np.where((np.max(hkl_feat[:,:-1], axis=1)<3.1) & \
+                                      (np.min(hkl_feat[:,:-1], axis=1)>-3.1))
+                selected_hkl_feat = hkl_feat[conditions]
+                assert(selected_hkl_feat.shape[0] <= 343)
+            elif npoint == 729:
+                conditions = np.where((np.max(hkl_feat[:,:-1], axis=1)<4.1) & \
+                                      (np.min(hkl_feat[:,:-1], axis=1)>-4.1))
+                selected_hkl_feat = hkl_feat[conditions]
+                assert(selected_hkl_feat.shape[0] <= 729)
+            else:
+                raise NotImplementedError
+
+            # convert to Cartesion
+            if use_primitive:
+                basis_file = "./MPdata_all/"+mat_id+"_primitive_basis.npy"
+            else:
+                basis_file = "./MPdata_all/"+mat_id+"_conventional_basis.npy"
+            recip_latt = np.load(basis_file)
+            recip_pos = np.dot(selected_hkl_feat[:,:-1], recip_latt)
+            # CuKa by default
+            max_r = 2 / 1.54184
+            recip_pos /= max_r
+            assert(np.amax(recip_pos) <= 1.0)
+            assert(np.amin(recip_pos) >= -1.0)
+            # normalize diffraction intensity
+            intensity = np.log(1+selected_hkl_feat[:,-1]) / 3
+            intensity = intensity.reshape(-1, 1)
+            assert(np.amax(intensity) <= 1.3)
+            assert(np.amin(intensity) >= 0.)
+            # generate point cloud and write to file
+            point_cloud = np.concatenate((recip_pos, intensity), axis=1)
+            np.save(os.path.join(save_dir, mat_id), point_cloud)
 
 
 def show_statistics(data):
@@ -414,82 +504,7 @@ def check_crystal_system(data_input, sym_thresh):
     return data_out
 
 
-def generate_train_valid_test(MPdata, out_dir, properties, npoint, random_seed):
-    # id_prop file
-    id_prop_all = MPdata[properties]
-    print('size of all data:', id_prop_all.shape[0], 'npoint:', npoint)
-    # random shuffle with seed
-    id_prop_all = id_prop_all.sample(frac=1, random_state=random_seed)
-    # split ratio
-    train_ratio, valid_ratio = 0.7, 0.15
-    # train
-    train_dir = os.path.join(out_dir, "train/")
-    os.mkdir(train_dir)
-    train_file = os.path.join(train_dir, "id_prop.csv")
-    train_split = int(np.floor(id_prop_all.shape[0] * train_ratio))
-    train_data = id_prop_all.iloc[:train_split]
-    train_data.to_csv(train_file, sep=',', header=properties, index=False, mode='w')
-    # valid
-    valid_dir = os.path.join(out_dir, "valid/")
-    os.mkdir(valid_dir)
-    valid_file = os.path.join(valid_dir, "id_prop.csv")
-    valid_split = train_split + int(np.floor(id_prop_all.shape[0] * valid_ratio))
-    valid_data = id_prop_all.iloc[train_split:valid_split]
-    valid_data.to_csv(valid_file, sep=',', header=properties, index=False, mode='w')
-    # test
-    test_dir = os.path.join(out_dir, "test/")
-    os.mkdir(test_dir)
-    test_file = os.path.join(test_dir, "id_prop.csv")
-    test_data = id_prop_all.iloc[valid_split:]
-    test_data.to_csv(test_file, sep=',', header=properties, index=False, mode='w')
-    # write to file
-    for (save_data, save_dir) in [(train_data, train_dir), (valid_data, valid_dir), \
-                             (test_data, test_dir)]:
-        for mat_id in save_data['material_id']:
-            hkl_feat = np.load("./MPdata_all/"+mat_id+".npy")
-            # select hkl points
-            if npoint == 3:
-                conditions = np.where((np.sum(hkl_feat[:,:-1], axis=1)==1) & \
-                                      (np.min(hkl_feat[:,:-1], axis=1)>-1))
-                selected_hkl_feat = hkl_feat[conditions]
-            elif npoint == 27:
-                conditions = np.where((np.max(hkl_feat[:,:-1], axis=1)<1.1) & \
-                                      (np.min(hkl_feat[:,:-1], axis=1)>-1.1))
-                selected_hkl_feat = hkl_feat[conditions]
-            elif npoint == 125:
-                conditions = np.where((np.max(hkl_feat[:,:-1], axis=1)<2.1) & \
-                                      (np.min(hkl_feat[:,:-1], axis=1)>-2.1))
-                selected_hkl_feat = hkl_feat[conditions]
-            elif npoint == 343:
-                conditions = np.where((np.max(hkl_feat[:,:-1], axis=1)<3.1) & \
-                                      (np.min(hkl_feat[:,:-1], axis=1)>-3.1))
-                selected_hkl_feat = hkl_feat[conditions]
-            elif npoint == 729:
-                conditions = np.where((np.max(hkl_feat[:,:-1], axis=1)<4.1) & \
-                                      (np.min(hkl_feat[:,:-1], axis=1)>-4.1))
-                selected_hkl_feat = hkl_feat[conditions]
-            else:
-                raise NotImplementedError
-
-            # convert to Cartesion
-            recip_latt = np.load("./MPdata_all/"+mat_id+"_basis.npy")
-            recip_pos = np.dot(selected_hkl_feat[:,:-1], recip_latt)
-            # CuKa by default
-            max_r = 2 / 1.54184
-            recip_pos /= max_r
-            assert(np.amax(recip_pos) <= 1.0)
-            assert(np.amin(recip_pos) >= -1.0)
-            # normalize diffraction intensity
-            intensity = np.log(1+selected_hkl_feat[:,-1]) / 3
-            intensity = intensity.reshape(-1, 1)
-            assert(np.amax(intensity) <= 1.3)
-            assert(np.amin(intensity) >= 0.)
-            # generate point cloud and write to file
-            point_cloud = np.concatenate((recip_pos, intensity), axis=1)
-            np.save(os.path.join(save_dir, mat_id), point_cloud)
-
-
-def main():
+if __name__ == "__main__":
     # read all MPdata
     MPdata_all = pd.read_csv("./MPdata_all/MPdata_all.csv", sep=';', header=0, index_col=None)
 
@@ -497,6 +512,8 @@ def main():
     if False:
         print('statistics of original data')
         show_statistics(data=MPdata_all)
+    else:
+        print('size of original data:', MPdata_all.shape[0])
 
     # check crystal system match
     if False:
@@ -510,6 +527,11 @@ def main():
         pool.close()
         pool.join()
         print('size of data with matched crystal system:', MPdata_all.shape[0])
+    else:
+        print('\nskip checking, removing mp-18828 and mp-5466')
+        drop_ids = ['mp-18828', 'mp-5466']
+        MPdata_all = MPdata_all[~MPdata_all['material_id'].isin(drop_ids)]
+        print('size of data with matched crystal system:', MPdata_all.shape[0])
 
     # crystal system classification
     if False:
@@ -517,10 +539,10 @@ def main():
 
     # trigonal-hexagonal classification
     if False:
-        gen_tri_hex_cls_data(MPdata_all)
+        gen_THC_data(MPdata_all)
 
     # metal-insulator classification
-    if False:
+    if True:
         gen_MIC_data(MPdata_all)
 
     # elasticity classification
@@ -532,11 +554,7 @@ def main():
         gen_stability_data(MPdata_all)
 
     # topological trivialness classification
-    if True:
+    if False:
         gen_topo_data()
-
-
-if __name__ == "__main__":
-    main()
 
 
