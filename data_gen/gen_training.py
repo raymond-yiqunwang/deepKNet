@@ -17,8 +17,8 @@ def gen_Xsys_data(data_custom):
     print("\ngenerate Xsys data..")
     
     # only take crystals in ICSD
-#    print('>> remove entries with no ICSD IDs')
-#    data_custom = data_custom[data_custom['icsd_ids'] != '[]']
+    print('>> remove entries with no ICSD IDs')
+    data_custom = data_custom[data_custom['icsd_ids'] != '[]']
     
     # only take no-warning entries
     print('>> remove entries with warnings')
@@ -28,8 +28,8 @@ def gen_Xsys_data(data_custom):
 #    show_statistics(data_custom)
     
     # output directory
-    npoint = 27
-    use_primitive = False
+    npoint = 125
+    use_primitive = True
     random_seed = 123
     out_dir = "./data_Xsys_{}{}/".format("P" if use_primitive else "C", str(npoint))
     if os.path.exists(out_dir):
@@ -47,8 +47,8 @@ def gen_THC_data(data_custom):
     data_custom = data_custom[data_custom['crystal_system'].isin(['trigonal', 'hexagonal'])]
 
     # only take crystals in ICSD
-#    print('>> remove entries with no ICSD IDs')
-#    data_custom = data_custom[data_custom['icsd_ids'] != '[]']
+    print('>> remove entries with no ICSD IDs')
+    data_custom = data_custom[data_custom['icsd_ids'] != '[]']
     
     # only take no-warning entries
     print('>> remove entries with warnings')
@@ -87,29 +87,12 @@ def gen_MIC_data(data_custom):
 #    print("statistics after customization:")
 #    show_statistics(data_custom)
     
-    """
-    # get rid of rare elements
-    elem_dict = defaultdict(int)
-    for entry in data_custom['elements']:
-        for elem in ast.literal_eval(entry):
-            elem_dict[elem] += 1
-    rare_dict = {key: val for key, val in elem_dict.items() if val < 60}
-    print('>> get rid of rare elements: ')
-    print(rare_dict)
-    rare_elements = set(rare_dict.keys())
-    # drop entries containing rare elements
-    drop_instance = []
-    for idx, value in data_custom['elements'].iteritems():
-        if rare_elements & set(ast.literal_eval(value)):
-            drop_instance.append(idx)
-    data_custom = data_custom.drop(drop_instance)
-    """
-    
     # output directory
-    npoint = 729
+    npoint = 125
     use_primitive = True
     random_seed = 123
-    out_dir = "./data_MIC_{}{}/".format("P" if use_primitive else "C", str(npoint))
+    out_dir = "./data_MIC_{}{}_rand{}/".format("P" if use_primitive else "C", \
+                                               str(npoint), str(random_seed))
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
     os.mkdir(out_dir)
@@ -131,8 +114,8 @@ def gen_elasticity_data(data_custom):
     print('>> remove entries with warnings')
     data_custom = data_custom[data_custom['warnings'] == '[]']
 
-    print("statistics after customization:")
-    show_statistics(data_custom)
+#    print("statistics after customization:")
+#    show_statistics(data_custom)
     
     # elasticity
     GKP = []
@@ -145,8 +128,8 @@ def gen_elasticity_data(data_custom):
     data_custom['elasticity_data'] = GKP
 
     # output directory
-    npoint = 27
-    use_primitive = False
+    npoint = 125
+    use_primitive = True
     random_seed = 123
     out_dir = "./data_elasticity_{}{}/".format("P" if use_primitive else "C", str(npoint))
     if os.path.exists(out_dir):
@@ -159,24 +142,20 @@ def gen_elasticity_data(data_custom):
 def gen_stability_data(data_custom):
     print("\ngenerate stability data..")
     
-#    # only take materials with calculated band structures
-#    print('>> remove entries with no calculated band structures')
-#    data_custom = data_custom[data_custom['has_band_structure']]
-
-#    # only take crystals in ICSD
-#    print('>> remove entries with no ICSD IDs')
-#    data_custom = data_custom[data_custom['icsd_ids'] != '[]']
+    # only take crystals in ICSD
+    print('>> remove entries with no ICSD IDs')
+    data_custom = data_custom[data_custom['icsd_ids'] != '[]']
     
     # only take no-warning entries
     print('>> remove entries with warnings')
     data_custom = data_custom[data_custom['warnings'] == '[]']
 
-    print("statistics after customization:")
-    show_statistics(data_custom)
+#    print("statistics after customization:")
+#    show_statistics(data_custom)
     
     # output directory
-    npoint = 27
-    use_primitive = False
+    npoint = 125
+    use_primitive = True
     random_seed = 123
     out_dir = "./data_stability_{}{}/".format("P" if use_primitive else "C", str(npoint))
     if os.path.exists(out_dir):
@@ -186,21 +165,21 @@ def gen_stability_data(data_custom):
     generate_train_valid_test(stability_data, out_dir, npoint, use_primitive, random_seed)
 
 
-def gen_topo_data():
-    print("\ngenerate topo data..")
+def gen_TIC_data():
+    print("\ngenerate TIC data..")
     
-    topo_data = pd.read_csv("../misc/topo_MPdata_14k.csv", sep=';', header=0, index_col=None)
+    TIC_data = pd.read_csv("../misc/topo_MPdata_14k.csv", sep=';', header=0, index_col=None)
 
     # output directory
-    npoint = 27
-    use_primitive = False
+    npoint = 125
+    use_primitive = True
     random_seed = 123
-    out_dir = "./data_topo_{}{}/".format("P" if use_primitive else "C", str(npoint))
+    out_dir = "./data_TIC_{}{}/".format("P" if use_primitive else "C", str(npoint))
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
     os.mkdir(out_dir)
-    topo_data = topo_data[['material_id', 'topo_class']]
-    generate_train_valid_test(topo_data, out_dir, npoint, use_primitive, random_seed)
+    TIC_data = TIC_data[['material_id', 'topo_class']]
+    generate_train_valid_test(TIC_data, out_dir, npoint, use_primitive, random_seed)
 
 
 def generate_train_valid_test(id_prop_all, out_dir, npoint, use_primitive, random_seed=None):
@@ -555,6 +534,6 @@ if __name__ == "__main__":
 
     # topological trivialness classification
     if False:
-        gen_topo_data()
+        gen_TIC_data()
 
 
