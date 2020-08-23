@@ -140,7 +140,7 @@ class deepKNetDataset(Dataset):
         else:
             raise NotImplementedError
 
-        return point_cloud, prop.long()
+        return point_cloud, prop.long(), material_id
 
     def __len__(self):
         return self.id_prop.shape[0]

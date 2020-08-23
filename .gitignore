@@ -1,5 +1,6 @@
 *.log
 job_submit.sh
+pred*.sh
 hyper_params/
 runs/
 checkpoints/

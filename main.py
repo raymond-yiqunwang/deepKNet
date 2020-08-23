@@ -199,7 +199,7 @@ def train(train_loader, model, criterion, nclass, optimizer, epoch, writer):
         # measure data loading time
         data_time.update(time.time() - end)
 
-        image, target = data
+        image, target, _ = data
         
         # optionally skip the last batch
         if target.size(0) < 16: continue
@@ -272,7 +272,7 @@ def validate(val_loader, model, criterion, nclass, epoch, writer, test_mode=Fals
         end = time.time()
         running_loss = 0.0
         for idx, data in enumerate(val_loader):
-            image, target = data
+            image, target, _ = data
             
             # optionally skip the last batch
             if target.size(0) < 8: continue

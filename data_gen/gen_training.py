@@ -28,10 +28,11 @@ def gen_Xsys_data(data_custom):
 #    show_statistics(data_custom)
     
     # output directory
-    npoint = 125
-    use_primitive = True
+    npoint = 3
+    use_primitive = False
     random_seed = 123
-    out_dir = "./data_Xsys_{}{}/".format("P" if use_primitive else "C", str(npoint))
+    out_dir = "./data_Xsys_{}{}_rand{}/".format("P" if use_primitive else "C", \
+                                                str(npoint), str(random_seed))
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
     os.mkdir(out_dir)
@@ -88,8 +89,8 @@ def gen_MIC_data(data_custom):
 #    show_statistics(data_custom)
     
     # output directory
-    npoint = 125
-    use_primitive = True
+    npoint = 343
+    use_primitive = False
     random_seed = 123
     out_dir = "./data_MIC_{}{}_rand{}/".format("P" if use_primitive else "C", \
                                                str(npoint), str(random_seed))

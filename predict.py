@@ -1,4 +1,5 @@
 import argparse
+import pandas as pd
 import sys
 import os
 import shutil
@@ -124,11 +125,14 @@ def validate(val_loader, model, criterion, nclass):
     # switch to evaluation mode
     model.eval()
 
+    misclassified_ids = []
+    mispred_labels = []
+    true_labels = []
     with torch.no_grad():
         end = time.time()
         running_loss = 0.0
         for idx, data in enumerate(val_loader):
-            image, target = data
+            image, target, material_ids = data
             
             # optionally skip the last batch
             if target.size(0) < 8: continue
@@ -163,7 +167,21 @@ def validate(val_loader, model, criterion, nclass):
             if (idx+1) % args.print_freq == 0:
                 progress.display(idx+1)
                 running_loss = 0.0
+
+            # print misclassified
+            test_preds = np.argmax(np.exp(output.cpu().numpy()), axis=1)
+            test_targets = target.cpu().numpy()
+            for key, val in enumerate(test_preds==test_targets):
+                if not val:
+                    misclassified_ids.append(material_ids[key])
+                    true_labels.append(test_targets[key])
+                    mispred_labels.append(test_preds[key])
     
+    print('misclass number:', len(mispred_labels))
+    misclass_out = pd.DataFrame([misclassified_ids, true_labels, mispred_labels])
+    misclass_out = misclass_out.transpose()
+    misclass_out.to_csv('misclass.csv', header=['id', 'true', 'pred'], index=False)
+
     if nclass == 2:
         print(' * AUC {auc.avg:.3f}'.format(auc=auc_scores), flush=True)
         return auc_scores.avg
@@ -174,8 +192,8 @@ def validate(val_loader, model, criterion, nclass):
 
 def class_eval(prediction, target, threshold):
     prediction = np.exp(prediction.detach().cpu().numpy())
-#    pred_label = np.argmax(prediction, axis=1)
-    pred_label = prediction[:,1] > threshold
+    pred_label = np.argmax(prediction, axis=1)
+#    pred_label = prediction[:,1] > threshold
     target = target.detach().cpu().numpy()
     target_label = np.squeeze(target)
     if prediction.shape[1] == 2:
