@@ -121,13 +121,17 @@ class deepKNetDataset(Dataset):
         # binary metal-insulator classification
         elif self.target == 'MIC':
             prop = torch.Tensor([target_prop>1E-6])
-        # binary elasticity
-        elif self.target == 'elasticity':
+        # binary bulk modulus
+        elif self.target == 'bulk_modulus':
             target_prop = ast.literal_eval(target_prop)
-            shear_mod, bulk_mod, poisson_ratio = \
-                target_prop[0], target_prop[1], target_prop[2]
-            criterion = bulk_mod >= 100. # AUC 0.95+
-            #criterion = shear_mod >= 100. # AUC 0.88
+            bulk_mod = target_prop[1]
+            criterion = bulk_mod >= 100. 
+            prop = torch.Tensor([criterion])
+        # binary shear modulus
+        elif self.target == 'shear_modulus':
+            target_prop = ast.literal_eval(target_prop)
+            shear_mod = target_prop[0]
+            criterion = shear_mod >= 50. 
             prop = torch.Tensor([criterion])
         # binary stability
         elif self.target == 'stability':
