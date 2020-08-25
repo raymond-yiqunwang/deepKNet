@@ -18,10 +18,10 @@ CUDA_VISIBLE_DEVICES=0 python3 main.py \
     --permutation True \
     --conv_dims 4 128 512 \
     --nbert 4 \
-    --fc_dims 512 256 128 \
+    --fc_dims 512 128 \
     --pool CLS \
     --epochs 80 \
-    --batch_size 64 \
+    --batch_size 128 \
     --optim SGD \
     --lr 0.01 \
     --lr_milestones 20 40 60 \

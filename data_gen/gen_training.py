@@ -40,23 +40,24 @@ def gen_Xsys_data(data_custom):
 def gen_THC_data(data_custom):
     print("\ngenerate THC data..")
     
-    # only take trigonal and hexagonal materials
-    print('only take trigonal and hexagonal materials')
-    data_custom = data_custom[data_custom['crystal_system'].isin(['trigonal', 'hexagonal'])]
-
     # only take crystals in ICSD
     print('>> remove entries with no ICSD IDs')
     data_custom = data_custom[data_custom['icsd_ids'] != '[]']
-    
+
     # only take no-warning entries
     print('>> remove entries with warnings')
     data_custom = data_custom[data_custom['warnings'] == '[]']
     
+    # only take trigonal and hexagonal materials
+    print('only take trigonal and hexagonal materials')
+    data_custom = data_custom[data_custom['crystal_system'].isin(['trigonal', 'hexagonal'])]
+
     # output directory
     npoint = 27
     use_primitive = False
     random_seed = 123
-    out_dir = "./data_THC_{}{}/".format("P" if use_primitive else "C", str(npoint))
+    out_dir = "./data_THC_{}{}_rand{}/".format("P" if use_primitive else "C", \
+                                                str(npoint), str(random_seed))
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
     os.mkdir(out_dir)
@@ -79,9 +80,6 @@ def gen_MIC_data(data_custom):
     print('>> remove entries with warnings')
     data_custom = data_custom[data_custom['warnings'] == '[]']
 
-#    print("statistics after customization:")
-#    show_statistics(data_custom)
-    
     # output directory
     npoint = 343
     use_primitive = False
@@ -505,7 +503,7 @@ if __name__ == "__main__":
         print('size of data with matched crystal system:', MPdata_all.shape[0])
 
     # crystal system classification
-    if True:
+    if False:
         gen_Xsys_data(MPdata_all)
 
     # trigonal-hexagonal classification
@@ -513,7 +511,7 @@ if __name__ == "__main__":
         gen_THC_data(MPdata_all)
 
     # metal-insulator classification
-    if False:
+    if True:
         gen_MIC_data(MPdata_all)
 
     # elasticity classification
