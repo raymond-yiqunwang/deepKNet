@@ -7,36 +7,34 @@ import numpy as np
 from random import sample
 from sklearn import metrics
 import torch
-import torch.nn as nn
-import torch.optim as optim
 from torch.optim.lr_scheduler import MultiStepLR
 from tensorboardX import SummaryWriter
-from deepKNet.data import get_train_val_test_loader
+from deepKNet.data import get_train_valid_test_loader
 from deepKNet.model3D import PointNet
 
 parser = argparse.ArgumentParser(description='deepKNet model')
 parser.add_argument('--root', metavar='DATA_DIR')
 parser.add_argument('--target', metavar='TARGET_PROPERTY')
 parser.add_argument('--nclass', type=int)
-parser.add_argument('--run_name', default='runx', metavar='RUNID')
-parser.add_argument('--gpu_id', default=0, type=int, metavar='GPUID')
+parser.add_argument('--run_name', metavar='RUNID')
+parser.add_argument('--gpu_id', type=int, metavar='GPUID')
 # hyper parameter tuning
 parser.add_argument('--npoint', type=int, metavar='NPOINT CUTOFF')
-parser.add_argument('--point_dim', default=4, type=int, metavar='NPOINT DIM')
-parser.add_argument('--padding', default='zero', type=str, metavar='POINT PADDING')
-parser.add_argument('--data_aug', default='True', type=str)
-parser.add_argument('--rot_all', default='True', type=str)
-parser.add_argument('--permutation', default='True', type=str)
-parser.add_argument('--conv_dims', default=[4, 256], type=int, nargs='+')
-parser.add_argument('--nbert', default=4, type=int)
-parser.add_argument('--fc_dims', default=[256, 64], type=int, nargs='+')
-parser.add_argument('--pool', default='CLS', type=str)
-parser.add_argument('--epochs', default=80, type=int, metavar='N')
-parser.add_argument('--batch_size', default=64, type=int, metavar='N')
-parser.add_argument('--optim', default='SGD', type=str, metavar='OPTIM')
-parser.add_argument('--lr', default=0.01, type=float, metavar='LR')
-parser.add_argument('--lr_milestones', default=[20, 40, 60], nargs='+', type=int)
-parser.add_argument('--dropout', default=0.0, type=float, metavar='DROPOUT')
+parser.add_argument('--point_dim', type=int, metavar='NPOINT DIM')
+parser.add_argument('--padding', type=str, metavar='POINT PADDING')
+parser.add_argument('--data_aug', type=str)
+parser.add_argument('--rot_all', type=str)
+parser.add_argument('--permutation', type=str)
+parser.add_argument('--conv_dims', type=int, nargs='+')
+parser.add_argument('--nbert', type=int)
+parser.add_argument('--fc_dims', type=int, nargs='+')
+parser.add_argument('--pool', type=str)
+parser.add_argument('--epochs', type=int, metavar='N')
+parser.add_argument('--batch_size', type=int, metavar='N')
+parser.add_argument('--optim', type=str, metavar='OPTIM')
+parser.add_argument('--lr', type=float, metavar='LR')
+parser.add_argument('--lr_milestones', nargs='+', type=int)
+parser.add_argument('--dropout', type=float, metavar='DROPOUT')
 # default params
 parser.add_argument('--start_epoch', default=0, type=int, metavar='N')
 parser.add_argument('--weight_decay', default=0, type=float, metavar='W')
@@ -66,7 +64,7 @@ def main():
     global args, best_performance, cuda_device
 
     # get data loader
-    train_loader, val_loader, test_loader = get_train_val_test_loader(
+    train_loader, valid_loader, test_loader = get_train_valid_test_loader(
         root=args.root, target=args.target, npt=args.npoint, 
         pt_dim=args.point_dim, pad=args.padding, 
         daug=args.data_aug=='True', permut=args.permutation=='True', 
@@ -75,6 +73,10 @@ def main():
 
     # build model
     assert(args.conv_dims[0] == args.point_dim)
+    if args.target == 'crystal_system':
+        assert(args.nclass == 7)
+    elif args.target == 'crystal_family':
+        assert(args.nclass == 6)
     model = PointNet(nclass=args.nclass,
                      conv_dims=args.conv_dims,
                      nbert=args.nbert,
@@ -94,18 +96,18 @@ def main():
         print('running on CPU..', flush=True)
 
     # define loss function 
-    criterion = nn.NLLLoss()
+    criterion = torch.nn.NLLLoss()
     if args.cuda:
         criterion = criterion.cuda(device=cuda_device)
 
     # optimization algo
     if args.optim == 'Adam':
-        optimizer = optim.Adam(model.parameters(), lr=args.lr, 
-                               weight_decay=args.weight_decay)
+        optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, 
+                                     weight_decay=args.weight_decay)
     elif args.optim == 'SGD':
-        optimizer = optim.SGD(model.parameters(), lr=args.lr, 
-                              momentum=args.momentum,
-                              weight_decay=args.weight_decay)
+        optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, 
+                                    momentum=args.momentum,
+                                    weight_decay=args.weight_decay)
     else:
         raise NameError('Only Adam or SGD is allowed as --optim')
 
@@ -144,7 +146,7 @@ def main():
         train(train_loader, model, criterion, args.nclass, optimizer, epoch, writer)
 
         # evaluate on validation set
-        performance = validate(val_loader, model, criterion, args.nclass, epoch, writer)
+        performance = validate(valid_loader, model, criterion, args.nclass, epoch, writer)
 
         scheduler.step()
 
@@ -160,7 +162,8 @@ def main():
             'optimizer': optimizer.state_dict(),
         }, is_best)
 
-        if ((epoch-args.start_epoch+1)%args.test_freq == 0) or (epoch == args.epochs-1):
+        if ((epoch-args.start_epoch+1)%args.test_freq == 0) or \
+            (epoch == args.start_epoch+args.epochs-1):
             # test best model
             print('---------Evaluate Model on Test Set---------------', flush=True)
             best_model = load_best_model()
@@ -199,7 +202,7 @@ def train(train_loader, model, criterion, nclass, optimizer, epoch, writer):
         # measure data loading time
         data_time.update(time.time() - end)
 
-        image, target, _ = data
+        point_cloud, target, _ = data
         
         # optionally skip the last batch
         if target.size(0) < 16: continue
@@ -207,11 +210,11 @@ def train(train_loader, model, criterion, nclass, optimizer, epoch, writer):
         target = target.view(-1)
 
         if args.cuda:
-            image = image.cuda(device=cuda_device)
+            point_cloud = point_cloud.cuda(device=cuda_device)
             target = target.cuda(device=cuda_device)
 
         # compute output
-        output = model(image)
+        output = model(point_cloud)
         loss = criterion(output, target)
 
         # measure accuracy and record loss
@@ -244,7 +247,7 @@ def train(train_loader, model, criterion, nclass, optimizer, epoch, writer):
             running_loss = 0.0
 
 
-def validate(val_loader, model, criterion, nclass, epoch, writer, test_mode=False):
+def validate(valid_loader, model, criterion, nclass, epoch, writer, test_mode=False):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':4.2f')
     losses = AverageMeter('Loss', ':6.3f')
@@ -260,7 +263,7 @@ def validate(val_loader, model, criterion, nclass, epoch, writer, test_mode=Fals
     else:
         report = [batch_time, data_time, losses, accuracies]
     progress = ProgressMeter(
-        len(val_loader),
+        len(valid_loader),
         report,
         prefix='Validate: ' if not test_mode else 'Test: '
     )
@@ -271,8 +274,8 @@ def validate(val_loader, model, criterion, nclass, epoch, writer, test_mode=Fals
     with torch.no_grad():
         end = time.time()
         running_loss = 0.0
-        for idx, data in enumerate(val_loader):
-            image, target, _ = data
+        for idx, data in enumerate(valid_loader):
+            point_cloud, target, _ = data
             
             # optionally skip the last batch
             if target.size(0) < 8: continue
@@ -280,11 +283,11 @@ def validate(val_loader, model, criterion, nclass, epoch, writer, test_mode=Fals
             target = target.view(-1)
 
             if args.cuda:
-                image = image.cuda(device=cuda_device)
+                point_cloud = point_cloud.cuda(device=cuda_device)
                 target = target.cuda(device=cuda_device)
 
             # compute output
-            output = model(image)
+            output = model(point_cloud)
             loss = criterion(output, target)
         
             # measure accuracy and record loss
@@ -308,7 +311,7 @@ def validate(val_loader, model, criterion, nclass, epoch, writer, test_mode=Fals
                 progress.display(idx+1)
                 writer.add_scalar('validation loss',
                                 running_loss / args.print_freq,
-                                epoch * len(val_loader) + idx)
+                                epoch * len(valid_loader) + idx)
                 running_loss = 0.0
     
     if nclass == 2:

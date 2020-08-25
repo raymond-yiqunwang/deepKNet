@@ -6,33 +6,36 @@ import numpy as np
 import pandas as pd
 from torch.utils.data import Dataset, DataLoader
 
-def get_train_val_test_loader(root, target, npt, pt_dim, pad, daug, rot_all,
-                              permut, batch_size, num_data_workers, pin_memory):
-
+def get_train_valid_test_loader(root, target, npt, pt_dim, pad, daug, rot_all,
+                                permut, batch_size, num_data_workers, pin_memory):
     print('data aug -- train: {}, val/test: {}'.format(daug, (daug and rot_all)))
     print('permutation: {}'.format(permut))
+    
+    # train DataLoader
     train_dataset = deepKNetDataset(root=os.path.join(root, 'train'), 
                                     target=target, npoint=npt, point_dim=pt_dim,
                                     padding=pad, data_aug=daug, permutation=permut)
-    val_dataset = deepKNetDataset(root=os.path.join(root, 'valid'),
-                                  target=target, npoint=npt, point_dim=pt_dim,
-                                  padding=pad, data_aug=(daug and rot_all), permutation=permut)
-    test_dataset = deepKNetDataset(root=os.path.join(root, 'test'),
-                                   target=target, npoint=npt, point_dim=pt_dim,
-                                   padding=pad, data_aug=(daug and rot_all), permutation=permut)
-
-    # init DataLoader
     train_loader = DataLoader(train_dataset, batch_size=batch_size,
                               num_workers=num_data_workers,
                               shuffle=True, pin_memory=pin_memory)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size,
-                            num_workers=num_data_workers,
-                            shuffle=True, pin_memory=pin_memory)
+    
+    # valid DataLoader
+    valid_dataset = deepKNetDataset(root=os.path.join(root, 'valid'),
+                                    target=target, npoint=npt, point_dim=pt_dim,
+                                    padding=pad, data_aug=(daug and rot_all), permutation=permut)
+    valid_loader = DataLoader(valid_dataset, batch_size=batch_size,
+                              num_workers=num_data_workers,
+                              shuffle=True, pin_memory=pin_memory)
+    
+    # test DataLoader
+    test_dataset = deepKNetDataset(root=os.path.join(root, 'test'),
+                                   target=target, npoint=npt, point_dim=pt_dim,
+                                   padding=pad, data_aug=(daug and rot_all), permutation=permut)
     test_loader = DataLoader(test_dataset, batch_size=batch_size,
                              num_workers=num_data_workers,
                              shuffle=True, pin_memory=pin_memory)
     
-    return train_loader, val_loader, test_loader
+    return train_loader, valid_loader, test_loader
 
 
 class deepKNetDataset(Dataset):
@@ -94,7 +97,7 @@ class deepKNetDataset(Dataset):
             assert(self.point_dim == 3)
             point_cloud = point_cloud[:,:-1]
 
-        point_cloud = torch.Tensor(point_cloud.transpose())
+        point_cloud_feat = torch.Tensor(point_cloud.transpose())
 
         # 6-class crystal family
         if self.target == 'crystal_family':
@@ -140,7 +143,7 @@ class deepKNetDataset(Dataset):
         else:
             raise NotImplementedError
 
-        return point_cloud, prop.long(), material_id
+        return point_cloud_feat, prop.long(), material_id
 
     def __len__(self):
         return self.id_prop.shape[0]
