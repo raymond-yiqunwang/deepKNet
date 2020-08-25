@@ -107,9 +107,6 @@ def gen_elasticity_data(data_custom):
     print('>> remove entries with warnings')
     data_custom = data_custom[data_custom['warnings'] == '[]']
 
-#    print("statistics after customization:")
-#    show_statistics(data_custom)
-    
     # elasticity
     GKP = []
     for idx, irow in data_custom.iterrows():
@@ -121,10 +118,11 @@ def gen_elasticity_data(data_custom):
     data_custom['elasticity_data'] = GKP
 
     # output directory
-    npoint = 125
-    use_primitive = True
-    random_seed = 123
-    out_dir = "./data_elasticity_{}{}/".format("P" if use_primitive else "C", str(npoint))
+    npoint = 343
+    use_primitive = False
+    random_seed = 789
+    out_dir = "./data_elasticity_{}{}_rand{}/".format("P" if use_primitive else "C", \
+                                                      str(npoint), str(random_seed))
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
     os.mkdir(out_dir)
@@ -134,23 +132,21 @@ def gen_elasticity_data(data_custom):
 
 def gen_stability_data(data_custom):
     print("\ngenerate stability data..")
-    
+
     # only take crystals in ICSD
     print('>> remove entries with no ICSD IDs')
     data_custom = data_custom[data_custom['icsd_ids'] != '[]']
-    
+
     # only take no-warning entries
     print('>> remove entries with warnings')
     data_custom = data_custom[data_custom['warnings'] == '[]']
 
-#    print("statistics after customization:")
-#    show_statistics(data_custom)
-    
     # output directory
-    npoint = 125
-    use_primitive = True
-    random_seed = 123
-    out_dir = "./data_stability_{}{}/".format("P" if use_primitive else "C", str(npoint))
+    npoint = 343
+    use_primitive = False
+    random_seed = 789
+    out_dir = "./data_stability_{}{}_rand{}/".format("P" if use_primitive else "C", \
+                                                     str(npoint), str(random_seed))
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
     os.mkdir(out_dir)
@@ -329,8 +325,8 @@ def show_statistics(data):
                 'std = {:.2f}, min = {:.2f}, max = {:.2f}' \
                 .format(e_above_hull.mean(), e_above_hull.median(),\
                      e_above_hull.std(), e_above_hull.min(), e_above_hull.max()))
-    print('>> Energy above hull (eV) < 20meV: {:d}'.format( \
-          e_above_hull[e_above_hull < 0.02].size))
+    print('>> Energy above hull (eV) < 10 meV: {:d}'.format( \
+          e_above_hull[e_above_hull < 0.01].size))
 
     # band gap
     gap_threshold = 1E-6
@@ -511,7 +507,7 @@ if __name__ == "__main__":
         gen_THC_data(MPdata_all)
 
     # metal-insulator classification
-    if True:
+    if False:
         gen_MIC_data(MPdata_all)
 
     # elasticity classification

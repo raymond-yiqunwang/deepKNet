@@ -135,7 +135,7 @@ class deepKNetDataset(Dataset):
             prop = torch.Tensor([criterion])
         # binary stability
         elif self.target == 'stability':
-            prop = torch.Tensor([target_prop<0.02])
+            prop = torch.Tensor([target_prop<0.01])
         # binary topologically trivial vs. non-trivial
         elif self.target == 'TIC2':
             assert(target_prop in ['trivial*', 'TI*', 'SM*'])
