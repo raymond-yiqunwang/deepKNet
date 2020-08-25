@@ -24,13 +24,10 @@ def gen_Xsys_data(data_custom):
     print('>> remove entries with warnings')
     data_custom = data_custom[data_custom['warnings'] == '[]']
 
-#    print("statistics after customization:")
-#    show_statistics(data_custom)
-    
     # output directory
-    npoint = 3
+    npoint = 27
     use_primitive = False
-    random_seed = 123
+    random_seed = 789
     out_dir = "./data_Xsys_{}{}_rand{}/".format("P" if use_primitive else "C", \
                                                 str(npoint), str(random_seed))
     if os.path.exists(out_dir):
@@ -54,9 +51,6 @@ def gen_THC_data(data_custom):
     # only take no-warning entries
     print('>> remove entries with warnings')
     data_custom = data_custom[data_custom['warnings'] == '[]']
-    
-#    print("statistics after customization:")
-#    show_statistics(data_custom)
     
     # output directory
     npoint = 27
@@ -91,7 +85,7 @@ def gen_MIC_data(data_custom):
     # output directory
     npoint = 343
     use_primitive = False
-    random_seed = 123
+    random_seed = 789
     out_dir = "./data_MIC_{}{}_rand{}/".format("P" if use_primitive else "C", \
                                                str(npoint), str(random_seed))
     if os.path.exists(out_dir):
@@ -183,8 +177,8 @@ def gen_TIC_data():
     generate_train_valid_test(TIC_data, out_dir, npoint, use_primitive, random_seed)
 
 
-def generate_train_valid_test(id_prop_all, out_dir, npoint, use_primitive, random_seed=None):
-    print('size of dataset:', id_prop_all.shape[0], 'npoint:', npoint)
+def generate_train_valid_test(id_prop_all, out_dir, npoint, use_primitive, random_seed):
+    print('size of dataset:', id_prop_all.shape[0], 'npoint:', npoint, 'random seed:', random_seed)
     # random shuffle with seed
     id_prop_all = id_prop_all.sample(frac=1, random_state=random_seed)
     # split ratio
@@ -209,9 +203,9 @@ def generate_train_valid_test(id_prop_all, out_dir, npoint, use_primitive, rando
     test_file = os.path.join(test_dir, "id_prop.csv")
     test_data = id_prop_all.iloc[valid_split:]
     test_data.to_csv(test_file, sep=',', header=id_prop_all.columns, index=False, mode='w')
-    # write to file
+    # point cloud data
     for (save_data, save_dir) in [(train_data, train_dir), (valid_data, valid_dir), \
-                             (test_data, test_dir)]:
+                                  (test_data, test_dir)]:
         for mat_id in save_data['material_id']:
             # primitive or conventional cell
             if use_primitive:
@@ -261,7 +255,7 @@ def generate_train_valid_test(id_prop_all, out_dir, npoint, use_primitive, rando
             assert(np.amax(recip_pos) <= 1.0)
             assert(np.amin(recip_pos) >= -1.0)
             # normalize diffraction intensity
-            intensity = np.log(1+selected_hkl_feat[:,-1]) / 3
+            intensity = np.log(1+selected_hkl_feat[:,-1]) / 3.
             intensity = intensity.reshape(-1, 1)
             assert(np.amax(intensity) <= 1.3)
             assert(np.amin(intensity) >= 0.)
@@ -365,13 +359,10 @@ def show_statistics(data):
     Gs, Ks, Ps = [], [], []
     for imat in elasticity:
         shear_mod = ast.literal_eval(imat)['G_Voigt_Reuss_Hill']
-        #if shear_mod > -1E-6: Gs.append(shear_mod)
         Gs.append(shear_mod)
         bulk_mod = ast.literal_eval(imat)['K_Voigt_Reuss_Hill']
-        #if bulk_mod > -1E-6: Ks.append(bulk_mod)
         Ks.append(bulk_mod)
         poisson_ratio = ast.literal_eval(imat)['poisson_ratio']
-        #if poisson_ratio > -1E-6: Ps.append(poisson_ratio)
         Ps.append(poisson_ratio)
     print('Shear modulus > 50: {:d}'.format((np.array(Gs)>50).sum()))
     print('Bulk modulus > 100: {:d}'.format((np.array(Ks)>100).sum()))
@@ -514,7 +505,7 @@ if __name__ == "__main__":
         print('size of data with matched crystal system:', MPdata_all.shape[0])
 
     # crystal system classification
-    if False:
+    if True:
         gen_Xsys_data(MPdata_all)
 
     # trigonal-hexagonal classification
@@ -522,7 +513,7 @@ if __name__ == "__main__":
         gen_THC_data(MPdata_all)
 
     # metal-insulator classification
-    if True:
+    if False:
         gen_MIC_data(MPdata_all)
 
     # elasticity classification
