@@ -14,6 +14,7 @@ CUDA_VISIBLE_DEVICES=0 python3 main.py \
     --point_dim 4 \
     --padding zero \
     --data_aug True \
+    --rand_intensity True \
     --rot_all True \
     --permutation True \
     --conv_dims 4 128 512 \

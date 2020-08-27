@@ -160,10 +160,11 @@ def gen_TIC_data():
     TIC_data = pd.read_csv("../misc/topo_MPdata_14k.csv", sep=';', header=0, index_col=None)
 
     # output directory
-    npoint = 125
+    npoint = 343
     use_primitive = True
-    random_seed = 123
-    out_dir = "./data_TIC_{}{}/".format("P" if use_primitive else "C", str(npoint))
+    random_seed = 789
+    out_dir = "./data_TIC_{}{}_rand{}/".format("P" if use_primitive else "C", \
+                                               str(npoint), str(random_seed))
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
     os.mkdir(out_dir)

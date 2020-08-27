@@ -23,6 +23,7 @@ parser.add_argument('--npoint', type=int, metavar='NPOINT CUTOFF')
 parser.add_argument('--point_dim', type=int, metavar='NPOINT DIM')
 parser.add_argument('--padding', type=str, metavar='POINT PADDING')
 parser.add_argument('--data_aug', type=str)
+parser.add_argument('--rand_intensity', type=str)
 parser.add_argument('--rot_all', type=str)
 parser.add_argument('--permutation', type=str)
 parser.add_argument('--conv_dims', type=int, nargs='+')
@@ -66,10 +67,11 @@ def main():
     # get data loader
     train_loader, valid_loader, test_loader = get_train_valid_test_loader(
         root=args.root, target=args.target, npt=args.npoint, 
-        pt_dim=args.point_dim, pad=args.padding, 
-        daug=args.data_aug=='True', permut=args.permutation=='True', 
-        rot_all=args.rot_all=='True', batch_size=args.batch_size,
-        pin_memory=args.cuda, num_data_workers=args.num_data_workers)
+        pt_dim=args.point_dim, pad=args.padding, daug=args.data_aug=='True',
+        rnd_intensity=args.rand_intensity=='True',
+        permut=args.permutation=='True', rot_all=args.rot_all=='True',
+        batch_size=args.batch_size, pin_memory=args.cuda, 
+        num_data_workers=args.num_data_workers)
 
     # build model
     assert(args.conv_dims[0] == args.point_dim)

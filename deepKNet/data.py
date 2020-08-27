@@ -6,15 +6,17 @@ import numpy as np
 import pandas as pd
 from torch.utils.data import Dataset, DataLoader
 
-def get_train_valid_test_loader(root, target, npt, pt_dim, pad, daug, rot_all,
-                                permut, batch_size, num_data_workers, pin_memory):
+def get_train_valid_test_loader(root, target, npt, pt_dim, pad, daug, rnd_intensity, rot_all,
+                                      permut, batch_size, num_data_workers, pin_memory):
     print('data aug -- train: {}, val/test: {}'.format(daug, (daug and rot_all)))
     print('permutation: {}'.format(permut))
+    print('randomize intensity: {}'.format(rnd_intensity))
     
     # train DataLoader
     train_dataset = deepKNetDataset(root=os.path.join(root, 'train'), 
                                     target=target, npoint=npt, point_dim=pt_dim,
-                                    padding=pad, data_aug=daug, permutation=permut)
+                                    padding=pad, data_aug=daug, 
+                                    rand_intensity=rnd_intensity, permutation=permut)
     train_loader = DataLoader(train_dataset, batch_size=batch_size,
                               num_workers=num_data_workers,
                               shuffle=True, pin_memory=pin_memory)
@@ -22,7 +24,8 @@ def get_train_valid_test_loader(root, target, npt, pt_dim, pad, daug, rot_all,
     # valid DataLoader
     valid_dataset = deepKNetDataset(root=os.path.join(root, 'valid'),
                                     target=target, npoint=npt, point_dim=pt_dim,
-                                    padding=pad, data_aug=(daug and rot_all), permutation=permut)
+                                    padding=pad, data_aug=(daug and rot_all), 
+                                    rand_intensity=rnd_intensity, permutation=permut)
     valid_loader = DataLoader(valid_dataset, batch_size=batch_size,
                               num_workers=num_data_workers,
                               shuffle=True, pin_memory=pin_memory)
@@ -30,7 +33,8 @@ def get_train_valid_test_loader(root, target, npt, pt_dim, pad, daug, rot_all,
     # test DataLoader
     test_dataset = deepKNetDataset(root=os.path.join(root, 'test'),
                                    target=target, npoint=npt, point_dim=pt_dim,
-                                   padding=pad, data_aug=(daug and rot_all), permutation=permut)
+                                   padding=pad, data_aug=(daug and rot_all),
+                                   rand_intensity=rnd_intensity, permutation=permut)
     test_loader = DataLoader(test_dataset, batch_size=batch_size,
                              num_workers=num_data_workers,
                              shuffle=True, pin_memory=pin_memory)
@@ -39,13 +43,15 @@ def get_train_valid_test_loader(root, target, npt, pt_dim, pad, daug, rot_all,
 
 
 class deepKNetDataset(Dataset):
-    def __init__(self, root, target, npoint, point_dim, padding, data_aug, permutation):
+    def __init__(self, root, target, npoint, point_dim, padding, \
+                       data_aug, rand_intensity, permutation):
         self.root = root
         self.target = target
         self.npoint = npoint
         self.point_dim = point_dim
         self.padding = padding
         self.data_aug = data_aug
+        self.random_intensity = rand_intensity
         self.permutation = permutation
         id_prop_data = pd.read_csv(os.path.join(root, 'id_prop.csv'), \
                                    header=0, sep=',', index_col=None)
@@ -89,6 +95,10 @@ class deepKNetDataset(Dataset):
             ]
             rot_matrix = np.array(rot_matrix).reshape(3,3)
             point_cloud[:,:-1] = np.dot(point_cloud[:,:-1], rot_matrix.T)
+
+        # randomly scale all intensity by a factor
+        if self.random_intensity:
+            point_cloud[:,-1] = point_cloud[:,-1] * np.random.random()
         
         if self.permutation:
             np.random.shuffle(point_cloud[1:])
