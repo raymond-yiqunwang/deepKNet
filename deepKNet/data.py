@@ -98,7 +98,7 @@ class deepKNetDataset(Dataset):
 
         # randomly scale all intensity by a factor
         if self.random_intensity:
-            point_cloud[:,-1] = point_cloud[:,-1] * np.random.random()
+            point_cloud[:,-1] *= np.random.random()
         
         if self.permutation:
             np.random.shuffle(point_cloud[1:])
