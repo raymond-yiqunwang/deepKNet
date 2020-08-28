@@ -111,12 +111,12 @@ class deepKNetDataset(Dataset):
 
         # 6-class crystal family
         if self.target == 'crystal_family':
-            cryst_sys_dict = {
+            cryst_family_dict = {
                 'cubic': 0, 'orthorhombic': 1, 'tetragonal': 2,
                 'monoclinic': 3, 'triclinic': 4,
                 'hexagonal': 5, 'trigonal': 5 
             }
-            prop = torch.Tensor([cryst_sys_dict[target_prop]])
+            prop = torch.Tensor([cryst_family_dict[target_prop]])
         # 7-class crystal system
         elif self.target == 'crystal_system':
             cryst_sys_dict = {
@@ -142,6 +142,12 @@ class deepKNetDataset(Dataset):
             target_prop = ast.literal_eval(target_prop)
             shear_mod = target_prop[0]
             criterion = shear_mod >= 50. 
+            prop = torch.Tensor([criterion])
+        # binary Poisson ratio
+        elif self.target == 'poisson_ratio':
+            target_prop = ast.literal_eval(target_prop)
+            poisson_ratio = target_prop[2]
+            criterion = poisson_ratio >= 0.3
             prop = torch.Tensor([criterion])
         # binary stability
         elif self.target == 'stability':
