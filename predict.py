@@ -8,11 +8,9 @@ import numpy as np
 from random import sample
 from sklearn import metrics
 import torch
-import torch.nn as nn
-import torch.optim as optim
 from torch.optim.lr_scheduler import MultiStepLR
 from tensorboardX import SummaryWriter
-from deepKNet.data import get_train_val_test_loader
+from deepKNet.data import get_train_valid_test_loader
 from deepKNet.model3D import PointNet
 
 parser = argparse.ArgumentParser(description='deepKNet model')
@@ -28,6 +26,7 @@ parser.add_argument('--npoint', type=int, metavar='NPOINT CUTOFF')
 parser.add_argument('--point_dim', default=4, type=int, metavar='NPOINT DIM')
 parser.add_argument('--padding', default='zero', type=str, metavar='POINT PADDING')
 parser.add_argument('--data_aug', default='True', type=str)
+parser.add_argument('--rand_intensity', type=str)
 parser.add_argument('--rot_all', default='True', type=str)
 parser.add_argument('--permutation', default='True', type=str)
 parser.add_argument('--conv_dims', type=int, nargs='+')
@@ -57,10 +56,12 @@ def main():
     global args, cuda_device
 
     # get data loader
-    _, _, test_loader = get_train_val_test_loader(
+    _, _, test_loader = get_train_valid_test_loader(
         root=args.root, target=args.target, npt=args.npoint, 
         pt_dim=args.point_dim, pad=args.padding, 
-        daug=args.data_aug=='True', permut=args.permutation=='True', 
+        daug=args.data_aug=='True', 
+        rnd_intensity=args.rand_intensity=='True',
+        permut=args.permutation=='True', 
         rot_all=args.rot_all=='True', batch_size=args.batch_size,
         pin_memory=args.cuda, num_data_workers=args.num_data_workers)
 
@@ -84,7 +85,7 @@ def main():
         print('running on CPU..', flush=True)
 
     # define loss function 
-    criterion = nn.NLLLoss()
+    criterion = torch.nn.NLLLoss()
     if args.cuda:
         criterion = criterion.cuda(device=cuda_device)
 
@@ -101,7 +102,7 @@ def main():
 
 
 
-def validate(val_loader, model, criterion, nclass):
+def validate(valid_loader, model, criterion, nclass):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':4.2f')
     losses = AverageMeter('Loss', ':6.3f')
@@ -117,7 +118,7 @@ def validate(val_loader, model, criterion, nclass):
     else:
         report = [batch_time, data_time, losses, accuracies]
     progress = ProgressMeter(
-        len(val_loader),
+        len(valid_loader),
         report,
         prefix='Test:'
     )
@@ -131,7 +132,7 @@ def validate(val_loader, model, criterion, nclass):
     with torch.no_grad():
         end = time.time()
         running_loss = 0.0
-        for idx, data in enumerate(val_loader):
+        for idx, data in enumerate(valid_loader):
             image, target, material_ids = data
             
             # optionally skip the last batch
@@ -148,7 +149,7 @@ def validate(val_loader, model, criterion, nclass):
             loss = criterion(output, target)
         
             # measure accuracy and record loss
-            accuracy, precision, recall, fscore, auc_score, ave_precision =\
+            accuracy, precision, recall, fscore, auc_score, ave_precision, fpr, tpr, thresholds =\
                 class_eval(output, target, args.threshold)
             losses.update(loss.item(), target.size(0))
             accuracies.update(accuracy.item(), target.size(0))
@@ -157,6 +158,8 @@ def validate(val_loader, model, criterion, nclass):
             fscores.update(fscore.item(), target.size(0))
             auc_scores.update(auc_score.item(), target.size(0))
             ave_precisions.update(ave_precision.item(), target.size(0))
+            ROC_curve = pd.DataFrame([fpr, tpr]).transpose()
+            ROC_curve.to_csv("ROC_curve{}.csv".format(str(idx)), index=False, header=['fpr', 'tpr'])
 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -205,13 +208,15 @@ def class_eval(prediction, target, threshold):
             auc_score = np.float64(-1E8)
         accuracy = metrics.accuracy_score(target_label, pred_label)
         ave_precision = metrics.average_precision_score(target_label, prediction[:,1])
+        fpr, tpr, thresholds = metrics.roc_curve(target_label, prediction[:,1])
     else:
         correct = np.equal(pred_label, target_label).sum()
         precision, recall = np.float64(0.0), np.float64(0.0)
         fscore, auc_score = np.float64(0.0), np.float64(0.0)
         accuracy = np.float64(correct/float(target_label.size))
         ave_precision = np.float64(0.0)
-    return accuracy, precision, recall, fscore, auc_score, ave_precision
+        fpr, tpr, thresholds = [], [], []
+    return accuracy, precision, recall, fscore, auc_score, ave_precision, fpr, tpr, thresholds
 
 
 class AverageMeter(object):

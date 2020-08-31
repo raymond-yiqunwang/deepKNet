@@ -142,8 +142,8 @@ def gen_stability_data(data_custom):
     data_custom = data_custom[data_custom['warnings'] == '[]']
 
     # output directory
-    npoint = 343
-    use_primitive = False
+    npoint = 27
+    use_primitive = True
     random_seed = 789
     out_dir = "./data_stability_{}{}_rand{}/".format("P" if use_primitive else "C", \
                                                      str(npoint), str(random_seed))
@@ -516,7 +516,7 @@ if __name__ == "__main__":
         gen_elasticity_data(MPdata_all)
 
     # stability classification
-    if False:
+    if True:
         gen_stability_data(MPdata_all)
 
     # topological trivialness classification
