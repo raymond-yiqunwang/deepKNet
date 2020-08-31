@@ -109,7 +109,13 @@ class deepKNetDataset(Dataset):
         if self.systematic_absence:
             # cannot do both at the same time
             assert(not self.random_intensity)
-            point_cloud[:,-1] = np.where(point_cloud[:,-1]>1E-6, 1.0, 0.0)
+            non_zeros = point_cloud[point_cloud[:,-1]>1E-10]
+            non_zeros[:,-1] = 1.0
+            zeros = point_cloud[point_cloud[:,-1]<=1E-10]
+            zeros[:,-1] = 0.0
+            point_cloud = np.concatenate((zeros, non_zeros), axis=0)
+            assert((point_cloud[np.where(point_cloud[:,-1]==1.0)].shape[0] + \
+                    point_cloud[np.where(point_cloud[:,-1]==0.0)].shape[0]) == point_cloud.shape[0])
 
         # randomly permute all points except the origin
         if self.permutation:
