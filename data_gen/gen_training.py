@@ -53,7 +53,7 @@ def gen_THC_data(data_custom):
     data_custom = data_custom[data_custom['crystal_system'].isin(['trigonal', 'hexagonal'])]
 
     # output directory
-    npoint = 27
+    npoint = 125
     use_primitive = False
     random_seed = 123
     out_dir = "./data_THC_{}{}_rand{}/".format("P" if use_primitive else "C", \
@@ -504,7 +504,7 @@ if __name__ == "__main__":
         gen_Xsys_data(MPdata_all)
 
     # trigonal-hexagonal classification
-    if False:
+    if True:
         gen_THC_data(MPdata_all)
 
     # metal-insulator classification
@@ -516,7 +516,7 @@ if __name__ == "__main__":
         gen_elasticity_data(MPdata_all)
 
     # stability classification
-    if True:
+    if False:
         gen_stability_data(MPdata_all)
 
     # topological trivialness classification

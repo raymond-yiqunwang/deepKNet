@@ -24,6 +24,7 @@ parser.add_argument('--point_dim', type=int, metavar='NPOINT DIM')
 parser.add_argument('--padding', type=str, metavar='POINT PADDING')
 parser.add_argument('--data_aug', type=str)
 parser.add_argument('--rand_intensity', type=str)
+parser.add_argument('--systematic_absence', type=str)
 parser.add_argument('--rot_all', type=str)
 parser.add_argument('--permutation', type=str)
 parser.add_argument('--conv_dims', type=int, nargs='+')
@@ -69,6 +70,7 @@ def main():
         root=args.root, target=args.target, npt=args.npoint, 
         pt_dim=args.point_dim, pad=args.padding, daug=args.data_aug=='True',
         rnd_intensity=args.rand_intensity=='True',
+        sys_abs=args.systematic_absence=='True',
         permut=args.permutation=='True', rot_all=args.rot_all=='True',
         batch_size=args.batch_size, pin_memory=args.cuda, 
         num_data_workers=args.num_data_workers)
