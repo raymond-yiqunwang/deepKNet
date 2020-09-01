@@ -61,8 +61,6 @@ class deepKNetDataset(Dataset):
         id_prop_data = pd.read_csv(os.path.join(root, 'id_prop.csv'), \
                                    header=0, sep=',', index_col=None)
         self.id_prop = id_prop_data.values
-        # for safety shuffle init
-        random.shuffle(self.id_prop)
 
     def __getitem__(self, idx):
         material_id, target_prop = self.id_prop[idx]
