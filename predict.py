@@ -27,6 +27,7 @@ parser.add_argument('--point_dim', default=4, type=int, metavar='NPOINT DIM')
 parser.add_argument('--padding', default='zero', type=str, metavar='POINT PADDING')
 parser.add_argument('--data_aug', default='True', type=str)
 parser.add_argument('--rand_intensity', type=str)
+parser.add_argument('--systematic_absence', type=str)
 parser.add_argument('--rot_all', default='True', type=str)
 parser.add_argument('--permutation', default='True', type=str)
 parser.add_argument('--conv_dims', type=int, nargs='+')
@@ -61,6 +62,7 @@ def main():
         pt_dim=args.point_dim, pad=args.padding, 
         daug=args.data_aug=='True', 
         rnd_intensity=args.rand_intensity=='True',
+        sys_abs=args.systematic_absence=='True',
         permut=args.permutation=='True', 
         rot_all=args.rot_all=='True', batch_size=args.batch_size,
         pin_memory=args.cuda, num_data_workers=args.num_data_workers)
@@ -127,8 +129,10 @@ def validate(valid_loader, model, criterion, nclass):
     model.eval()
 
     misclassified_ids = []
-    mispred_labels = []
     true_labels = []
+    true_label_scores = []
+    mispred_labels = []
+    mispred_label_scores = []
     with torch.no_grad():
         end = time.time()
         running_loss = 0.0
@@ -158,8 +162,8 @@ def validate(valid_loader, model, criterion, nclass):
             fscores.update(fscore.item(), target.size(0))
             auc_scores.update(auc_score.item(), target.size(0))
             ave_precisions.update(ave_precision.item(), target.size(0))
-            ROC_curve = pd.DataFrame([fpr, tpr]).transpose()
-            ROC_curve.to_csv("ROC_curve{}.csv".format(str(idx)), index=False, header=['fpr', 'tpr'])
+#            ROC_curve = pd.DataFrame([fpr, tpr]).transpose()
+#            ROC_curve.to_csv("ROC_curve{}.csv".format(str(idx)), index=False, header=['fpr', 'tpr'])
 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -172,18 +176,25 @@ def validate(valid_loader, model, criterion, nclass):
                 running_loss = 0.0
 
             # print misclassified
-            test_preds = np.argmax(np.exp(output.cpu().numpy()), axis=1)
+            pred_scores = np.exp(output.cpu().numpy())
+            test_preds = np.argmax(pred_scores, axis=1)
             test_targets = target.cpu().numpy()
             for key, val in enumerate(test_preds==test_targets):
                 if not val:
                     misclassified_ids.append(material_ids[key])
-                    true_labels.append(test_targets[key])
-                    mispred_labels.append(test_preds[key])
+                    true_label = test_targets[key]
+                    true_labels.append(true_label)
+                    true_label_scores.append(pred_scores[key,true_label])
+                    mispred_label = test_preds[key]
+                    mispred_labels.append(mispred_label)
+                    mispred_label_scores.append(pred_scores[key,mispred_label])
     
     print('misclass number:', len(mispred_labels))
-    misclass_out = pd.DataFrame([misclassified_ids, true_labels, mispred_labels])
+    misclass_out = pd.DataFrame([misclassified_ids, true_labels, true_label_scores, \
+                                                    mispred_labels, mispred_label_scores])
     misclass_out = misclass_out.transpose()
-    misclass_out.to_csv('misclass.csv', header=['id', 'true', 'pred'], index=False)
+    header_out = ['id', 'true', 'true_score', 'pred', 'pred_score']
+    misclass_out.to_csv('misclass.csv', header=header_out, index=False)
 
     if nclass == 2:
         print(' * AUC {auc.avg:.3f}'.format(auc=auc_scores), flush=True)
