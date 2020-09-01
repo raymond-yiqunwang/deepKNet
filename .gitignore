@@ -1,5 +1,6 @@
 *.log
 job_submit.sh
+predict.sh
 RESULTS/
 runs/
 checkpoints/
