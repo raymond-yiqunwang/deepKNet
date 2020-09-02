@@ -12,11 +12,10 @@ CUDA_VISIBLE_DEVICES=0 python3 main.py \
     --gpu_id 0 \
     --npoint 3 \
     --point_dim 4 \
-    --padding zero \
     --data_aug True \
-    --rand_intensity True \
-    --rot_all True \
-    --permutation True \
+    --rot_range -1 1 \
+    --random_intensity True \
+    --systematic_absence False \
     --conv_dims 4 128 512 \
     --nbert 4 \
     --fc_dims 512 128 \

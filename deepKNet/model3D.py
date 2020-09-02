@@ -5,13 +5,13 @@ import torch.nn.functional as F
 
 
 class PointNet(nn.Module):
-    def __init__(self, nclass, conv_dims, nbert, fc_dims, pool, dp):
+    def __init__(self, nclass, conv_dims, nbert, fc_dims, pool, dropout):
         super(PointNet, self).__init__()
         self.nclass = nclass
         self.embed_dim = conv_dims[-1]
         self.nbert = nbert
         self.pool = pool
-        self.dp = dp
+        self.dp = dropout
 
         self.conv_layers = nn.ModuleList([nn.Conv1d(conv_dims[i], conv_dims[i+1], 1) \
                                           for i in range(len(conv_dims)-1)])

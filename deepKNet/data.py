@@ -6,39 +6,39 @@ import numpy as np
 import pandas as pd
 from torch.utils.data import Dataset, DataLoader
 
-def get_train_valid_test_loader(root, target, npt, pt_dim, pad, daug, rnd_intensity, sys_abs,
-                                rot_all, permut, batch_size, num_data_workers, pin_memory):
-    print('data aug -- train: {}, val/test: {}'.format(daug, (daug and rot_all)))
-    print('permutation: {}'.format(permut))
-    print('randomize intensity: {}'.format(rnd_intensity))
-    print('systematic absence: {}'.format(sys_abs))
+def get_train_valid_test_loader(root, target, npoint, point_dim, data_aug, 
+                                rot_range, random_intensity, systematic_absence,
+                                batch_size, num_data_workers, pin_memory):
+    print('data augmentation -- train/val/test: {}'.format(data_aug))
+    print('random intensity: {}'.format(random_intensity))
+    print('systematic absence: {}'.format(systematic_absence))
     
     # train DataLoader
     train_dataset = deepKNetDataset(root=os.path.join(root, 'train'), 
-                                    target=target, npoint=npt, point_dim=pt_dim,
-                                    padding=pad, data_aug=daug, 
-                                    rand_intensity=rnd_intensity, sys_absence=sys_abs,
-                                    permutation=permut)
+                                    target=target, npoint=npoint, point_dim=point_dim,
+                                    data_aug=data_aug, rot_range=rot_range,
+                                    random_intensity=random_intensity,
+                                    systematic_absence=systematic_absence)
     train_loader = DataLoader(train_dataset, batch_size=batch_size,
                               num_workers=num_data_workers,
                               shuffle=True, pin_memory=pin_memory)
     
     # valid DataLoader
     valid_dataset = deepKNetDataset(root=os.path.join(root, 'valid'),
-                                    target=target, npoint=npt, point_dim=pt_dim,
-                                    padding=pad, data_aug=(daug and rot_all), 
-                                    rand_intensity=rnd_intensity, sys_absence=sys_abs,
-                                    permutation=permut)
+                                    target=target, npoint=npoint, point_dim=point_dim,
+                                    data_aug=data_aug, rot_range=rot_range,
+                                    random_intensity=random_intensity,
+                                    systematic_absence=systematic_absence)
     valid_loader = DataLoader(valid_dataset, batch_size=batch_size,
                               num_workers=num_data_workers,
                               shuffle=True, pin_memory=pin_memory)
     
     # test DataLoader
     test_dataset = deepKNetDataset(root=os.path.join(root, 'test'),
-                                   target=target, npoint=npt, point_dim=pt_dim,
-                                   padding=pad, data_aug=(daug and rot_all),
-                                   rand_intensity=rnd_intensity, sys_absence=sys_abs,
-                                   permutation=permut)
+                                   target=target, npoint=npoint, point_dim=point_dim,
+                                   data_aug=data_aug, rot_range=rot_range,
+                                   random_intensity=random_intensity,
+                                   systematic_absence=systematic_absence)
     test_loader = DataLoader(test_dataset, batch_size=batch_size,
                              num_workers=num_data_workers,
                              shuffle=True, pin_memory=pin_memory)
@@ -47,17 +47,16 @@ def get_train_valid_test_loader(root, target, npt, pt_dim, pad, daug, rnd_intens
 
 
 class deepKNetDataset(Dataset):
-    def __init__(self, root, target, npoint, point_dim, padding, \
-                       data_aug, rand_intensity, sys_absence, permutation):
+    def __init__(self, root, target, npoint, point_dim, data_aug, rot_range,
+                       random_intensity, systematic_absence):
         self.root = root
         self.target = target
         self.npoint = npoint
         self.point_dim = point_dim
-        self.padding = padding
         self.data_aug = data_aug
-        self.random_intensity = rand_intensity
-        self.systematic_absence = sys_absence
-        self.permutation = permutation
+        self.rot_range = rot_range
+        self.random_intensity = random_intensity
+        self.systematic_absence = systematic_absence
         id_prop_data = pd.read_csv(os.path.join(root, 'id_prop.csv'), \
                                    header=0, sep=',', index_col=None)
         self.id_prop = id_prop_data.values
@@ -67,24 +66,16 @@ class deepKNetDataset(Dataset):
         # load point cloud data
         point_cloud = np.load(os.path.join(self.root, material_id+'.npy'))
         
-        # padding and cutoff
-        if self.padding == 'zero':
-            if point_cloud.shape[0] < self.npoint:
-                point_cloud = np.pad(point_cloud, 
-                                     ((0, self.npoint-point_cloud.shape[0]), (0, 0)),
-                                     mode='constant')
-            else:
-                point_cloud = point_cloud[:self.npoint, :]
-        elif self.padding == 'periodic':
-            while point_cloud.shape[0] < self.npoint:
-                point_cloud = np.repeat(point_cloud, 2, axis=0)
-            point_cloud = point_cloud[:self.npoint, :]
-        else:
-            raise NotImplementedError
+        assert(point_cloud.shape[0] <= self.npoint)
+        if point_cloud.shape[0] < self.npoint:
+            point_cloud = np.pad(point_cloud, 
+                                 ((0, self.npoint-point_cloud.shape[0]), (0, 0)),
+                                 mode='constant')
 
         # apply random 3D rotation for data augmentation
         if self.data_aug:
-            alpha, beta, gamma = 2. * np.pi * (np.random.random(3)-0.5)
+            rot_low, rot_high = self.rot_range
+            alpha, beta, gamma = np.pi * np.random.uniform(rot_low, rot_high, 3)
             rot1 = [np.cos(alpha), -1*np.sin(alpha), 0,
                     np.sin(alpha), np.cos(alpha), 0,
                     0, 0, 1]
@@ -97,9 +88,8 @@ class deepKNetDataset(Dataset):
                     0, np.cos(gamma), -1*np.sin(gamma),
                     0, np.sin(gamma), np.cos(gamma)]
             rot3 = np.array(rot3).reshape(3,3)
-            point_cloud[:,:-1] = np.dot(point_cloud[:,:-1], rot1.T)
-            point_cloud[:,:-1] = np.dot(point_cloud[:,:-1], rot2.T)
-            point_cloud[:,:-1] = np.dot(point_cloud[:,:-1], rot3.T)
+            rot_matrix = rot1.dot(rot2).dot(rot3)
+            point_cloud[:,:-1] = np.dot(point_cloud[:,:-1], rot_matrix.T)
             if target_prop in ['cubic', 'orthorhombic', 'tetragonal']:
                 assert(np.dot(point_cloud[0,:-1], point_cloud[1,:-1]) < 1E-10)
                 assert(np.dot(point_cloud[1,:-1], point_cloud[2,:-1]) < 1E-10)
@@ -122,9 +112,9 @@ class deepKNetDataset(Dataset):
                     point_cloud[np.where(point_cloud[:,-1]==0.0)].shape[0]) == point_cloud.shape[0])
 
         # randomly permute all points except the origin
-        if self.permutation:
-            np.random.shuffle(point_cloud[1:])
+        np.random.shuffle(point_cloud[1:])
 
+        # mask intensity info
         if self.point_dim != 4:
             assert(self.point_dim == 3)
             point_cloud = point_cloud[:,:-1]

@@ -21,11 +21,9 @@ parser.add_argument('--gpu_id', type=int, metavar='GPUID')
 # hyper parameter tuning
 parser.add_argument('--npoint', type=int, metavar='NPOINT CUTOFF')
 parser.add_argument('--point_dim', type=int, metavar='NPOINT DIM')
-parser.add_argument('--padding', type=str, metavar='POINT PADDING')
 parser.add_argument('--data_aug', type=str)
-parser.add_argument('--rot_all', type=str)
-parser.add_argument('--permutation', type=str)
-parser.add_argument('--rand_intensity', type=str)
+parser.add_argument('--rot_range', type=float, nargs='+')
+parser.add_argument('--random_intensity', type=str)
 parser.add_argument('--systematic_absence', type=str)
 parser.add_argument('--conv_dims', type=int, nargs='+')
 parser.add_argument('--nbert', type=int)
@@ -45,7 +43,7 @@ n_threads = torch.get_num_threads()
 parser.add_argument('--num_threads', default=n_threads, type=int, metavar='N_thread')
 parser.add_argument('--num_data_workers', default=4, type=int, metavar='N')
 parser.add_argument('--print_freq', default=10, type=int, metavar='N')
-parser.add_argument('--test_freq', default=10, type=int, metavar='N')
+parser.add_argument('--test_freq', default=20, type=int, metavar='N')
 parser.add_argument('--disable_cuda', action='store_true')
 parser.add_argument('--resume', default='', type=str, metavar='PATH')
 
@@ -55,7 +53,6 @@ args.cuda = torch.cuda.is_available() and not args.disable_cuda
 cuda_device = torch.device('cuda:{}'.format(args.gpu_id)) if args.cuda else None
 if args.num_threads != n_threads:
     torch.set_num_threads(args.num_threads)
-# print out args
 print('User defined variables:', flush=True)
 for key, val in vars(args).items():
     print('  => {:17s}: {}'.format(key, val), flush=True)
@@ -67,13 +64,17 @@ def main():
 
     # get data loader
     train_loader, valid_loader, test_loader = get_train_valid_test_loader(
-        root=args.root, target=args.target, npt=args.npoint, 
-        pt_dim=args.point_dim, pad=args.padding, daug=args.data_aug=='True',
-        rnd_intensity=args.rand_intensity=='True',
-        sys_abs=args.systematic_absence=='True',
-        permut=args.permutation=='True', rot_all=args.rot_all=='True',
-        batch_size=args.batch_size, pin_memory=args.cuda, 
-        num_data_workers=args.num_data_workers)
+        root=args.root,
+        target=args.target,
+        npoint=args.npoint, 
+        point_dim=args.point_dim,
+        data_aug=args.data_aug=='True',
+        rot_range=args.rot_range,
+        random_intensity=args.random_intensity=='True',
+        systematic_absence=args.systematic_absence=='True',
+        batch_size=args.batch_size,
+        num_data_workers=args.num_data_workers,
+        pin_memory=args.cuda)
 
     # build model
     assert(args.conv_dims[0] == args.point_dim)
@@ -86,7 +87,7 @@ def main():
                      nbert=args.nbert,
                      fc_dims=args.fc_dims,
                      pool=args.pool,
-                     dp=args.dropout)
+                     dropout=args.dropout)
     # number of trainable model parameters
     trainable_params = sum(p.numel() for p in model.parameters() 
                            if p.requires_grad)

@@ -24,12 +24,10 @@ parser.add_argument('--gpu_id', default=0, type=int, metavar='GPUID')
 # hyper parameter tuning
 parser.add_argument('--npoint', type=int, metavar='NPOINT CUTOFF')
 parser.add_argument('--point_dim', default=4, type=int, metavar='NPOINT DIM')
-parser.add_argument('--padding', default='zero', type=str, metavar='POINT PADDING')
 parser.add_argument('--data_aug', default='True', type=str)
-parser.add_argument('--rand_intensity', type=str)
+parser.add_argument('--rot_range', type=float, nargs='+')
+parser.add_argument('--random_intensity', type=str)
 parser.add_argument('--systematic_absence', type=str)
-parser.add_argument('--rot_all', default='True', type=str)
-parser.add_argument('--permutation', default='True', type=str)
 parser.add_argument('--conv_dims', type=int, nargs='+')
 parser.add_argument('--nbert', default=4, type=int)
 parser.add_argument('--fc_dims', type=int, nargs='+')
@@ -58,14 +56,17 @@ def main():
 
     # get data loader
     _, _, test_loader = get_train_valid_test_loader(
-        root=args.root, target=args.target, npt=args.npoint, 
-        pt_dim=args.point_dim, pad=args.padding, 
-        daug=args.data_aug=='True', 
-        rnd_intensity=args.rand_intensity=='True',
-        sys_abs=args.systematic_absence=='True',
-        permut=args.permutation=='True', 
-        rot_all=args.rot_all=='True', batch_size=args.batch_size,
-        pin_memory=args.cuda, num_data_workers=args.num_data_workers)
+        root=args.root,
+        target=args.target,
+        npoint=args.npoint, 
+        point_dim=args.point_dim,
+        data_aug=args.data_aug=='True',
+        rot_range=args.rot_range,
+        random_intensity=args.random_intensity=='True',
+        systematic_absence=args.systematic_absence=='True',
+        batch_size=args.batch_size,
+        num_data_workers=args.num_data_workers,
+        pin_memory=args.cuda)
 
     # build model
     model = PointNet(nclass=args.nclass,
@@ -73,7 +74,7 @@ def main():
                      nbert=args.nbert,
                      fc_dims=args.fc_dims,
                      pool=args.pool,
-                     dp=0.0)
+                     dropout=0.0)
     # number of trainable model parameters
     trainable_params = sum(p.numel() for p in model.parameters() 
                            if p.requires_grad)
