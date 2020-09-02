@@ -84,20 +84,26 @@ class deepKNetDataset(Dataset):
 
         # apply random 3D rotation for data augmentation
         if self.data_aug:
-            alpha, beta, gamma = 0.25 * np.pi * np.random.random(3)
-            rot_matrix = [
-                np.cos(alpha)*np.cos(beta),
-                np.cos(alpha)*np.sin(beta)*np.sin(gamma) - np.sin(alpha)*np.cos(gamma),
-                np.cos(alpha)*np.sin(beta)*np.cos(gamma) + np.sin(alpha)*np.sin(gamma),
-                np.sin(alpha)*np.cos(beta),
-                np.sin(alpha)*np.sin(beta)*np.sin(gamma) + np.cos(alpha)*np.cos(gamma),
-                np.sin(alpha)*np.sin(beta)*np.cos(gamma) - np.cos(alpha)*np.sin(gamma),
-                -1*np.sin(beta),
-                np.cos(beta)*np.sin(gamma),
-                np.cos(beta)*np.cos(gamma)
-            ]
-            rot_matrix = np.array(rot_matrix).reshape(3,3)
-            point_cloud[:,:-1] = np.dot(point_cloud[:,:-1], rot_matrix.T)
+            alpha, beta, gamma = 2. * np.pi * (np.random.random(3)-0.5)
+            rot1 = [np.cos(alpha), -1*np.sin(alpha), 0,
+                    np.sin(alpha), np.cos(alpha), 0,
+                    0, 0, 1]
+            rot1 = np.array(rot1).reshape(3,3)
+            rot2 = [np.cos(beta), 0, -1*np.sin(beta),
+                    0, 1, 0,
+                    np.sin(beta), 0, np.cos(beta)]
+            rot2 = np.array(rot2).reshape(3,3)
+            rot3 = [1, 0, 0,
+                    0, np.cos(gamma), -1*np.sin(gamma),
+                    0, np.sin(gamma), np.cos(gamma)]
+            rot3 = np.array(rot3).reshape(3,3)
+            point_cloud[:,:-1] = np.dot(point_cloud[:,:-1], rot1.T)
+            point_cloud[:,:-1] = np.dot(point_cloud[:,:-1], rot2.T)
+            point_cloud[:,:-1] = np.dot(point_cloud[:,:-1], rot3.T)
+            if target_prop in ['cubic', 'orthorhombic', 'tetragonal']:
+                assert(np.dot(point_cloud[0,:-1], point_cloud[1,:-1]) < 1E-10)
+                assert(np.dot(point_cloud[1,:-1], point_cloud[2,:-1]) < 1E-10)
+                assert(np.dot(point_cloud[0,:-1], point_cloud[2,:-1]) < 1E-10)
 
         # randomly scale all intensity by a factor
         if self.random_intensity:
@@ -107,9 +113,9 @@ class deepKNetDataset(Dataset):
         if self.systematic_absence:
             # cannot do both at the same time
             assert(not self.random_intensity)
-            non_zeros = point_cloud[point_cloud[:,-1]>1E-10]
+            non_zeros = point_cloud[point_cloud[:,-1]>1E-8]
             non_zeros[:,-1] = 1.0
-            zeros = point_cloud[point_cloud[:,-1]<=1E-10]
+            zeros = point_cloud[point_cloud[:,-1]<=1E-8]
             zeros[:,-1] = 0.0
             point_cloud = np.concatenate((zeros, non_zeros), axis=0)
             assert((point_cloud[np.where(point_cloud[:,-1]==1.0)].shape[0] + \
@@ -183,5 +189,3 @@ class deepKNetDataset(Dataset):
 
     def __len__(self):
         return self.id_prop.shape[0]
-
-

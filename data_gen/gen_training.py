@@ -55,7 +55,7 @@ def gen_THC_data(data_custom):
     # output directory
     npoint = 125
     use_primitive = False
-    random_seed = 123
+    random_seed = 789
     out_dir = "./data_THC_{}{}_rand{}/".format("P" if use_primitive else "C", \
                                                 str(npoint), str(random_seed))
     if os.path.exists(out_dir):
