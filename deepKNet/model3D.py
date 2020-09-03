@@ -52,6 +52,8 @@ class PointNet(nn.Module):
         if stn:
             print('\n STN3d \n')
             self.stn3d = STN3d()
+        else:
+            self.stn3d = None
 
         self.conv_layers = nn.ModuleList([nn.Conv1d(conv_dims[i], conv_dims[i+1], 1) \
                                           for i in range(len(conv_dims)-1)])
