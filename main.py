@@ -35,6 +35,7 @@ parser.add_argument('--optim', type=str, metavar='OPTIM')
 parser.add_argument('--lr', type=float, metavar='LR')
 parser.add_argument('--lr_milestones', nargs='+', type=int)
 parser.add_argument('--dropout', type=float, metavar='DROPOUT')
+parser.add_argument('--stn', action='store_true')
 # default params
 parser.add_argument('--start_epoch', default=0, type=int, metavar='N')
 parser.add_argument('--weight_decay', default=0, type=float, metavar='W')
@@ -87,7 +88,8 @@ def main():
                      nbert=args.nbert,
                      fc_dims=args.fc_dims,
                      pool=args.pool,
-                     dropout=args.dropout)
+                     dropout=args.dropout,
+                     stn=args.stn)
     # number of trainable model parameters
     trainable_params = sum(p.numel() for p in model.parameters() 
                            if p.requires_grad)
