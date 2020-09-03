@@ -10,6 +10,7 @@ def get_train_valid_test_loader(root, target, npoint, point_dim, data_aug,
                                 rot_range, random_intensity, systematic_absence,
                                 batch_size, num_data_workers, pin_memory):
     print('data augmentation -- train/val/test: {}'.format(data_aug))
+    print('rotation range: {}pi - {}pi'.format(rot_range[0], rot_range[1]))
     print('random intensity: {}'.format(random_intensity))
     print('systematic absence: {}'.format(systematic_absence))
     
