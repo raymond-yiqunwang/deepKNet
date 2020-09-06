@@ -11,7 +11,7 @@ import torch
 from torch.optim.lr_scheduler import MultiStepLR
 from tensorboardX import SummaryWriter
 from deepKNet.data import get_train_valid_test_loader
-from deepKNet.model3D import PointNet
+from deepKNet.model3D_open import PointNet
 
 parser = argparse.ArgumentParser(description='deepKNet model')
 parser.add_argument('--root', metavar='DATA_DIR')
@@ -33,6 +33,7 @@ parser.add_argument('--nbert', default=4, type=int)
 parser.add_argument('--fc_dims', type=int, nargs='+')
 parser.add_argument('--pool', default='CLS', type=str)
 parser.add_argument('--batch_size', default=64, type=int, metavar='N')
+parser.add_argument('--stn', action='store_true')
 # default params
 n_threads = torch.get_num_threads()
 parser.add_argument('--num_threads', default=n_threads, type=int, metavar='N_thread')
@@ -74,7 +75,8 @@ def main():
                      nbert=args.nbert,
                      fc_dims=args.fc_dims,
                      pool=args.pool,
-                     dropout=0.0)
+                     dropout=0.0,
+                     stn=args.stn)
     # number of trainable model parameters
     trainable_params = sum(p.numel() for p in model.parameters() 
                            if p.requires_grad)
@@ -98,7 +100,7 @@ def main():
         checkpoint = torch.load(args.modelpath, map_location=torch.device('cpu'))
         model.load_state_dict(checkpoint['state_dict'])
     else:
-        print("=> no checkpoint found at '{}', existing..".format(args.resume))
+        print("=> no checkpoint found at '{}', existing..".format(args.modelpath))
         sys.exit(1)
 
     validate(test_loader, model, criterion, args.nclass)
@@ -130,6 +132,7 @@ def validate(valid_loader, model, criterion, nclass):
     model.eval()
 
     misclassified_ids = []
+    material_ids_all = []
     true_labels = []
     true_label_scores = []
     mispred_labels = []
@@ -139,6 +142,7 @@ def validate(valid_loader, model, criterion, nclass):
         running_loss = 0.0
         for idx, data in enumerate(valid_loader):
             image, target, material_ids = data
+            material_ids_all += list(material_ids)
             
             # optionally skip the last batch
             if target.size(0) < 8: continue
@@ -190,6 +194,10 @@ def validate(valid_loader, model, criterion, nclass):
                     mispred_labels.append(mispred_label)
                     mispred_label_scores.append(pred_scores[key,mispred_label])
     
+    with open('material_ids_all.txt', 'w') as f:
+        for mat_id in material_ids_all:
+            f.write(mat_id)
+            f.write('\n')
     print('misclass number:', len(mispred_labels))
     misclass_out = pd.DataFrame([misclassified_ids, true_labels, true_label_scores, \
                                                     mispred_labels, mispred_label_scores])

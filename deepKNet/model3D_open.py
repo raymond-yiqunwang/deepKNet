@@ -102,6 +102,10 @@ class PointNet(nn.Module):
             x = bert(x)
         x = x.permute(1, 2, 0)
 
+        # critical points
+        critical_points = np.argmax(x, axis=2)
+        np.save("critical_points.npy", critical_points)
+
         # pooling
         if self.pool == 'CLS':
             x = x[:, :, 0]

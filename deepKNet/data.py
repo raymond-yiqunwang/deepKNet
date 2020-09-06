@@ -113,7 +113,8 @@ class deepKNetDataset(Dataset):
                     point_cloud[np.where(point_cloud[:,-1]==0.0)].shape[0]) == point_cloud.shape[0])
 
         # randomly permute all points except the origin
-        np.random.shuffle(point_cloud[1:])
+        if self.data_aug:
+            np.random.shuffle(point_cloud[1:])
 
         # mask intensity info
         if self.point_dim != 4:
