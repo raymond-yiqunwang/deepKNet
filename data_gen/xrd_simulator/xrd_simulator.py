@@ -298,18 +298,31 @@ class XRDSimulator(AbstractDiffractionPatternCalculator):
         return xrd, recip_latt.matrix, features
 
 
+from pymatgen.core.structure import Structure
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 ### implemented for debugging purpose
 if __name__ == "__main__":
     # obtain material cif file
     my_API_key = "gxTAyXSm2GvCdWer"
     m = MPRester(api_key=my_API_key)
-    mp_data = m.query(criteria={"material_id": { "$eq" : "mp-2885" }}, properties=['cif'])
-    #mp_data = m.query(criteria={"material_id": { "$eq" : "mp-10163" }}, properties=['cif'])
+    mp_data = m.query(criteria={"material_id": { "$eq" : "mp-22862" }}, properties=['cif'])
     struct = Structure.from_str(mp_data[0]['cif'], fmt='cif')
+    sga = SpacegroupAnalyzer(struct, symprec=0.1)
+    conventional_struct = sga.get_conventional_standard_structure()
+    print(conventional_struct)
     
     # compute XRD diffraction pattern and compare outputs
-    pattern, _, features = XRDSimulator('CuKa').get_pattern(struct, two_theta_range=None) # this implementation
-    pattern_pymatgen = XRDCalculator('CuKa').get_pattern(struct, two_theta_range=None) # pymatgen original implementation
+    pattern, _, features = XRDSimulator('CuKa').get_pattern(conventional_struct, two_theta_range=None) # this implementation
+    features = np.array(features)
+    features = features[features[:,-1] > 1E-8]
+    features = features[features[:,0] < 2.5]
+    features = features[features[:,0] > -2.5]
+    features = features[features[:,1] < 2.5]
+    features = features[features[:,1] > -2.5]
+    features = features[features[:,2] < 2.5]
+    features = features[features[:,2] > -2.5]
+    print(features)
+    pattern_pymatgen = XRDCalculator('CuKa').get_pattern(conventional_struct, two_theta_range=None) # pymatgen original implementation
     print('Error rate: {:.6f}'.format(max(abs(np.array(pattern.x) - np.array(pattern_pymatgen.x)))))
     print(len(features))
 

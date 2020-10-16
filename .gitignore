@@ -1,6 +1,8 @@
 *.log
 job_submit.sh
 predict.sh
+misc/model_interpretation/
+misc/perovskite_test/
 RESULTS/
 runs/
 checkpoints/

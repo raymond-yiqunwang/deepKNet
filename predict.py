@@ -202,6 +202,10 @@ def validate(valid_loader, model, criterion, nclass):
     misclass_out = pd.DataFrame([misclassified_ids, true_labels, true_label_scores, \
                                                     mispred_labels, mispred_label_scores])
     misclass_out = misclass_out.transpose()
+    all_pred = pd.DataFrame([material_ids, test_preds, pred_scores, test_targets])
+    all_pred = all_pred.transpose()
+    all_pred_header = ['id', 'pred_label', 'pred_score', 'true_label']
+    all_pred.to_csv('all_predict.csv', header=all_pred_header, index=False)
     header_out = ['id', 'true', 'true_score', 'pred', 'pred_score']
     misclass_out.to_csv('misclass.csv', header=header_out, index=False)
 
