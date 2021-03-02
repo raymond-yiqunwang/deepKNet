@@ -8,7 +8,7 @@ from random import sample
 from sklearn import metrics
 import torch
 from torch.optim.lr_scheduler import MultiStepLR
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 from deepKNet.data import get_train_valid_test_loader
 from deepKNet.model3D import PointNet
 
@@ -44,7 +44,7 @@ n_threads = torch.get_num_threads()
 parser.add_argument('--num_threads', default=n_threads, type=int, metavar='N_thread')
 parser.add_argument('--num_data_workers', default=4, type=int, metavar='N')
 parser.add_argument('--print_freq', default=10, type=int, metavar='N')
-parser.add_argument('--test_freq', default=20, type=int, metavar='N')
+parser.add_argument('--test_freq', default=50, type=int, metavar='N')
 parser.add_argument('--disable_cuda', action='store_true')
 parser.add_argument('--resume', default='', type=str, metavar='PATH')
 

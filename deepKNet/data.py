@@ -157,23 +157,9 @@ class deepKNetDataset(Dataset):
             shear_mod = target_prop[0]
             criterion = shear_mod >= 50. 
             prop = torch.Tensor([criterion])
-        # binary Poisson ratio
-        elif self.target == 'poisson_ratio':
-            target_prop = ast.literal_eval(target_prop)
-            poisson_ratio = target_prop[2]
-            criterion = poisson_ratio >= 0.3
-            prop = torch.Tensor([criterion])
         # binary stability
         elif self.target == 'stability':
             prop = torch.Tensor([target_prop<0.01])
-        # binary topologically trivial vs. non-trivial
-        elif self.target == 'TIC2':
-            assert(target_prop in ['trivial*', 'TI*', 'SM*'])
-            prop = torch.Tensor([target_prop=='trivial*'])
-        # ternary topological classification
-        elif self.target == 'TIC3':
-            topo_dict = {'trivial*': 0, 'TI*': 1, 'SM*': 2}
-            prop = torch.Tensor([topo_dict[target_prop]])
         else:
             raise NotImplementedError
 
@@ -181,3 +167,5 @@ class deepKNetDataset(Dataset):
 
     def __len__(self):
         return self.id_prop.shape[0]
+
+

@@ -9,16 +9,14 @@ from random import sample
 from sklearn import metrics
 import torch
 from torch.optim.lr_scheduler import MultiStepLR
-from tensorboardX import SummaryWriter
 from deepKNet.data import get_train_valid_test_loader
-from deepKNet.model3D_open import PointNet
+from deepKNet.model3D import PointNet
 
 parser = argparse.ArgumentParser(description='deepKNet model')
 parser.add_argument('--root', metavar='DATA_DIR')
 parser.add_argument('--modelpath', metavar='MODEL_PATH')
 parser.add_argument('--target', metavar='TARGET_PROPERTY')
 parser.add_argument('--nclass', type=int)
-parser.add_argument('--threshold', default=0.5, type=float)
 parser.add_argument('--run_name', default='runx', metavar='RUNID')
 parser.add_argument('--gpu_id', default=0, type=int, metavar='GPUID')
 # hyper parameter tuning
@@ -29,9 +27,9 @@ parser.add_argument('--rot_range', type=float, nargs='+')
 parser.add_argument('--random_intensity', type=str)
 parser.add_argument('--systematic_absence', type=str)
 parser.add_argument('--conv_dims', type=int, nargs='+')
+parser.add_argument('--pool', default='CLS', type=str)
 parser.add_argument('--nbert', default=4, type=int)
 parser.add_argument('--fc_dims', type=int, nargs='+')
-parser.add_argument('--pool', default='CLS', type=str)
 parser.add_argument('--batch_size', default=64, type=int, metavar='N')
 parser.add_argument('--stn', action='store_true')
 # default params
@@ -70,6 +68,11 @@ def main():
         pin_memory=args.cuda)
 
     # build model
+    assert(args.conv_dims[0] == args.point_dim)
+    if args.target == 'crystal_system':
+        assert(args.nclass == 7)
+    elif args.target == 'crystal_family':
+        assert(args.nclass == 6)
     model = PointNet(nclass=args.nclass,
                      conv_dims=args.conv_dims,
                      nbert=args.nbert,
@@ -83,17 +86,6 @@ def main():
     print('Number of trainable model parameters: {:d}' \
            .format(trainable_params), flush=True)
 
-    if args.cuda:
-        print('running on GPU:{}..'.format(args.gpu_id), flush=True)
-        model = model.cuda(device=cuda_device)
-    else:
-        print('running on CPU..', flush=True)
-
-    # define loss function 
-    criterion = torch.nn.NLLLoss()
-    if args.cuda:
-        criterion = criterion.cuda(device=cuda_device)
-
     # load checkpoint
     if os.path.isfile(args.modelpath):
         print("=> loading checkpoint '{}'".format(args.modelpath), flush=True)
@@ -102,9 +94,17 @@ def main():
     else:
         print("=> no checkpoint found at '{}', existing..".format(args.modelpath))
         sys.exit(1)
+    
+    # define loss function 
+    criterion = torch.nn.NLLLoss()
+    if args.cuda:
+        print('running on GPU:{}..'.format(args.gpu_id), flush=True)
+        criterion = criterion.cuda(device=cuda_device)
+        model = model.cuda(device=cuda_device)
+    else:
+        print('running on CPU..', flush=True)
 
     validate(test_loader, model, criterion, args.nclass)
-
 
 
 def validate(valid_loader, model, criterion, nclass):
@@ -131,12 +131,6 @@ def validate(valid_loader, model, criterion, nclass):
     # switch to evaluation mode
     model.eval()
 
-    misclassified_ids = []
-    material_ids_all = []
-    true_labels = []
-    true_label_scores = []
-    mispred_labels = []
-    mispred_label_scores = []
     with torch.no_grad():
         end = time.time()
         running_loss = 0.0
@@ -159,7 +153,7 @@ def validate(valid_loader, model, criterion, nclass):
         
             # measure accuracy and record loss
             accuracy, precision, recall, fscore, auc_score, ave_precision, fpr, tpr, thresholds =\
-                class_eval(output, target, args.threshold)
+                class_eval(output, target)
             losses.update(loss.item(), target.size(0))
             accuracies.update(accuracy.item(), target.size(0))
             precisions.update(precision.item(), target.size(0))
@@ -167,8 +161,6 @@ def validate(valid_loader, model, criterion, nclass):
             fscores.update(fscore.item(), target.size(0))
             auc_scores.update(auc_score.item(), target.size(0))
             ave_precisions.update(ave_precision.item(), target.size(0))
-#            ROC_curve = pd.DataFrame([fpr, tpr]).transpose()
-#            ROC_curve.to_csv("ROC_curve{}.csv".format(str(idx)), index=False, header=['fpr', 'tpr'])
 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -180,35 +172,6 @@ def validate(valid_loader, model, criterion, nclass):
                 progress.display(idx+1)
                 running_loss = 0.0
 
-            # print misclassified
-            pred_scores = np.exp(output.cpu().numpy())
-            test_preds = np.argmax(pred_scores, axis=1)
-            test_targets = target.cpu().numpy()
-            for key, val in enumerate(test_preds==test_targets):
-                if not val:
-                    misclassified_ids.append(material_ids[key])
-                    true_label = test_targets[key]
-                    true_labels.append(true_label)
-                    true_label_scores.append(pred_scores[key,true_label])
-                    mispred_label = test_preds[key]
-                    mispred_labels.append(mispred_label)
-                    mispred_label_scores.append(pred_scores[key,mispred_label])
-    
-    with open('material_ids_all.txt', 'w') as f:
-        for mat_id in material_ids_all:
-            f.write(mat_id)
-            f.write('\n')
-    print('misclass number:', len(mispred_labels))
-    misclass_out = pd.DataFrame([misclassified_ids, true_labels, true_label_scores, \
-                                                    mispred_labels, mispred_label_scores])
-    misclass_out = misclass_out.transpose()
-    all_pred = pd.DataFrame([material_ids, test_preds, pred_scores, test_targets])
-    all_pred = all_pred.transpose()
-    all_pred_header = ['id', 'pred_label', 'pred_score', 'true_label']
-    all_pred.to_csv('all_predict.csv', header=all_pred_header, index=False)
-    header_out = ['id', 'true', 'true_score', 'pred', 'pred_score']
-    misclass_out.to_csv('misclass.csv', header=header_out, index=False)
-
     if nclass == 2:
         print(' * AUC {auc.avg:.3f}'.format(auc=auc_scores), flush=True)
         return auc_scores.avg
@@ -217,10 +180,9 @@ def validate(valid_loader, model, criterion, nclass):
         return accuracies.avg
 
 
-def class_eval(prediction, target, threshold):
+def class_eval(prediction, target):
     prediction = np.exp(prediction.detach().cpu().numpy())
     pred_label = np.argmax(prediction, axis=1)
-#    pred_label = prediction[:,1] > threshold
     target = target.detach().cpu().numpy()
     target_label = np.squeeze(target)
     if prediction.shape[1] == 2:
@@ -232,15 +194,15 @@ def class_eval(prediction, target, threshold):
             auc_score = np.float64(-1E8)
         accuracy = metrics.accuracy_score(target_label, pred_label)
         ave_precision = metrics.average_precision_score(target_label, prediction[:,1])
-        fpr, tpr, thresholds = metrics.roc_curve(target_label, prediction[:,1])
+        fpr, tpr, _ = metrics.roc_curve(target_label, prediction[:,1])
     else:
         correct = np.equal(pred_label, target_label).sum()
         precision, recall = np.float64(0.0), np.float64(0.0)
         fscore, auc_score = np.float64(0.0), np.float64(0.0)
         accuracy = np.float64(correct/float(target_label.size))
         ave_precision = np.float64(0.0)
-        fpr, tpr, thresholds = [], [], []
-    return accuracy, precision, recall, fscore, auc_score, ave_precision, fpr, tpr, thresholds
+        fpr, tpr, _ = [], [], []
+    return accuracy, precision, recall, fscore, auc_score, ave_precision, fpr, tpr
 
 
 class AverageMeter(object):
